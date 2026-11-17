@@ -79,8 +79,8 @@ const MAX_BONUS = 500;
 // workflow stays Running with the compliance approval kept, and Temporal retries the task. To fix it,
 // uncomment the first line below, delete the second, and restart the worker: the opening resumes and
 // completes with the bonus.
-const PROMOTIONS: Record<string, Promotion> = { 'WELCOME-BONUS': { rate: 0.01 } };
-// const PROMOTIONS: Record<string, Promotion> = { WELCOME_BONUS: { rate: 0.01 } };
+// const PROMOTIONS: Record<string, Promotion> = { 'WELCOME-BONUS': { rate: 0.01 } };
+const PROMOTIONS: Record<string, Promotion> = { WELCOME_BONUS: { rate: 0.01 } };
 
 function welcomeBonus(promoCode: string, initialAmount: number): number {
   const promotion = PROMOTIONS[promoCode];
