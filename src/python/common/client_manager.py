@@ -5,7 +5,7 @@ from datetime import datetime
 
 # --- Configuration ---
 script_dir = os.path.dirname(__file__)
-clients_relative_path = '../../../../data/clients.json'
+clients_relative_path = '../../../data/clients.json'
 CLIENTS_FILE = os.path.join(script_dir, clients_relative_path)
 
 class ClientManager:

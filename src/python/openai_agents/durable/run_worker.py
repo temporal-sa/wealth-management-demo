@@ -17,7 +17,7 @@ from durable.activities.event_stream_activities import EventStreamActivities
 from durable.activities.open_account import OpenAccount
 from temporalio.contrib.openai_agents import OpenAIAgentsPlugin, ModelActivityParameters
 
-from durable.claim_check.claim_check_plugin import ClaimCheckPlugin
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin
 
 from durable.activities.beneficiaries import Beneficiaries
 from durable.activities.custodian import Custodian

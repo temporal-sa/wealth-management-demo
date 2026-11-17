@@ -22,7 +22,7 @@ from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
 import tests.scripted_model as scripted_model
-from common.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
+from prompts.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
 from durable.workflows.supervisor_workflow import (
     WealthManagementContext,
     WealthManagementWorkflow,

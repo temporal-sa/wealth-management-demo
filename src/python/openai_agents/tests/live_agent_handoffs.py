@@ -35,7 +35,7 @@ from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
 import durable.chaos as chaos
-from common.agent_constants import BENE_AGENT_NAME, INVEST_AGENT_NAME, SUPERVISOR_AGENT_NAME
+from prompts.agent_constants import BENE_AGENT_NAME, INVEST_AGENT_NAME, SUPERVISOR_AGENT_NAME
 from common.chaos_manager import ChaosFlag
 from durable.activities.beneficiaries import Beneficiaries
 from durable.activities.investments import Investments

@@ -1,14 +1,14 @@
 # React Web App for Wealth Management
 
 An easy to use web based front end for the Wealth Management Agent. 
-It uses the [API](../src/python/openai_agents/api/README.md) to interact with Temporal.
+It uses the [API](../src/python/api/README.md) to interact with Temporal.
 
 ## Prerequisites 
 
 [Node.js](https://nodejs.org/en/download): Version 18 or higher, with npm.
 
 The web application relies on the API to communicate with Temporal. 
-Be sure to follow the instructions to run the API, which can be found [here](../src/python/openai_agents/api/README.md)
+Be sure to follow the instructions to run the API, which can be found [here](../src/python/api/README.md)
 
 Note that the web application communicates directly with the API and the API is what 
 communicates with Temporal running locally or in the cloud.

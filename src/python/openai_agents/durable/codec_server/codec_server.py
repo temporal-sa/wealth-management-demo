@@ -15,7 +15,7 @@ from google.protobuf import json_format
 from temporalio.api.common.v1 import Payload, Payloads
 
 from common.redis_config import RedisConfig
-from durable.claim_check.claim_check_codec import ClaimCheckCodec
+from common.claim_check.claim_check_codec import ClaimCheckCodec
 
 TEMPORAL_UI_ORIGIN = "http://localhost:8233"
 ALLOWED_ORIGINS = {TEMPORAL_UI_ORIGIN, "https://cloud.temporal.io"}

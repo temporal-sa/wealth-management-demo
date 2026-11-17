@@ -26,7 +26,7 @@ The overall application architecture looks like this:
 ![](../../../../docs/images/application-architecture.png)
 
 There is a React UX which is where the customer interacts with the application. 
-The React UX leverages an [API](../api/README.md) which exposes endpoints to start a workflow, send a prompt,
+The React UX leverages an [API](../../api/README.md) which exposes endpoints to start a workflow, send a prompt,
 retrieve the chat history, end the chat, and control the chaos panel. The React frontend uses adaptive polling
 to retrieve new events from Redis (through the API), providing real-time status updates as the Open Account 
 child workflow progresses through the different steps. 
@@ -217,7 +217,7 @@ See [interop/open_account/java/README.md](../../../../interop/open_account/java/
 ### Start the API
 
 ```bash
-cd src/python/openai_agents/api
+cd src/python/api
 ./startlocalapi.sh
 ```
 ### Start the UX
@@ -308,7 +308,7 @@ command to convert it if needed. See [interop/open_account/java/README.md](../..
 ### Start the API
 
 ```bash
-cd src/python/openai_agents/api
+cd src/python/api
 ./startcloudapi.sh
 ```
 ### Start the UX
@@ -527,6 +527,7 @@ uv run pytest
 * `tests/test_repeat_opening.py` - opening the same account name twice in a chat starts two child workflows (`...-Vacation-1`, `...-Vacation-2`), each with its own KYC
 * `tests/test_client_id.py` - every agent is told the client ID once a tool has used it
 * `tests/test_off_topic.py` - the supervisor prompt (Temporal and non-Temporal versions) declines off-topic questions
+* `tests/test_api_client.py` - the shared API's Temporal calls (`src/python/api/client.py`) start, message and end the real chat workflow
 
 `tests/live_agent_handoffs.py` is a live test of the agent handoffs. It is not part of `uv run pytest`,
 because it calls the paid OpenAI API. It runs the real chat workflow, with real OpenAI calls (on their own

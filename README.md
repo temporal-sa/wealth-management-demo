@@ -14,12 +14,12 @@ interop/
   open_account/java/  Java OpenInvestmentAccountWorkflow, works with every port
 scripts/              Scripts that work with any language (compliance approval, cloud env, claim check)
 src/<language>/
-  common/             Code shared by that language's ports
-  api/                REST API for the front end (works with every framework)
+  common/             Code shared by that language's ports and its API (no agent framework)
+  api/                REST API for the front end: works with every port, has its own dependency file
   <framework>/        One port, with its own dependency file:
     standalone/       Framework-only CLI chat (was <x>_supervisor/)
     durable/          Temporal version: workflows, activities, worker, scripts (was temporal_supervisor/)
-    api/  common/     Until they're shared at the language level
+    prompts/          The agents' prompts (framework-specific)
     tests/
 ```
 

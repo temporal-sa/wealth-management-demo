@@ -22,7 +22,7 @@ public class InvestmentManager {
     private String jsonFilePath;
 
     public InvestmentManager() {
-        this("../data/investments.json");
+        this("../../../data/investments.json");
     }
     public InvestmentManager(String jsonFilePath) {
         this.jsonFilePath = jsonFilePath;

@@ -1,6 +1,6 @@
 """Off-topic questions are declined by the supervisor's prompt, not by a guardrail."""
 
-import common.agent_constants as agent_constants
+import prompts.agent_constants as agent_constants
 import standalone.main as standalone
 import durable.workflows.supervisor_workflow as supervisor_workflow
 

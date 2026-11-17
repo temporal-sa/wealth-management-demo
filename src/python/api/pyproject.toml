@@ -1,0 +1,38 @@
+[project]
+name = "wealth-management-api"
+version = "0.1.0"
+description = "REST API for the shared front end. Works with every Python port: it uses only the Temporal contracts."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "pydantic (>=2.11.7,<3.0.0)",
+    "fastapi (>=0.162.0,<0.163.0)",
+    "uvicorn (>=0.35.0,<0.36.0)",
+    "redis (>=6.2.0,<7.0.0)",
+    "temporalio (==1.18.1)",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+# src/python, so the api and common packages import by name.
+dev-mode-dirs = [".."]
+
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "module"
+asyncio_default_test_loop_scope = "module"
+testpaths = ["tests"]
+pythonpath = [".."]

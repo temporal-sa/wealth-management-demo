@@ -24,7 +24,7 @@ public class InvestmentClientManager {
     private final ObjectMapper objectMapper;
 
     public InvestmentClientManager() {
-        this("../data/clients.json");
+        this("../../../data/clients.json");
     }
     // The constructor initializes the file path and ObjectMapper.
     public InvestmentClientManager(String filePath) {

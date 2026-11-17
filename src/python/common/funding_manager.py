@@ -2,7 +2,7 @@ import json
 import os
 
 script_dir = os.path.dirname(__file__)
-relative_path = '../../../../data/funding_accounts.json'
+relative_path = '../../../data/funding_accounts.json'
 FUNDING_FILE = os.path.join(script_dir, relative_path)
 
 

@@ -35,7 +35,7 @@ from temporalio import activity
 from temporalio.service import RPCError, RPCStatusCode
 from temporalio.worker import Worker
 
-from common.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
+from prompts.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
 from durable.activities.beneficiaries import Beneficiaries
 from durable.activities.clients import ClientActivities
 from durable.activities.investments import Investments

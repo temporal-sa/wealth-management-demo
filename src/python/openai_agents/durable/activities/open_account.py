@@ -13,7 +13,7 @@ from durable.activities.clients import WealthManagementClient
 from durable.activities.investments import Investments
 from durable.retry_policies import TOOL_RETRY_POLICY
 
-from durable.claim_check.claim_check_plugin import ClaimCheckPlugin
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin
 
 with workflow.unsafe.imports_passed_through():
     from agents import RunContextWrapper, function_tool

@@ -17,7 +17,7 @@ from agents import (
 )
 
 from common.account_context import ClientContext
-from common.agent_constants import BENE_AGENT_NAME, BENE_HANDOFF, BENE_INSTRUCTIONS, INVEST_AGENT_NAME, INVEST_HANDOFF, \
+from prompts.agent_constants import BENE_AGENT_NAME, BENE_HANDOFF, BENE_INSTRUCTIONS, INVEST_AGENT_NAME, INVEST_HANDOFF, \
     INVEST_INSTRUCTIONS, SUPERVISOR_AGENT_NAME, SUPERVISOR_HANDOFF, SUPERVISOR_INSTRUCTIONS
 from common.beneficiaries_manager import BeneficiariesManager
 from common.investment_manager import InvestmentAccount, InvestmentManager
