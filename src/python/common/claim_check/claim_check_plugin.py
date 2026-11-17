@@ -29,14 +29,22 @@ class ClaimCheckPlugin(Plugin):
                 payload_converter_class=default_converter_class
             )
 
+    # Works with both Temporal Python SDK plugin interfaces: 1.18 chains plugins through
+    # init_client_plugin and self.next_plugin (the OpenAI Agents port); 1.19 and later call
+    # each plugin's configure_client in turn and pass `next` to connect_service_client
+    # (the Pydantic AI port).
+
     def init_client_plugin(self, next: Plugin) -> None:
-        """Initialize the plugin chain"""
+        """Initialize the plugin chain (SDK 1.18)"""
         self.next_plugin = next
 
     def configure_client(self, config: ClientConfig) -> ClientConfig:
         config["data_converter"] = self.get_data_converter(config)
-        return self.next_plugin.configure_client(config)
+        next_plugin = getattr(self, "next_plugin", None)
+        return next_plugin.configure_client(config) if next_plugin else config
 
-    async def connect_service_client(self, config):
-        """Pass through to next plugin in chain"""
+    async def connect_service_client(self, config, next=None):
+        """Pass through to the next plugin in the chain"""
+        if next is not None:
+            return await next(config)
         return await self.next_plugin.connect_service_client(config)

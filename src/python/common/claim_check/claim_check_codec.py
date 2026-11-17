@@ -13,7 +13,8 @@ from common.redis_config import RedisConfig
 #
 class ClaimCheckCodec(PayloadCodec):
 
-    def __init__(self, config: RedisConfig):
+    def __init__(self, config: Optional[RedisConfig] = None):
+        config = config or RedisConfig()
         self.redis_client = redis.Redis(host=config.hostname, port=config.port)
 
     #
