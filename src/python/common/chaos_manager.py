@@ -34,12 +34,12 @@ CHAOS_FLAGS: List[ChaosFlagInfo] = [
     ),
     ChaosFlagInfo(
         ChaosFlag.LLM_DOWN,
-        "OpenAI API down",
+        "LLM API down",
         "Every model call raises a connection error. The agent pauses mid-turn and resumes when you turn this off.",
     ),
     ChaosFlagInfo(
         ChaosFlag.LLM_RATE_LIMITED,
-        "OpenAI rate limited (429)",
+        "LLM rate limited (429)",
         "Every model call is throttled. Retries wait for the server's Retry-After delay instead of the normal backoff.",
     ),
     ChaosFlagInfo(

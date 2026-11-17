@@ -11,7 +11,7 @@ const SCENARIOS = [
   },
   {
     title: 'LLM down or rate limited',
-    steps: 'Turn on an OpenAI flag and send any message. Rate-limited calls wait 15s between attempts (the Retry-After delay) instead of backing off normally.',
+    steps: 'Turn on an LLM flag and send any message. Rate-limited calls wait 15s between attempts (the Retry-After delay) instead of backing off normally.',
   },
   {
     title: 'Business rule (non-retryable)',

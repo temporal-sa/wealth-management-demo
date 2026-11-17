@@ -24,6 +24,6 @@ def rate_limited(message: str) -> ApplicationError:
 
 class ChaosAwareOpenAIModel(OpenAIChatCompletionsModel):
     async def get_response(self, *args, **kwargs):
-        await inject_failure(ChaosFlag.LLM_DOWN, ConnectionError("OpenAI API unavailable"))
-        await inject_failure(ChaosFlag.LLM_RATE_LIMITED, rate_limited("OpenAI API rate limit exceeded (HTTP 429)"))
+        await inject_failure(ChaosFlag.LLM_DOWN, ConnectionError("LLM API unavailable (injected by the chaos panel)"))
+        await inject_failure(ChaosFlag.LLM_RATE_LIMITED, rate_limited("LLM API rate limit exceeded (HTTP 429, injected by the chaos panel)"))
         return await super().get_response(*args, **kwargs)
