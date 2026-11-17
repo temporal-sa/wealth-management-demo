@@ -1,3 +1,12 @@
 # Shared scripts
 
-Scripts that work with any language: `localsendcomplianceapproval.sh`, `cloudsendcomplianceapproval.sh`, `setcloudenv.example`, `setclaimcheck.sh`, data reset. Commit only `.example` files for secrets.
+Settings files that every port's start scripts source, plus scripts that work with any language. Create the `.sh` files from the `.example` files here; only the `.example` files are committed.
+
+| File | Purpose |
+|---|---|
+| `setoaikey.example` → `setoaikey.sh` | OpenAI API key (`OPENAI_API_KEY`) |
+| `setclaimcheck.example` → `setclaimcheck.sh` | Optional claim check: `USE_CLAIM_CHECK`, Redis host and port |
+| `setcloudenv.example` → `setcloudenv.sh` | Temporal Cloud address, namespace and mTLS cert and key |
+| `setsplitworkflows.sh` | Sourced by worker scripts: a queue argument moves the open-account workflow onto that queue (e.g. for the Java worker) |
+
+Other ports will add their key files here (e.g. `setgeminikey.example`, `setllmkey.example`), so ports that use the same provider share one key file.
