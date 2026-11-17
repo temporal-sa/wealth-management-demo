@@ -11,8 +11,8 @@ from pathlib import Path
 from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-import common.agents as agents
-from common.agent_constants import (
+import pyai_agents.agents as agents
+from prompts.agent_constants import (
     BENE_INSTRUCTIONS,
     INVEST_INSTRUCTIONS,
     OFF_TOPIC_INSTRUCTIONS,
@@ -21,7 +21,7 @@ from common.agent_constants import (
     SUPERVISOR_AGENT_NAME,
     SUPERVISOR_INSTRUCTIONS,
 )
-from py_supervisor.main import PydanticAIWealthManagement
+from standalone.main import PydanticAIWealthManagement
 
 DECLINE_BLOCK = """You only help with wealth management: the customer's beneficiaries and investment accounts.
 If the customer asks about anything else (for example general knowledge, weather, news, or

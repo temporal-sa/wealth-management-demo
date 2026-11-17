@@ -27,9 +27,9 @@ from pydantic_ai import RunContext
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.usage import RunUsage
 
-from common.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
-from common.agents import AgentDependencies, get_account_opening_status
-from temporal_supervisor.workflows.supervisor_workflow import (
+from prompts.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
+from pyai_agents.agents import AgentDependencies, get_account_opening_status
+from durable.workflows.supervisor_workflow import (
     ACCOUNT_OPENING_ENDED,
     WealthManagementWorkflow,
 )
@@ -155,7 +155,7 @@ async def test_get_account_opening_status():
 
 def test_the_status_tool_runs_in_the_workflow():
     # It reads deps that only the workflow keeps up to date.
-    from temporal_supervisor.workflows.supervisor_workflow import temporal_open_account_agent
+    from durable.workflows.supervisor_workflow import temporal_open_account_agent
 
     toolset = next(t for t in temporal_open_account_agent._toolsets if t.id == "<agent>")
     assert toolset.tool_activity_config == {"get_account_opening_status": False}

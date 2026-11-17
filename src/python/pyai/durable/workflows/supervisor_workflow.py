@@ -17,7 +17,7 @@ from pydantic_ai.durable_exec.temporal import (
     TemporalAgent,
 )
 
-from common.agents import (
+from pyai_agents.agents import (
     AgentDependencies,
     supervisor_agent,
     beneficiary_agent,
@@ -25,7 +25,7 @@ from common.agents import (
     open_account_agent,
 )
 
-from common.agent_constants import (
+from prompts.agent_constants import (
     BENE_AGENT_NAME,
     INVEST_AGENT_NAME,
     MAX_ROUTING_HOPS,
@@ -37,12 +37,12 @@ from common.user_message import ProcessUserMessageInput, ChatInteraction
 from common.account_context import UpdateAccountOpeningStateInput
 from common.status_update import StatusUpdate
 
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities
-from temporal_supervisor.activities.local_activities import LocalActivities
-from temporal_supervisor.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
+from durable.activities.event_stream_activities import EventStreamActivities
+from durable.activities.local_activities import LocalActivities
+from durable.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
 
 with workflow.unsafe.imports_passed_through():
-    from temporal_supervisor.model_config import LLM_TASK_QUEUE
+    from durable.model_config import LLM_TASK_QUEUE
 
 # States the account opening workflows (Python and Java) end in
 ACCOUNT_OPENING_ENDED = ("Complete", "Rolled back")

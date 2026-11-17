@@ -3,7 +3,7 @@
 Demonstrates how to use Pydantic AI Framework with multiple agents. This version runs in your terminal,
 without Temporal, Redis or a web application.
 
-The Temporal version of this example is located [here](../temporal_supervisor/README.md)
+The Temporal version of this example is located [here](../durable/README.md)
 
 Scenarios currently implemented include
 * Add Beneficiary - add a new beneficiary to your account
@@ -23,9 +23,9 @@ Scenarios currently implemented include
 * [OpenAI API Key](https://platform.openai.com/api-keys) - Your key to accessing OpenAI's LLM
 
 ## Set up Python Environment
-From the repository root:
 
 ```bash
+cd src/python/pyai
 uv sync
 ```
 
@@ -33,11 +33,11 @@ uv sync
 From the repository root:
 
 ```bash
-cp setoaikey.example setoaikey.sh
-chmod +x setoaikey.sh
+cp scripts/setoaikey.example scripts/setoaikey.sh
+chmod +x scripts/setoaikey.sh
 ```
 
-Now edit the setoaikey.sh file and paste in your OpenAI API Key.
+Now edit scripts/setoaikey.sh and paste in your OpenAI API Key.
 It should look something like this:
 ```text
 export OPENAI_API_KEY=sk-proj-....
@@ -45,12 +45,12 @@ export OPENAI_API_KEY=sk-proj-....
 
 ## Running the agent
 ```bash
-cd src/py_supervisor
+cd src/python/pyai/standalone
 ./startchat.sh
 ```
 
-`startchat.sh` sources `../../setoaikey.sh` and runs `python -m py_supervisor.main` with `src` on the
-`PYTHONPATH`. Run it from `src/py_supervisor`: the data files are found relative to that folder.
+`startchat.sh` sources `scripts/setoaikey.sh` and runs `python -m standalone.main`. The data files in
+`data/` at the repository root are found relative to the shared code, so it works from any folder.
 
 Type `end`, `exit` or `quit` to stop.
 

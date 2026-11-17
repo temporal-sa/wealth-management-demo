@@ -32,7 +32,12 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 * A port's worker running, for example the reference port's (`src/python/openai_agents/durable/startlocalworker.sh`
   or `startcloudworker.sh`). The API and the worker must use the same `TEMPORAL_TASK_QUEUE`.
 
-See the reference port's [Temporal README](../openai_agents/durable/README.md) for setting these up.
+| Port | Its default task queue | Start the API with |
+|---|---|---|
+| [OpenAI Agents SDK](../openai_agents/durable/README.md) | `Supervisor` | `./startlocalapi.sh` |
+| [Pydantic AI](../pyai/durable/README.md) | `PY-AI-Supervisor` | `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startlocalapi.sh` |
+
+See each port's Temporal README (linked above) for setting these up.
 
 ## Set up Python Environment
 The API has its own environment, with no agent framework installed. From the repository root:
@@ -115,4 +120,4 @@ The tests call the endpoints over HTTP against a stub chat workflow on the Tempo
 (downloaded automatically on first run), so no model key, Redis or running Temporal service is needed.
 The stub's worker uses Temporal's default data converter, which shows the API's payloads are plain JSON
 any port can read. Each Python port also checks the API's calls against its real chat workflow, for
-example `src/python/openai_agents/tests/test_api_client.py`.
+example `src/python/openai_agents/tests/test_api_client.py` and `src/python/pyai/tests/test_api_client.py`.

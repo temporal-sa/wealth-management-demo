@@ -4,16 +4,17 @@ import logging
 
 from temporalio.client import Client
 from common.client_helper import ClientHelper
+from durable.task_queues import DEFAULT_TASK_QUEUE
 
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
 
 
 async def approve(workflow_id: str):
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s")
 
-    client_helper = ClientHelper()
+    client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
     print(f"address is {client_helper.address}")
     client = await Client.connect(**client_helper.client_config,
                                   plugins=[
@@ -28,7 +29,7 @@ async def main():
     parser = argparse.ArgumentParser(
         description="",
         epilog='Example usage:\n'
-               '  export SKIP_OPENAI_PLUGIN=True; export PYTHONPATH="${PYTHONPATH}:../../src"; uv run python -m temporal_supervisor.run_send_compliance_approval --workflow-id myworkflow\n'
+               '  cd src/python/pyai/durable && ./localsendcomplianceapproval.sh myworkflow\n'
     )
 
     # Global argument for Workflow ID

@@ -18,10 +18,11 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from temporalio.exceptions import ApplicationError
 
 from common.chaos_manager import ChaosFlag
-from temporal_supervisor.chaos import inject_failure
+from durable.chaos import inject_failure
+from durable.task_queues import DEFAULT_TASK_QUEUE
 
-# Same default as ClientHelper.taskQueue.
-TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", "PY-AI-Supervisor")
+# Same default as ClientHelper.taskQueue in this port.
+TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", DEFAULT_TASK_QUEUE)
 # TEMPORAL_TASK_QUEUE_LLM is the name the OpenAI Agents SDK version uses;
 # TEMPORAL_LLM_TASK_QUEUE is still accepted.
 LLM_TASK_QUEUE = (os.getenv("TEMPORAL_TASK_QUEUE_LLM")

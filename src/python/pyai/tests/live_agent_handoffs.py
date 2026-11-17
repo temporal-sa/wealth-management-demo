@@ -32,8 +32,8 @@ from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-import temporal_supervisor.chaos as chaos
-from common.agent_constants import (
+import durable.chaos as chaos
+from prompts.agent_constants import (
     BENE_AGENT_NAME,
     BENE_INSTRUCTIONS,
     INVEST_AGENT_NAME,
@@ -44,10 +44,10 @@ from common.agent_constants import (
     SUPERVISOR_INSTRUCTIONS,
 )
 from common.user_message import ChatInteraction, ProcessUserMessageInput
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.activities.local_activities import LocalActivities
-from temporal_supervisor.model_config import LLM_TASK_QUEUE
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.activities.investments import Investments
+from durable.activities.local_activities import LocalActivities
+from durable.model_config import LLM_TASK_QUEUE
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 RUNS = max(1, int(os.getenv("LIVE_TEST_RUNS", "1")))
 TASK_QUEUE = "agent-handoffs-live-test"

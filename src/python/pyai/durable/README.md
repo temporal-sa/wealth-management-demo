@@ -17,10 +17,10 @@ Scenarios currently implemented include
 ## Application Architecture
 The overall application architecture looks like this:
 
-![](../../images/application-architecture.png)
+![](../../../../docs/images/pyai/application-architecture.png)
 
 There is a React UX which is where the customer interacts with the application.
-The React UX leverages an [API](../api/README.md) which exposes endpoints to start a workflow, send a prompt,
+The React UX leverages an [API](../../api/README.md) which exposes endpoints to start a workflow, send a prompt,
 retrieve the chat history, end the chat, and drive the chaos panel. The React frontend uses adaptive polling
 to retrieve new events (stored in Redis) through the API.
 
@@ -35,12 +35,12 @@ that drive the agentic application.
 * [Temporal CLI](https://docs.temporal.io/cli#install) - Local Temporal service
 * [Redis](https://redis.io/downloads/) - Stores conversation history and the chaos panel flags
 * [Node.js](https://nodejs.org/en/download) and npm - Runs the React UX
-* [Java](https://adoptium.net/) JDK 25 (optional) - Only needed to run the [Java Open Investment Account Workflow](../../java/README.md). The Gradle wrapper (Gradle 9.8.2) is included, so you don't need to install Gradle
+* [Java](https://adoptium.net/) JDK 25 (optional) - Only needed to run the [Java Open Investment Account Workflow](../../../../interop/open_account/java/README.md). The Gradle wrapper (Gradle 9.8.2) is included, so you don't need to install Gradle
 
 ## Set up Python Environment
-From the repository root:
 
 ```bash
+cd src/python/pyai
 uv sync
 ```
 
@@ -49,17 +49,17 @@ uv sync
 From the repository root:
 
 ```bash
-cp setoaikey.example setoaikey.sh
-chmod +x setoaikey.sh
+cp scripts/setoaikey.example scripts/setoaikey.sh
+chmod +x scripts/setoaikey.sh
 ```
 
-Now edit the setoaikey.sh file and paste in your OpenAI API Key.
+Now edit scripts/setoaikey.sh and paste in your OpenAI API Key.
 It should look something like this:
 ```bash
 export OPENAI_API_KEY=sk-proj-....
 ```
 
-The worker and API start scripts source `setoaikey.sh` from the repository root.
+The worker start scripts source `scripts/setoaikey.sh`. (The API doesn't need it: it never calls the model.)
 
 ## Set up Redis
 
@@ -79,7 +79,7 @@ export REDIS_HOST=localhost
 export REDIS_PORT=6379
 ```
 
-The Java worker doesn't read these; it uses `spring.data.redis` in `java/src/main/resources/application.yaml`
+The Java worker doesn't read these; it uses `spring.data.redis` in `interop/open_account/java/src/main/resources/application.yaml`
 (only needed for claim check).
 
 ## Set up Claim Check (optional)
@@ -94,11 +94,11 @@ replaces it with the data stored in Redis.
 From the repository root:
 
 ```bash
-cp setclaimcheck.example setclaimcheck.sh
-chmod +x setclaimcheck.sh
+cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
+chmod +x scripts/setclaimcheck.sh
 ```
 
-Now edit the setclaimcheck.sh file and fill in the location of Redis
+Now edit scripts/setclaimcheck.sh and fill in the location of Redis
 It should look something like this:
 ```bash
 export USE_CLAIM_CHECK=true
@@ -118,7 +118,7 @@ conversation history and is also used if Claim Check has been enabled.
 Be aware that using a claim check pattern introduces performance costs by doing remote calls to Redis for every payload. 
 Also, make sure your Redis implementation is rock solid as any downtime will directly affect your workflows. 
 
-Claim check is optional. The start scripts source `setclaimcheck.sh` from the repository root when it
+Claim check is optional. The start scripts source `scripts/setclaimcheck.sh` when it
 exists; if you haven't created it, they run without claim check.
 
 ## Run Codec Server for Claim Check (optional)
@@ -126,11 +126,11 @@ If you have decided to set up the Claim Check above, you will
 most likely want to also run a Codec Server to be able to see the actual sent to 
 the workflow and activities. 
 
-Be sure you have updated the setclaimcheck.sh as mentioned above.
+Be sure you have updated scripts/setclaimcheck.sh as mentioned above.
 
 To run the Codec Server:
 ```bash
-cd src/temporal_supervisor
+cd src/python/pyai/durable
 ./startcodecserver.sh
 ```
 
@@ -152,15 +152,15 @@ extra spaces at the end of the URL or it will not work. You can turn off the two
 user access token and Include cross-origin credentials. Click on apply and you have configured 
 the codec server. 
 
-![](../../images/config-codec-server.png)
+![](../../../../docs/images/pyai/config-codec-server.png)
 
 As you run through different scenarios, you'll be able to see the decoded values in the browser.
 
-![](../../images/decoded-input.png)
+![](../../../../docs/images/pyai/decoded-input.png)
 
 If you remove the codec server settings, you won't be able to see anything other than a BASE64 Encoded ID.
 
-![](../../images/encoded-input.png)
+![](../../../../docs/images/pyai/encoded-input.png)
 
 ## Running the Demo Locally
 Start Temporal Locally.
@@ -174,7 +174,7 @@ In another terminal, start the worker.
 ### Start the Worker using the Python Open Investment Account Workflow (default)
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/pyai/durable
 ./startlocalworker.sh
 ```
 
@@ -182,66 +182,66 @@ If you want to use the Java Open Investment Account Workflow,
 you need to specify the name of the Task Queue when running the Python worker:
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/pyai/durable
 ./startlocalworker.sh Open-Account-Java
 ```
 
 and then start the Java worker, making sure you pass in the same name as you did 
-when you started the Python worker:
+when you started the Python worker. Set `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor` so it calls this port's activities:
 
 ```bash
-cd java
-./startlocalworker.sh Open-Account-Java
+cd interop/open_account/java
+TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startlocalworker.sh Open-Account-Java
 ```
 
 ### Start the API
 
-In another terminal, start the REST API.
+In another terminal, start the shared REST API on this port's task queue:
 
 ```bash
-cd src/api
-./startlocalapi.sh
+cd src/python/api
+TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startlocalapi.sh
 ```
 
 And in another terminal, start the UX. 
 
 ### Start the UX
 ```bash
-cd src/frontend
+cd frontend
 npm install
 npm start
 ```
 
-A new browser window opens where you can interact with the application. See the [frontend README](../frontend/README.md).
+A new browser window opens where you can interact with the application. See the [frontend README](../../../../frontend/README.md).
 
 If you are opening a new investment account, in another terminal
 ### Send the Compliance Reviewed Signal
 ```bash
-cd src/temporal_supervisor
+cd src/python/pyai/durable
 ./localsendcomplianceapproval.sh "<Child Workflow ID>"
 ```
 
 ### Finding the child workflow ID
 
 The child workflow ID has the format `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, for example
-`OpenAccount-pyai-temporal-agent-abc123-123-Vacation-1` (the web app gives each chat a random workflow ID
-starting with `pyai-temporal-agent-`). `<n>` counts the account openings started in the chat (1, 2, 3, ...):
+`OpenAccount-oai-temporal-agent-abc123-123-Vacation-1` (the shared web app gives each chat a random workflow ID
+starting with `oai-temporal-agent-`). `<n>` counts the account openings started in the chat (1, 2, 3, ...):
 every request to open an account starts a new account opening, with its own KYC confirmation, even if an
 account with the same name was opened, or is still being opened, earlier in the chat. Quote the ID if the
 account name contains a space.
 
 It is shown at the end of the agent's reply when it asks you to confirm your information, for example
-`(Workflow ID: OpenAccount-pyai-temporal-agent-abc123-123-Vacation-1)`. You can also find it in the Temporal UI
+`(Workflow ID: OpenAccount-oai-temporal-agent-abc123-123-Vacation-1)`. You can also find it in the Temporal UI
 (http://localhost:8233 locally): look for the running `OpenInvestmentAccountWorkflow`, which is a child of
 the chat's `WealthManagementWorkflow`.
 
 Here is a screenshot of the UX walking through a few scenarios:
 
-![](../../images/ux-chat-session.png)
+![](../../../../docs/images/pyai/ux-chat-session.png)
 
 Here is a sample event history shown in the Temporal UX
 
-![](../../images/temporal-ux-session.png)
+![](../../../../docs/images/pyai/temporal-ux-session.png)
 
 ## How the Open Account functionality works
 
@@ -285,17 +285,17 @@ the worker it started when the scenarios finish, and can be run from any directo
 must be running, and no other Python worker should be polling the same task queue:
 
 ```bash
-src/temporal_supervisor/startlocalopenaccount.sh
+src/python/pyai/durable/startlocalopenaccount.sh
 # in another terminal
-cd src/temporal_supervisor
+cd src/python/pyai/durable
 ./localsendcomplianceapproval.sh testing-open-investment-account-workflow3
 ```
 
 With a task queue name, the workflow runs on that queue (`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT`), so you
-can run the same scenarios against the Java workflow (start `java/startlocalworker.sh <queue>` first):
+can run the same scenarios against the Java workflow (start the Java worker first: `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor interop/open_account/java/startlocalworker.sh <queue>`):
 
 ```bash
-src/temporal_supervisor/startlocalopenaccount.sh Open-Account-Java
+src/python/pyai/durable/startlocalopenaccount.sh Open-Account-Java
 ```
 
 ## Failure scenarios (chaos panel)
@@ -318,7 +318,7 @@ failure. **Reset all** turns every flag off.
 | **Saga** | Turn on *Custodian rejects new accounts* (and *Slow account-opening steps* so you can watch), then open an account through compliance approval. Without flags: as client `123`, open an account with $300,000 (the linked bank account has $250,000). | After compliance approval the child workflow creates the account record, transfers the deposit from the linked bank account, and registers with the custodian. When a step fails non-retryably, the completed steps are undone in reverse order (refund, then remove the account). Compensations are activities too, so they are retried until they succeed. Kill the worker mid-rollback and the rollback still finishes. Transfers are idempotent, so a retried debit or refund never moves money twice. |
 | **Bug in workflow code** | Turn on *Bug in workflow code*, then open an account through compliance approval. See below. | The workflow pauses at the failing line, keeping all its state, until a worker with fixed code picks it up. |
 
-Every scenario works with both the Python and the [Java](../../java/README.md)
+Every scenario works with both the Python and the [Java](../../../../interop/open_account/java/README.md)
 account opening workflow. The failures are injected in the Python activities,
 which the Java workflow calls too, and both workflows implement the same saga and
 the same kind of bug.
@@ -356,7 +356,7 @@ input, so every retry hits the same line. The fix is code:
 
 * Python: change `inputs.initial_deposit` to `inputs.initial_amount`, the line
   commented out above it, and restart the Python worker.
-* Java: swap `PROMOTION_RATES` for the commented-out line above it, and restart
+* Java: swap `BONUS_RATES` for the commented-out line above it, and restart
   the Java worker.
 
 The workflow resumes on the server's next workflow-task retry and opens the
@@ -367,18 +367,19 @@ within about a minute.
 After the demo, re-arm the bug:
 
 ```bash
-git checkout src/temporal_supervisor/workflows/open_account_workflow.py
-git checkout java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java
+git checkout src/python/pyai/durable/workflows/open_account_workflow.py
+git checkout interop/open_account/java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java
 ```
 
 ## Running the tests
 
 The Python tests (in `tests/`) cover the failure scenarios, the agents' handoffs and checks, off-topic
-handling and the standalone version. The workflow tests run against a local Temporal test server
+handling, the standalone version, and the shared API's calls against the real chat workflow
+(`tests/test_api_client.py`). The workflow tests run against a local Temporal test server
 (downloaded automatically on first run) with stub activities. They need no OpenAI API key or Redis.
-From the repository root:
 
 ```bash
+cd src/python/pyai
 uv run pytest
 ```
 
@@ -395,10 +396,10 @@ the Beneficiary Agent to the supervisor and on to the Investment Agent and lists
 run's transcript, with what each agent did, is printed.
 
 It calls the paid OpenAI API, so it is not part of `uv run pytest` (the file name doesn't match
-`test_*.py`) and is skipped when `OPENAI_API_KEY` isn't set. Run it from the repository root with:
+`test_*.py`) and is skipped when `OPENAI_API_KEY` isn't set. Run it from `src/python/pyai` with:
 
 ```bash
-source ./setoaikey.sh
+source ../../../scripts/setoaikey.sh
 LIVE_TEST_RUNS=10 uv run pytest tests/live_agent_handoffs.py -s
 ```
 
@@ -412,21 +413,21 @@ with IDs ending `-Vacation-1` and `-Vacation-2`. It also runs the real `OpenInve
 (compliance is never approved, so no data file is written):
 
 ```bash
-source ./setoaikey.sh
+source ../../../scripts/setoaikey.sh
 LIVE_TEST_RUNS=3 uv run pytest tests/live_repeat_opening.py -s
 ```
 
 For the Java workflow (JDK 25):
 
 ```bash
-cd java
+cd interop/open_account/java
 ./gradlew test
 ```
 
 For the React UX (watch mode; use `CI=true npm test` to run once):
 
 ```bash
-cd src/frontend
+cd frontend
 npm install
 npm test
 ```
@@ -438,7 +439,7 @@ Alternatively you can interact with workflow using the temporal CLI
 Start the worker in a new terminal:
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/pyai/durable
 ./startlocalworker.sh
 ```
 
@@ -471,28 +472,27 @@ continue-as-new in production (see the TODO in `workflows/supervisor_workflow.py
 
 | Variable | Default | Used for |
 |---|---|---|
-| `OPENAI_API_KEY` | | The agents' model calls (set in `setoaikey.sh`). |
-| `TEMPORAL_TASK_QUEUE` | `PY-AI-Supervisor` | Task queue of the chat workflow and the tools. The worker, API and Java worker must agree. |
+| `OPENAI_API_KEY` | | The agents' model calls (set in `scripts/setoaikey.sh`). |
+| `TEMPORAL_TASK_QUEUE` | `PY-AI-Supervisor` (`durable/task_queues.py`) | Task queue of the chat workflow and the tools. The worker, API and Java worker must agree. The shared API and Java worker default to `Supervisor`, so start them with `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor`. |
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | value of `TEMPORAL_TASK_QUEUE` | Task queue of `OpenInvestmentAccountWorkflow`. The worker scripts set it from their optional argument (`./startlocalworker.sh Open-Account-Java`, via `setsplitworkflows.sh`); when it differs from `TEMPORAL_TASK_QUEUE`, the Python worker doesn't run the account opening workflow and the Java worker must. |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` (`PY-AI-Supervisor-llm`) | Task queue for the model calls. The old name `TEMPORAL_LLM_TASK_QUEUE` is still accepted. |
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Most model calls per second the Temporal service dispatches from the LLM task queue, e.g. `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh`. |
 | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Conversation events, chaos flags and claim check (Python components). |
-| `USE_CLAIM_CHECK` | `False` | Enables the claim check codec (set in `setclaimcheck.sh`). |
+| `USE_CLAIM_CHECK` | `False` | Enables the claim check codec (set in `scripts/setclaimcheck.sh`). |
 | `SKIP_AGENTS` | `False` | Runs the worker without the agents (no supervisor workflow or model calls, so no OpenAI key); set by `startlocalopenaccount.sh`. |
 | `TEMPORAL_ADDRESS` | `127.0.0.1:7233` | Temporal service address. |
 | `TEMPORAL_NAMESPACE` | `default` | Temporal namespace. |
-| `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH` | | mTLS client certificate and key for Temporal Cloud (set in `setcloudenv.sh`). |
+| `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH` | | mTLS client certificate and key for Temporal Cloud (set in `scripts/setcloudenv.sh`). |
 
 ## Running the Demo in Temporal Cloud
 
-Copy the setcloudenv.example, located in the src/temporal_supervisor folder, to the repository root and name it
-setcloudenv.sh (it is gitignored). From the repository root:
+Copy `scripts/setcloudenv.example` to `scripts/setcloudenv.sh` (it is gitignored). From the repository root:
 
 ```bash
-cp  src/temporal_supervisor/setcloudenv.example setcloudenv.sh
+cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
-Edit setcloudenv.sh to match your Temporal Cloud account:
+Edit scripts/setcloudenv.sh to match your Temporal Cloud account:
 ```bash
 export TEMPORAL_ADDRESS=<namespace>.<accountID>.tmprl.cloud:7233
 export TEMPORAL_NAMESPACE=<namespace>.<accountID>
@@ -501,14 +501,14 @@ export TEMPORAL_TLS_CLIENT_KEY_PATH="/path/to/key.key"
 ```
 
 The cloud scripts (`startcloudworker.sh`, `startcloudapi.sh`, `cloudsendcomplianceapproval.sh`) source
-`../../setcloudenv.sh`.
+`scripts/setcloudenv.sh`.
 
 ### Start the Worker
 
 In a terminal, start the worker, using Temporal Cloud:
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/pyai/durable
 ./startcloudworker.sh
 ```
 
@@ -516,18 +516,18 @@ If you want to use the Java Open Investment Account Workflow,
 you need to specify the name of the Task Queue when running the Python worker:
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/pyai/durable
 ./startcloudworker.sh Open-Account-Java
 ```
 
 and then start the Java worker, making sure you pass in the same name as you did 
 when you started the Python worker. See
-[Running Using Temporal Cloud](../../java/README.md#running-using-temporal-cloud) in the Java README
+[Running Using Temporal Cloud](../../../../interop/open_account/java/README.md#running-using-temporal-cloud) in the Java README
 for the PKCS8 key it needs.
 
 ```bash
-cd java
-./startcloudworker.sh Open-Account-Java
+cd interop/open_account/java
+TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startcloudworker.sh Open-Account-Java
 ```
 
 ### Start the API
@@ -535,15 +535,15 @@ cd java
 In another terminal, start the API using Temporal Cloud
 
 ```bash
-cd src/api
-./startcloudapi.sh
+cd src/python/api
+TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startcloudapi.sh
 ```
 
 And in another terminal, start the UX:
 
 ### Start the UX
 ```bash
-cd src/frontend
+cd frontend
 npm install
 npm start
 ```
@@ -553,7 +553,7 @@ A new browser window opens where you can interact with the application.
 If you are opening a new investment account, in another terminal
 ### Send the Compliance Reviewed Signal (Cloud)
 ```bash
-cd src/temporal_supervisor
+cd src/python/pyai/durable
 ./cloudsendcomplianceapproval.sh "<Child Workflow ID>"
 ```
 

@@ -13,17 +13,18 @@ from pydantic_ai.durable_exec.temporal import (
 )
 
 from common.client_helper import ClientHelper
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities
-from temporal_supervisor.activities.local_activities import LocalActivities
-from temporal_supervisor.activities.clients import ClientActivities
-from temporal_supervisor.activities.open_account import OpenAccount
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.activities.funding import Funding
-from temporal_supervisor.activities.custodian import Custodian
-from temporal_supervisor.model_config import LLM_MAX_CALLS_PER_SECOND, LLM_TASK_QUEUE
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.task_queues import DEFAULT_TASK_QUEUE
+from durable.activities.event_stream_activities import EventStreamActivities
+from durable.activities.local_activities import LocalActivities
+from durable.activities.clients import ClientActivities
+from durable.activities.open_account import OpenAccount
+from durable.activities.investments import Investments
+from durable.activities.funding import Funding
+from durable.activities.custodian import Custodian
+from durable.model_config import LLM_MAX_CALLS_PER_SECOND, LLM_TASK_QUEUE
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
 
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin
 
 from temporalio.envconfig import ClientConfig
 
@@ -39,7 +40,7 @@ async def main():
     logging.basicConfig(level=logging.INFO,
         format="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s")
     
-    client_helper = ClientHelper()
+    client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
     # Normally the worker runs the supervisor workflow and its agents. To just test the
     # open account workflow (startlocalopenaccount.sh), SKIP_AGENTS leaves them out: the
     # agents build their OpenAI model on import, which needs a key. PydanticAIPlugin stays
@@ -48,7 +49,7 @@ async def main():
         WealthManagementWorkflow = None
         print("******* Skipping the agents (SKIP_AGENTS=True): no supervisor workflow or model calls *******")
     else:
-        from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+        from durable.workflows.supervisor_workflow import WealthManagementWorkflow
     plugins = [ PydanticAIPlugin(), ClaimCheckPlugin() ]
     print(f"address is {client_helper.address} and plugins are {plugins}")
     client = await Client.connect(**client_helper.client_config,

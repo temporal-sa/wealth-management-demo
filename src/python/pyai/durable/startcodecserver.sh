@@ -1,8 +1,7 @@
 #!/bin/bash
+cd "$(dirname "$0")" || exit 1
 echo "****************************************"
 echo "* Remember to start your Redis Server! *"
 echo "****************************************"
-[ -f ../../setclaimcheck.sh ] && source ../../setclaimcheck.sh
-# set the python path up to the src folder to avoid Error while finding module specification
-export PYTHONPATH="${PYTHONPATH}:../../src"
-uv run python -m codec_server.codec_server
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
+uv run python -m durable.codec_server.codec_server

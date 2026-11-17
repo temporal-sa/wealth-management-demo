@@ -1,4 +1,4 @@
-"""The standalone (non-Temporal) version in py_supervisor, with stand-in models.
+"""The standalone (non-Temporal) version in standalone/, with stand-in models.
 
 No OpenAI API key, Temporal server or Redis needed.
 """
@@ -10,11 +10,11 @@ import pytest
 from pydantic_ai.messages import ModelMessage, ModelResponse, ToolCallPart, UserPromptPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-import common.agents as agents
-from common.agent_constants import ROUTING_FALLBACK_RESPONSE, SUPERVISOR_AGENT_NAME
-from common.domain_classes import OpenInvestmentAccountInput
+import pyai_agents.agents as agents
+from prompts.agent_constants import ROUTING_FALLBACK_RESPONSE, SUPERVISOR_AGENT_NAME
+from pyai_agents.domain_classes import OpenInvestmentAccountInput
 from common.investment_manager import InvestmentManager
-from py_supervisor.main import PydanticAIWealthManagement
+from standalone.main import PydanticAIWealthManagement
 
 
 @pytest.fixture

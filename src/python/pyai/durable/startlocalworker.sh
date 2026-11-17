@@ -1,9 +1,8 @@
 #!/bin/bash
-[ -f ../../setclaimcheck.sh ] && source ../../setclaimcheck.sh
-source ../../setoaikey.sh
+cd "$(dirname "$0")" || exit 1
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
+source ../../../../scripts/setoaikey.sh
 # if you pass in a parameter, use that as the task queue
 # for the Open Account workflow
-source ../../setsplitworkflows.sh $1
-# set the python path up to the src folder to avoid Error while finding module specification
-export PYTHONPATH="${PYTHONPATH}:../../src"
-uv run python -m temporal_supervisor.run_worker
+source ../../../../scripts/setsplitworkflows.sh $1
+uv run python -m durable.run_worker

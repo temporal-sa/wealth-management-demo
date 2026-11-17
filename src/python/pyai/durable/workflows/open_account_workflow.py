@@ -3,14 +3,14 @@ from temporalio import workflow
 from temporalio.exceptions import ActivityError, ApplicationError
 
 from common.investment_manager import InvestmentAccount
-from temporal_supervisor.activities.clients import ClientActivities
-from temporal_supervisor.activities.custodian import Custodian
-from temporal_supervisor.activities.funding import Funding
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.retry_policies import TOOL_RETRY_POLICY, TOOL_START_TO_CLOSE_TIMEOUT
+from durable.activities.clients import ClientActivities
+from durable.activities.custodian import Custodian
+from durable.activities.funding import Funding
+from durable.activities.investments import Investments
+from durable.retry_policies import TOOL_RETRY_POLICY, TOOL_START_TO_CLOSE_TIMEOUT
 from common.account_context import UpdateAccountOpeningStateInput
 
-from common.domain_classes import OpenInvestmentAccountInput, OpenInvestmentAccountOutput, WealthManagementClient
+from pyai_agents.domain_classes import OpenInvestmentAccountInput, OpenInvestmentAccountOutput, WealthManagementClient
 
 @workflow.defn
 class OpenInvestmentAccountWorkflow:

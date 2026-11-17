@@ -17,7 +17,7 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.usage import RunUsage
 
-from common.agents import (
+from pyai_agents.agents import (
     AgentDependencies,
     customer_said,
     respond_about_account_opening,
@@ -107,8 +107,8 @@ async def test_agents_get_their_instructions_with_a_shared_history():
     from pydantic_ai.messages import ModelMessage
     from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-    from common.agent_constants import OPEN_ACCOUNT_INSTRUCTIONS
-    from common.agents import open_account_agent
+    from prompts.agent_constants import OPEN_ACCOUNT_INSTRUCTIONS
+    from pyai_agents.agents import open_account_agent
 
     sent = []
 

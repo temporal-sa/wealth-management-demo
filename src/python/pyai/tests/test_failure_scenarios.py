@@ -26,14 +26,14 @@ from temporalio.exceptions import ApplicationError
 from temporalio.testing import ActivityEnvironment, WorkflowEnvironment
 from temporalio.worker import Worker
 
-import temporal_supervisor.chaos as chaos
-import temporal_supervisor.model_config as model_config
+import durable.chaos as chaos
+import durable.model_config as model_config
 from common.chaos_manager import ChaosFlag, ChaosManager
-from common.domain_classes import OpenInvestmentAccountInput
+from pyai_agents.domain_classes import OpenInvestmentAccountInput
 from common.funding_manager import FundingManager, InsufficientFundsError
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.activities.investments import Investments
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 TASK_QUEUE = "test-failure-scenarios"
 CLIENT_ID = "C-1"
@@ -322,7 +322,7 @@ async def test_supervisor_workflow_passes_sandbox_validation(temporal_env):
 
 def test_client_id_tools_run_in_the_workflow():
     # set_client_id changes deps, which would be lost if it ran in an activity.
-    from temporal_supervisor.workflows.supervisor_workflow import temporal_super_agent
+    from durable.workflows.supervisor_workflow import temporal_super_agent
 
     toolset = next(t for t in temporal_super_agent._toolsets if t.id == "<agent>")
     assert toolset.tool_activity_config == {"get_client_id": False, "set_client_id": False}

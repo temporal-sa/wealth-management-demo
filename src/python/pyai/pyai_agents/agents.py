@@ -7,7 +7,7 @@ import re
 from pydantic_ai import Agent, RunContext, ModelRetry
 from pydantic_ai.messages import ToolCallPart, ToolReturnPart, UserPromptPart
 
-from common.agent_constants import (
+from prompts.agent_constants import (
     AGENT_MODEL,
     SUPERVISOR_AGENT_NAME, SUPERVISOR_INSTRUCTIONS,
     BENE_AGENT_NAME, BENE_INSTRUCTIONS,
@@ -16,7 +16,7 @@ from common.agent_constants import (
 )
 from common.beneficiaries_manager import BeneficiariesManager
 from common.investment_manager import InvestmentManager, InvestmentAccount
-from common.domain_classes import OpenInvestmentAccountInput, WealthManagementClient
+from pyai_agents.domain_classes import OpenInvestmentAccountInput, WealthManagementClient
 
 from temporalio import workflow
 from temporalio.exceptions import ActivityError, ApplicationError
@@ -24,14 +24,15 @@ from temporalio.workflow import ParentClosePolicy
 from temporalio.client import Client, WorkflowHandle
 
 from common.client_helper import ClientHelper
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from temporal_supervisor.activities.open_account import OpenAccount
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.retry_policies import TOOL_RETRY_POLICY, TOOL_START_TO_CLOSE_TIMEOUT
+from durable.task_queues import DEFAULT_TASK_QUEUE
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.activities.open_account import OpenAccount
+from durable.activities.investments import Investments
+from durable.retry_policies import TOOL_RETRY_POLICY, TOOL_START_TO_CLOSE_TIMEOUT
 
 with workflow.unsafe.imports_passed_through():
-    from temporal_supervisor.chaos import core_banking_api
-    from temporal_supervisor.model_config import ChaosAwareModel, agent_model as build_agent_model
+    from durable.chaos import core_banking_api
+    from durable.model_config import ChaosAwareModel, agent_model as build_agent_model
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ def debug_print(message: str):
 # Import Temporal plugins for the helper function
 try:
     from pydantic_ai.durable_exec.temporal import PydanticAIPlugin
-    from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
+    from common.claim_check.claim_check_plugin import ClaimCheckPlugin
 except ImportError as e:
     logger.error(f"Unable to initialize plugins: {e}")
     PydanticAIPlugin = None
@@ -161,7 +162,7 @@ async def _current_investments(client_id: str) -> list:
     """The client's investment accounts, read fresh from the system.
 
     Inside the Temporal workflow this has to be an activity (no file I/O in workflow
-    code); the standalone version (py_supervisor) reads them directly.
+    code); the standalone version (standalone/) reads them directly.
     """
     if workflow.in_workflow():
         return await workflow.execute_activity(
@@ -415,7 +416,7 @@ async def route_from_investment_to_open_account(ctx: RunContext[AgentDependencie
         ctx.deps.client_id = client_id
 
         if not workflow.in_workflow():
-            # Standalone version (py_supervisor): no account opening workflow, so the
+            # Standalone version (standalone/): no account opening workflow, so the
             # account is simply added, like the open_investment tool of the OpenAI
             # Agents SDK standalone version.
             InvestmentManager().add_investment_account(
@@ -563,7 +564,7 @@ Is this information correct and up to date? Please confirm.
 
 # helper function
 async def get_workflow_handle(workflow_id) -> WorkflowHandle:
-    client_helper = ClientHelper()
+    client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
     print(f"(OpenAccount.get_temporal_client) address is {client_helper.address}")
     the_client = await Client.connect(**client_helper.client_config,
                                       plugins=[ PydanticAIPlugin(), ClaimCheckPlugin() ])

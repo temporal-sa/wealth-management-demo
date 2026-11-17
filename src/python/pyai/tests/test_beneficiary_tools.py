@@ -9,9 +9,9 @@ from pydantic_ai import ModelRetry, RunContext
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.usage import RunUsage
 
-import common.agents as agents
-from common.agent_constants import BENE_INSTRUCTIONS
-from common.agents import AgentDependencies, delete_beneficiaries
+import pyai_agents.agents as agents
+from prompts.agent_constants import BENE_INSTRUCTIONS
+from pyai_agents.agents import AgentDependencies, delete_beneficiaries
 from common.beneficiaries_manager import BeneficiariesManager
 
 # Two beneficiaries with the same name: only the id tells them apart.

@@ -8,8 +8,8 @@ from pydantic_ai import ModelRetry, RunContext
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.usage import RunUsage
 
-import common.agents as agents
-from common.agents import AgentDependencies, close_investment, list_investments
+import pyai_agents.agents as agents
+from pyai_agents.agents import AgentDependencies, close_investment, list_investments
 from common.investment_manager import InvestmentAccount, InvestmentManager
 
 

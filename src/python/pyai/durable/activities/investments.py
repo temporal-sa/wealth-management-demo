@@ -6,7 +6,7 @@ from temporalio.exceptions import ApplicationError
 with workflow.unsafe.imports_passed_through():
     from common.investment_manager import InvestmentManager, InvestmentAccount
     from common.chaos_manager import ChaosFlag
-    from temporal_supervisor.chaos import core_banking_api, is_enabled, maybe_slow_down
+    from durable.chaos import core_banking_api, is_enabled, maybe_slow_down
 
 MIN_INITIAL_DEPOSIT = 100.0
 MAX_INITIAL_DEPOSIT = 1_000_000.0

@@ -1,5 +1,4 @@
 #!/bin/bash
-source ../../setoaikey.sh
-# set the python path up to the src folder to avoid Error while finding module specification
-export PYTHONPATH="${PYTHONPATH}:../../src"
-uv run python -m py_supervisor.main
+cd "$(dirname "$0")" || exit 1
+source ../../../../scripts/setoaikey.sh
+uv run python -m standalone.main

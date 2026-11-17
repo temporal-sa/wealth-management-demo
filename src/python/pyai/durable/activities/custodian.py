@@ -3,7 +3,7 @@ from temporalio.exceptions import ApplicationError
 
 with workflow.unsafe.imports_passed_through():
     from common.chaos_manager import ChaosFlag
-    from temporal_supervisor.chaos import inject_failure, maybe_slow_down
+    from durable.chaos import inject_failure, maybe_slow_down
 
 
 class Custodian:

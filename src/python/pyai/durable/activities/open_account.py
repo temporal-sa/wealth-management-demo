@@ -4,16 +4,17 @@ from temporalio import activity
 from temporalio.client import WorkflowHandle, Client
 
 from common.client_helper import ClientHelper
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from temporal_supervisor.activities.clients import WealthManagementClient
+from durable.task_queues import DEFAULT_TASK_QUEUE
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.activities.clients import WealthManagementClient
 
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin
 
 class OpenAccount:
 
     @staticmethod
     async def get_workflow_handle(workflow_id) -> WorkflowHandle:
-        client_helper = ClientHelper()
+        client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
         print(f"(OpenAccount.get_temporal_client) address is {client_helper.address}")
         the_client = await Client.connect(**client_helper.client_config,
                                           plugins=[

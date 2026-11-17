@@ -5,7 +5,7 @@ from typing import List
 
 from pydantic_ai import Agent, ModelMessage
 
-from common.agent_constants import (
+from prompts.agent_constants import (
     BENE_AGENT_NAME,
     INVEST_AGENT_NAME,
     MAX_ROUTING_HOPS,
@@ -13,7 +13,7 @@ from common.agent_constants import (
     ROUTING_FALLBACK_RESPONSE,
     SUPERVISOR_AGENT_NAME,
 )
-from common.agents import (
+from pyai_agents.agents import (
     AgentDependencies,
     supervisor_agent,
     beneficiary_agent,
@@ -23,7 +23,7 @@ from common.agents import (
 
 ### Logging Configuration
 # logging.basicConfig(level=logging.INFO,
-#                     filename="py_supervisor.log",
+#                     filename="standalone.log",
 #                     format="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

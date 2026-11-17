@@ -20,18 +20,19 @@ src/<language>/
     standalone/       Framework-only CLI chat (was <x>_supervisor/)
     durable/          Temporal version: workflows, activities, worker, scripts (was temporal_supervisor/)
     prompts/          The agents' prompts (framework-specific)
+    <x>_agents/       (optional) Agent code both versions use, e.g. pyai/pyai_agents
     tests/
 ```
 
 ## Ports
 
-Only the reference port has been imported so far; the other folders hold a placeholder README.
+Two ports have been imported so far; the other folders hold a placeholder README.
 
 | Port | Language | Folder | Original repo |
 |---|---|---|---|
 | OpenAI Agents SDK (reference, imported) | Python | `src/python/openai_agents` | temporal-sa/oai-temporal-wealth-management |
 | Google ADK | Python | `src/python/google_adk` | temporal-sa/adk-wealth-management |
-| Pydantic AI | Python | `src/python/pyai` | temporal-sa/pyai-wealth-management |
+| Pydantic AI (imported) | Python | `src/python/pyai` | temporal-sa/pyai-wealth-management |
 | Strands Agents | Python | `src/python/strands_agents` | temporal-sa/strands-wealth-management |
 | Pure Python (LiteLLM) | Python | `src/python/pure` | temporal-sa/pure-wealth-management |
 | Vercel AI SDK | TypeScript | `src/typescript/vercel_ai` | temporal-sa/vai-wealth-management |
@@ -44,7 +45,7 @@ Create `src/<language>/<framework>/` with `standalone/`, `durable/`, `tests/` an
 
 ## Open decisions before migrating code
 
-- **Task queues:** every port defaults to `Supervisor`. Give each port its own default queue so two ports' workers can run at once.
-- **Chat workflow ID prefix:** make it a runtime setting of `frontend/` instead of a per-port edit.
+- **Task queues:** the OpenAI Agents port defaults to `Supervisor` and the Pydantic AI port to `PY-AI-Supervisor` (`durable/task_queues.py`), so those two can run at once. The shared API and Java worker default to `Supervisor`; start them with `TEMPORAL_TASK_QUEUE` set to the port's queue. Decide whether every port gets its own default.
+- **Chat workflow ID prefix:** `frontend/` gives every chat an `oai-temporal-agent-` ID, whichever port runs it (the Pydantic AI repo's copy used `pyai-temporal-agent-`). Make it a runtime setting.
 - **Python ADK port:** it has drifted from the PRD (own front end, own data, chaos flags per browser session). Decide whether to bring it back to the reference first.
-- **History:** import each repo the way the reference port was: on a branch, `git mv` its files into place in rename-only commits, then merge with `--allow-unrelated-histories`, so `git log --follow` reaches the original commits. (`git filter-repo --to-subdirectory-filter` also works if it is installed.)
+- **History:** import each repo the way the first two were: on a branch, `git mv` its files into place in rename-only commits, remove the files the monorepo already shares, then merge with `--allow-unrelated-histories`. The ports started from the same layout, so `git log --follow` on a moved file can show commits from more than one port; `git log <path-in-the-original-repo>` on the import's second parent shows one port's history.

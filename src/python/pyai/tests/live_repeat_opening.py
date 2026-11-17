@@ -29,15 +29,15 @@ from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-import common.agents as agents
-import temporal_supervisor.chaos as chaos
+import pyai_agents.agents as agents
+import durable.chaos as chaos
 from common.user_message import ChatInteraction, ProcessUserMessageInput
 from live_agent_handoffs import _turn_trace
-from temporal_supervisor.activities.clients import ClientActivities, WealthManagementClient
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.model_config import LLM_TASK_QUEUE
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.activities.clients import ClientActivities, WealthManagementClient
+from durable.activities.investments import Investments
+from durable.model_config import LLM_TASK_QUEUE
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 RUNS = max(1, int(os.getenv("LIVE_TEST_RUNS", "1")))
 TASK_QUEUE = "repeat-opening-live-test"
