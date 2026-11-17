@@ -31,7 +31,9 @@ npm start
 ```
 
 A browser window opens at http://localhost:3000. Click **Start Chat** to start a conversation. Each
-chat starts a new chat workflow with a random ID (`oai-temporal-agent-<random>`); **End Chat** ends it.
+chat starts a new chat workflow with a random ID named after the port the API serves, for example
+`oai-temporal-agent-<random>` or `pyai-temporal-agent-<random>` (the prefix comes from the API's
+`GET /config`); **End Chat** ends it.
 
 Click **Chaos** in the chat header to open the chaos panel, which turns failure scenarios on and off
 at runtime and lists the failures as they happen. See

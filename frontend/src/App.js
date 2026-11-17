@@ -3,6 +3,26 @@ import './App.css';
 import { API_BASE_URL } from './config';
 import ChaosPanel from './ChaosPanel';
 
+// Used if the API doesn't report its port's prefix (an API without GET /config).
+const DEFAULT_WORKFLOW_ID_PREFIX = 'oai-temporal-agent-';
+
+// The chat workflow ID prefix of the port the API serves (e.g. pyai-temporal-agent-),
+// so each workflow ID names the SDK that runs it.
+async function fetchWorkflowIdPrefix() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/config`);
+    if (response.ok) {
+      const config = await response.json();
+      if (config.workflow_id_prefix) {
+        return config.workflow_id_prefix;
+      }
+    }
+  } catch (error) {
+    console.log(`Couldn't read the API's config, using the default workflow ID prefix: ${error}`);
+  }
+  return DEFAULT_WORKFLOW_ID_PREFIX;
+}
+
 const SHOW_CHAOS_KEY = 'showChaosPanel';
 
 function loadShowChaos() {
@@ -27,7 +47,6 @@ function App() {
   let [isPolling, setIsPolling] = useState(false);
   const [isWaitingForAIResponse, setIsWaitingForAIResponse] = useState(false);
   const defaultHeaderText = 'Chat session started.';
-  const workflow_id_prefix = 'oai-temporal-agent-';
   const [workflow_id, setWorkflowId] = useState('');
   const [showChaos, setShowChaos] = useState(loadShowChaos);
 
@@ -83,7 +102,7 @@ function App() {
     try {
       let response;
       const newSessionId = Math.random().toString(36).substring(2, 15);
-      const newWorkflowId = workflow_id_prefix + newSessionId;
+      const newWorkflowId = (await fetchWorkflowIdPrefix()) + newSessionId;
       console.log(`Getting ready to start workflow with id ${newWorkflowId}`);
       response = await fetch(`${API_BASE_URL}/start-workflow?workflow_id=${newWorkflowId}`, { method: 'POST' });
       if (response.ok) {

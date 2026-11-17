@@ -109,3 +109,11 @@ async def test_the_api_client_starts_messages_and_ends_the_real_chat_workflow(mo
 
             await api_client.end_chat(api, workflow_id)
             await asyncio.wait_for(env.client.get_workflow_handle(workflow_id).result(), timeout=10)
+
+
+def test_the_api_knows_this_ports_task_queue():
+    """./startlocalapi.sh pyai starts chats where this port's worker listens by default."""
+    from api.ports import PORTS
+    from durable.task_queues import DEFAULT_TASK_QUEUE
+
+    assert PORTS["pyai"].task_queue == DEFAULT_TASK_QUEUE

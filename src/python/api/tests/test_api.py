@@ -13,6 +13,7 @@ the real chat workflow (src/python/openai_agents/tests/test_api_client.py).
 import asyncio
 import os
 import uuid
+from contextlib import contextmanager
 from datetime import timedelta
 
 import pytest
@@ -63,21 +64,30 @@ async def temporal_env():
             yield env
 
 
-@pytest.fixture(scope="module")
-def http(temporal_env, tmp_path_factory):
-    """The API, connected to the test server and starting chats on TASK_QUEUE."""
+@contextmanager
+def api(temporal_env, tmp_path_factory, **settings):
+    """The API, connected to the test server, with these environment settings (None unsets)."""
     empty_config = tmp_path_factory.mktemp("temporal") / "temporal.toml"
     empty_config.write_text("")
     with pytest.MonkeyPatch.context() as env:
         env.setenv("TEMPORAL_CONFIG_FILE", str(empty_config))
         env.setenv("TEMPORAL_ADDRESS", temporal_env.client.service_client.config.target_host)
         env.setenv("TEMPORAL_NAMESPACE", temporal_env.client.namespace)
-        env.setenv("TEMPORAL_TASK_QUEUE", TASK_QUEUE)
-        env.delenv("USE_CLAIM_CHECK", raising=False)
+        for name in ("USE_CLAIM_CHECK", "CHAT_PORT", "CHAT_WORKFLOW_ID_PREFIX", "TEMPORAL_TASK_QUEUE"):
+            env.delenv(name, raising=False)
+        for name, value in settings.items():
+            env.setenv(name, value)
         from api.main import app
 
         with TestClient(app) as client:
             yield client
+
+
+@pytest.fixture(scope="module")
+def http(temporal_env, tmp_path_factory):
+    """The API, starting chats on TASK_QUEUE."""
+    with api(temporal_env, tmp_path_factory, TEMPORAL_TASK_QUEUE=TASK_QUEUE) as client:
+        yield client
 
 
 async def post(http, path: str, **params) -> dict:
@@ -167,3 +177,45 @@ async def test_get_chat_history_returns_the_events_from_the_index(http, monkeypa
 async def test_set_chaos_rejects_an_unknown_flag(http):
     response = await asyncio.to_thread(http.post, "/chaos", params={"flag": "not_a_flag", "enabled": True})
     assert response.status_code == 400
+
+
+async def test_config_reports_the_default_port(http):
+    response = await asyncio.to_thread(http.get, "/config")
+    assert response.json() == {
+        "port": "openai_agents",
+        "label": "OpenAI Agents SDK",
+        "task_queue": TASK_QUEUE,
+        "workflow_id_prefix": "oai-temporal-agent-",
+    }
+
+
+async def test_chat_port_picks_the_ports_task_queue_and_workflow_id_prefix(temporal_env, tmp_path_factory):
+    with api(temporal_env, tmp_path_factory, CHAT_PORT="pyai") as client:
+        config = (await asyncio.to_thread(client.get, "/config")).json()
+        assert config == {
+            "port": "pyai",
+            "label": "Pydantic AI",
+            "task_queue": "PY-AI-Supervisor",
+            "workflow_id_prefix": "pyai-temporal-agent-",
+        }
+
+        workflow_id = config["workflow_id_prefix"] + uuid.uuid4().hex[:12]
+        assert await post(client, "/start-workflow", workflow_id=workflow_id) == {"message": "Workflow started."}
+
+    handle = temporal_env.client.get_workflow_handle(workflow_id)
+    assert (await handle.describe()).task_queue == "PY-AI-Supervisor"
+    await handle.terminate()
+
+
+async def test_settings_override_the_ports_values(temporal_env, tmp_path_factory):
+    with api(temporal_env, tmp_path_factory, CHAT_PORT="pyai", TEMPORAL_TASK_QUEUE="my-queue",
+             CHAT_WORKFLOW_ID_PREFIX="demo-") as client:
+        config = (await asyncio.to_thread(client.get, "/config")).json()
+    assert (config["task_queue"], config["workflow_id_prefix"]) == ("my-queue", "demo-")
+
+
+def test_an_unknown_chat_port_is_rejected(monkeypatch):
+    from api.ports import selected_port
+    monkeypatch.setenv("CHAT_PORT", "nope")
+    with pytest.raises(ValueError, match="openai_agents, pyai"):
+        selected_port()

@@ -22,7 +22,7 @@ This port was imported from [temporal-sa/pyai-wealth-management](https://github.
 | `prompts/` | The agents' instructions |
 | `tests/` | The port's tests |
 
-Its chat workflows run on the `PY-AI-Supervisor` task queue by default, so its worker can run next to another port's. Start the API and the Java worker with `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor` to use this port.
+Its chat workflows run on the `PY-AI-Supervisor` task queue by default, so its worker can run next to another port's. Start the API with `./startlocalapi.sh pyai`, which uses that queue and names each chat workflow `pyai-temporal-agent-<random>`, and the Java worker with `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor`.
 
 Scenarios currently implemented include:
 * Add Beneficiary - add a new beneficiary to your account
