@@ -1,0 +1,29 @@
+# Secrets: commit only .example files
+set*key.sh
+setcloudenv.sh
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Java / Gradle
+.gradle/
+interop/**/build/
+!interop/**/gradle/wrapper/gradle-wrapper.jar
+
+# Go
+/src/go/bin/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
