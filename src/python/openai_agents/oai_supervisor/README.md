@@ -24,17 +24,19 @@ Redis and Temporal are not needed for this version.
 ## Set up Python Environment
 From the repository root:
 ```bash
+cd src/python/openai_agents
 uv sync
 ```
 
 ## Set up your OpenAI API Key
- 
+
+From the repository root:
 ```bash
-cp setoaikey.example setoaikey.sh
-chmod +x setoaikey.sh
+cp scripts/setoaikey.example scripts/setoaikey.sh
+chmod +x scripts/setoaikey.sh
 ```
 
-Now edit the setoaikey.sh file and paste in your OpenAI API Key.
+Now edit scripts/setoaikey.sh and paste in your OpenAI API Key.
 It should look something like this:
 ```text
 export OPENAI_API_KEY=sk-proj-....
@@ -43,8 +45,9 @@ export OPENAI_API_KEY=sk-proj-....
 ## Running the agent
 From the repository root:
 ```bash
-source setoaikey.sh
-uv run python src/oai_supervisor/main.py
+source scripts/setoaikey.sh
+cd src/python/openai_agents
+uv run python oai_supervisor/main.py
 ```
 
 Example Output

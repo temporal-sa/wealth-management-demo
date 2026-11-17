@@ -1,9 +1,9 @@
 #!/bin/bash
 # Starts the Java Open Account worker against Temporal Cloud, using the connection settings
-# in ../setcloudenv.sh (see src/temporal_supervisor/setcloudenv.example) and the claim check
-# settings in ../setclaimcheck.sh.
+# in ../../../scripts/setcloudenv.sh (see scripts/setcloudenv.example) and the claim check
+# settings in ../../../scripts/setclaimcheck.sh.
 # The argument is the Open Account task queue; pass the same value to
-# src/temporal_supervisor/startcloudworker.sh so the Python supervisor starts the workflow there.
+# src/python/openai_agents/temporal_supervisor/startcloudworker.sh so the Python supervisor starts the workflow there.
 if [ -z "$1" ]
   then
     echo "**** Missing required parameter: Task Queue Name for the Open Account Workflow"
@@ -14,13 +14,13 @@ fi
 cd "$(dirname "$0")" || exit 1
 export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"
 
-if [ ! -f ../setcloudenv.sh ]; then
-  echo "**** ../setcloudenv.sh not found. Copy src/temporal_supervisor/setcloudenv.example to the"
-  echo "repository root as setcloudenv.sh and fill in your Temporal Cloud details."
+if [ ! -f ../../../scripts/setcloudenv.sh ]; then
+  echo "**** ../../../scripts/setcloudenv.sh not found. Copy scripts/setcloudenv.example to"
+  echo "scripts/setcloudenv.sh and fill in your Temporal Cloud details."
   exit 1
 fi
-[ -f ../setclaimcheck.sh ] && source ../setclaimcheck.sh
-source ../setcloudenv.sh
+[ -f ../../../scripts/setclaimcheck.sh ] && source ../../../scripts/setclaimcheck.sh
+source ../../../scripts/setcloudenv.sh
 
 # Map the settings in setcloudenv.sh to the names the Java worker reads
 # (common/ServerInfo.java for the activity client, application-tc.yaml for the worker).
@@ -29,17 +29,17 @@ KEY_PATH="${TEMPORAL_KEY_PKCS8_PATH:-${TEMPORAL_KEY_PATH:-$TEMPORAL_TLS_CLIENT_K
 
 for var in TEMPORAL_ADDRESS TEMPORAL_NAMESPACE TEMPORAL_CERT_PATH; do
   if [ -z "${!var}" ]; then
-    echo "**** $var is not set. Check ../setcloudenv.sh."
+    echo "**** $var is not set. Check ../../../scripts/setcloudenv.sh."
     exit 1
   fi
 done
 if [ -z "$KEY_PATH" ]; then
-  echo "**** No client key set. Set TEMPORAL_TLS_CLIENT_KEY_PATH (or TEMPORAL_KEY_PKCS8_PATH) in ../setcloudenv.sh."
+  echo "**** No client key set. Set TEMPORAL_TLS_CLIENT_KEY_PATH (or TEMPORAL_KEY_PKCS8_PATH) in ../../../scripts/setcloudenv.sh."
   exit 1
 fi
 for file in "$TEMPORAL_CERT_PATH" "$KEY_PATH"; do
   if [ ! -r "$file" ]; then
-    echo "**** Cannot read $file. Check the paths in ../setcloudenv.sh."
+    echo "**** Cannot read $file. Check the paths in ../../../scripts/setcloudenv.sh."
     exit 1
   fi
 done
@@ -53,7 +53,7 @@ if ! grep -q -- "-----BEGIN PRIVATE KEY-----" "$KEY_PATH"; then
   echo ""
   echo "  openssl pkcs8 -topk8 -nocrypt -in \"$KEY_PATH\" -out \"$PKCS8_PATH\""
   echo ""
-  echo "then add this line to ../setcloudenv.sh (the Python worker keeps using TEMPORAL_TLS_CLIENT_KEY_PATH):"
+  echo "then add this line to ../../../scripts/setcloudenv.sh (the Python worker keeps using TEMPORAL_TLS_CLIENT_KEY_PATH):"
   echo ""
   echo "  export TEMPORAL_KEY_PKCS8_PATH=\"$PKCS8_PATH\""
   exit 1

@@ -1,7 +1,7 @@
 #!/bin/bash
-source ../../setoaikey.sh
-[ -f ../../setclaimcheck.sh ] && source ../../setclaimcheck.sh
+source ../../../../scripts/setoaikey.sh
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
 # if you pass in a parameter, use that as the task queue
 # for the Open Account workflow
-source ../../setsplitworkflows.sh $1
+source ../../../../scripts/setsplitworkflows.sh $1
 uv run python run_worker.py

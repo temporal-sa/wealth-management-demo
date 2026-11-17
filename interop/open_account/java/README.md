@@ -2,7 +2,7 @@
 
 An optional Java (Spring Boot) implementation of `OpenInvestmentAccountWorkflow`, the child workflow
 the Open Account Agent starts to open a new investment account. It is a drop-in replacement for the
-Python version in [`src/temporal_supervisor/workflows/open_account_workflow.py`](../src/temporal_supervisor/workflows/open_account_workflow.py):
+Python version in [`src/python/openai_agents/temporal_supervisor/workflows/open_account_workflow.py`](../../../src/python/openai_agents/temporal_supervisor/workflows/open_account_workflow.py):
 same KYC and compliance steps, same saga (create the account record, debit the linked bank account,
 register with the custodian, with compensations in reverse order), and the same status updates
 signalled to the parent chat workflow.
@@ -20,7 +20,7 @@ Python `update_client` activity) and completes KYC.
 ## Prerequisites
 
 * [Java JDK 25](https://adoptium.net/) - the Gradle wrapper (`./gradlew`, Gradle 9.8.2) is included, so no separate Gradle install is needed
-* Everything the Python demo needs (Temporal CLI, Redis, uv, OpenAI API key). See the [Temporal README](../src/temporal_supervisor/README.md).
+* Everything the Python demo needs (Temporal CLI, Redis, uv, OpenAI API key). See the [Temporal README](../../../src/python/openai_agents/temporal_supervisor/README.md).
 
 ## Running Locally
 
@@ -31,46 +31,46 @@ worker with it, so the supervisor starts the child workflow on that queue (and d
 Python version of the workflow):
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/openai_agents/temporal_supervisor
 ./startlocalworker.sh Open-Account-Java
 ```
 
 Then, from the repository root, start the Java worker with the same name:
 
 ```bash
-cd java
+cd interop/open_account/java
 ./startlocalworker.sh Open-Account-Java
 ```
 
-The script sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` from the argument, sources `../setclaimcheck.sh`
+The script sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` from the argument, sources `scripts/setclaimcheck.sh`
 if it exists (claim check is optional) and runs `./gradlew runWorker`. It connects to `127.0.0.1:7233`, namespace `default`, as set
 in `src/main/resources/application.yaml`. When claim check is enabled, the Java worker uses the Redis at
 `spring.data.redis` in `application.yaml` (`localhost:6379`), not `REDIS_HOST` / `REDIS_PORT`.
 
-Start the API and the UX as described in the [Temporal README](../src/temporal_supervisor/README.md),
-and send the compliance approval with `src/temporal_supervisor/localsendcomplianceapproval.sh` as usual.
+Start the API and the UX as described in the [Temporal README](../../../src/python/openai_agents/temporal_supervisor/README.md),
+and send the compliance approval with `src/python/openai_agents/temporal_supervisor/localsendcomplianceapproval.sh` as usual.
 
 To try the Java workflow without the chat or an OpenAI key, run the open-account scenarios against it
-(with this worker running): `src/temporal_supervisor/startlocalopenaccount.sh Open-Account-Java`. See
-"Testing the Open Account workflow on its own" in the [Temporal README](../src/temporal_supervisor/README.md).
+(with this worker running): `src/python/openai_agents/temporal_supervisor/startlocalopenaccount.sh Open-Account-Java`. See
+"Testing the Open Account workflow on its own" in the [Temporal README](../../../src/python/openai_agents/temporal_supervisor/README.md).
 
 ## Running with Temporal Cloud
 
-Create `setcloudenv.sh` in the repository root (copy `src/temporal_supervisor/setcloudenv.example`)
-as described in the [Temporal README](../src/temporal_supervisor/README.md#running-the-demo-in-temporal-cloud).
+Create `scripts/setcloudenv.sh` (copy `scripts/setcloudenv.example`)
+as described in the [Temporal README](../../../src/python/openai_agents/temporal_supervisor/README.md#running-the-demo-in-temporal-cloud).
 Start the Python worker with the queue name, then the Java worker with the same name:
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/openai_agents/temporal_supervisor
 ./startcloudworker.sh Open-Account-Java
 ```
 
 ```bash
-cd java
+cd interop/open_account/java
 ./startcloudworker.sh Open-Account-Java
 ```
 
-The Java cloud script can be run from any directory. It sources `../setclaimcheck.sh` (if it exists) and `../setcloudenv.sh`, maps `TEMPORAL_TLS_CLIENT_CERT_PATH` to the
+The Java cloud script can be run from any directory. It sources `scripts/setclaimcheck.sh` (if it exists) and `scripts/setcloudenv.sh`, maps `TEMPORAL_TLS_CLIENT_CERT_PATH` to the
 `TEMPORAL_CERT_PATH` the Java worker reads, uses the Spring profile `tc`
 (`src/main/resources/application-tc.yaml`), and runs `./gradlew runWorker`. With this profile, the
 claim check Redis comes from `REDIS_HOST` / `REDIS_PORT` (default `localhost:6379`).
@@ -83,7 +83,7 @@ to convert it, for example:
 openssl pkcs8 -topk8 -nocrypt -in /path/to/key.key -out /path/to/key.pkcs8.key
 ```
 
-Then add the converted key to `setcloudenv.sh` (the Python components keep using
+Then add the converted key to `scripts/setcloudenv.sh` (the Python components keep using
 `TEMPORAL_TLS_CLIENT_KEY_PATH`):
 
 ```bash
@@ -101,10 +101,10 @@ workflow, so the workflow stays **Running**, paused at that line. To fix it, use
 workflow-task retry. Re-arm the bug afterwards, from the repository root:
 
 ```bash
-git checkout java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java
+git checkout interop/open_account/java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java
 ```
 
-See [Failure scenarios](../src/temporal_supervisor/README.md#failure-scenarios-chaos-panel) for the other scenarios.
+See [Failure scenarios](../../../src/python/openai_agents/temporal_supervisor/README.md#failure-scenarios-chaos-panel) for the other scenarios.
 
 ## Tests
 
@@ -112,6 +112,6 @@ The saga, retry and workflow-bug tests use the Temporal Java SDK's in-memory tes
 stub activities, so no Temporal server, Redis or OpenAI key is needed:
 
 ```bash
-cd java
+cd interop/open_account/java
 ./gradlew test
 ```

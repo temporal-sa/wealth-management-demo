@@ -1,8 +1,0 @@
-__pycache__
-/setoaikey.sh
-/setcloudenv.sh
-/setclaimcheck.sh
-.venv
-.idea
-.DS_Store
-dump.rdb

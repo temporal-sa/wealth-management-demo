@@ -5,10 +5,10 @@
 # OpenAI Agents plugin (SKIP_OPENAI_PLUGIN=True), and stops it when the scenarios finish.
 # Usage: startlocalopenaccount.sh [open-account-task-queue]
 # With a task queue name, the workflow runs on that queue: start the Java worker with
-# the same name first (java/startlocalworker.sh <queue>).
+# the same name first (interop/open_account/java/startlocalworker.sh <queue>).
 cd "$(dirname "$0")" || exit 1
-[ -f ../../setclaimcheck.sh ] && source ../../setclaimcheck.sh
-[ -f ../../setoaikey.sh ] && source ../../setoaikey.sh
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
+[ -f ../../../../scripts/setoaikey.sh ] && source ../../../../scripts/setoaikey.sh
 if [ -n "$1" ]; then
   export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"
   echo "*** Running the open-account workflow on task queue $1 (the Java worker must poll it). ***"

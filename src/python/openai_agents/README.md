@@ -3,10 +3,10 @@ Demonstrates how to use [OpenAI Agents SDK](https://openai.github.io/openai-agen
 Shows an example of just using OpenAI Agents SDK and another version that leverages [Temporal](https://temporal.io) to 
 wrap the agentic flow with Temporal.
 
-![](images/architecture.png)
+![](../../../docs/images/architecture.png)
 
-The vanilla OpenAI Agents SDK version of this example is located [here](src/oai_supervisor/README.md).
-The Temporal version of this example is located [here](src/temporal_supervisor/README.md).
+The vanilla OpenAI Agents SDK version of this example is located [here](oai_supervisor/README.md).
+The Temporal version of this example is located [here](temporal_supervisor/README.md).
 
 Scenarios currently implemented include
 * Add Beneficiary - add a new beneficiary to your account
@@ -22,7 +22,7 @@ Scenarios currently implemented include
 * Close Investment Account - closes an investment account
 * Off-topic questions - questions that aren't about beneficiaries or investment accounts are politely declined by the supervisor agent (handled in the agents' prompts)
 
-You can run through the scenarios with the Temporal version using a [Web Application](src/frontend/README.md).
+You can run through the scenarios with the Temporal version using a [Web Application](../../../frontend/README.md).
 The OpenAI Agents SDK version runs as a command-line chat.
 
 The demo data lives in the `data/` folder (`beneficiaries.json`, `clients.json`, `funding_accounts.json`, `investments.json`),
@@ -40,21 +40,24 @@ git checkout data/
 * [Temporal CLI](https://docs.temporal.io/cli#install) - Local Temporal service (Temporal version)
 * [Redis](https://redis.io/downloads/) - Stores conversation history, real-time status updates and the chaos panel's flags (Temporal version)
 * [Node.js](https://nodejs.org/en/download) 18 or later, with npm - Runs the web application (Temporal version)
-* [Java JDK 25](https://adoptium.net/) - Optional. Only needed for the Java version of the Open Investment Account workflow. The Gradle wrapper is included, so no separate Gradle install is needed. See [java/README.md](java/README.md).
+* [Java JDK 25](https://adoptium.net/) - Optional. Only needed for the Java version of the Open Investment Account workflow. The Gradle wrapper is included, so no separate Gradle install is needed. See [interop/open_account/java/README.md](../../../interop/open_account/java/README.md).
 
 ## Set up Python Environment
+From the repository root:
 ```bash
+cd src/python/openai_agents
 uv sync
 ```
 
 ## Set up your OpenAI API Key
- 
+
+From the repository root:
 ```bash
-cp setoaikey.example setoaikey.sh
-chmod +x setoaikey.sh
+cp scripts/setoaikey.example scripts/setoaikey.sh
+chmod +x scripts/setoaikey.sh
 ```
 
-Now edit the setoaikey.sh file and paste in your OpenAI API Key.
+Now edit scripts/setoaikey.sh and paste in your OpenAI API Key.
 It should look something like this:
 ```text
 export OPENAI_API_KEY=sk-proj-....
@@ -62,5 +65,5 @@ export OPENAI_API_KEY=sk-proj-....
 
 ## Getting Started
 
-* The OpenAI Agents SDK version of this example is located [here](src/oai_supervisor/README.md).
-* The Temporal version of this example is located [here](src/temporal_supervisor/README.md).
+* The OpenAI Agents SDK version of this example is located [here](oai_supervisor/README.md).
+* The Temporal version of this example is located [here](temporal_supervisor/README.md).

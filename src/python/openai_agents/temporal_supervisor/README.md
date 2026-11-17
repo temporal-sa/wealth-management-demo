@@ -23,7 +23,7 @@ git checkout data/
 
 The overall application architecture looks like this:
 
-![](../../images/application-architecture.png)
+![](../../../../docs/images/application-architecture.png)
 
 There is a React UX which is where the customer interacts with the application. 
 The React UX leverages an [API](../api/README.md) which exposes endpoints to start a workflow, send a prompt,
@@ -48,23 +48,24 @@ use continue-as-new for long conversations (see the TODO in `workflows/superviso
 * [Temporal CLI](https://docs.temporal.io/cli#install) - Local Temporal service
 * [Redis](https://redis.io/downloads/) - Redis - Required to store the conversation history, status updates and chaos panel flags, and optional for the Claim Check pattern.
 * [Node.js](https://nodejs.org/en/download) 18 or later, with npm - Runs the React UX.
-* [Java JDK 25](https://adoptium.net/) - Java - Optional. Only needed if you want to run the Java Open Investment Account workflow. The Gradle wrapper is included, so no separate Gradle install is needed. See [java/README.md](../../java/README.md).
+* [Java JDK 25](https://adoptium.net/) - Java - Optional. Only needed if you want to run the Java Open Investment Account workflow. The Gradle wrapper is included, so no separate Gradle install is needed. See [interop/open_account/java/README.md](../../../../interop/open_account/java/README.md).
 
 ## Set up Python Environment
 From the repository root:
 ```bash
+cd src/python/openai_agents
 uv sync
 ```
 
 ## Set up your OpenAI API Key
 
-From the repository root (the worker scripts source `../../setoaikey.sh`, so it must be in the repository root):
+From the repository root (the worker scripts source `scripts/setoaikey.sh`):
 ```bash
-cp setoaikey.example setoaikey.sh
-chmod +x setoaikey.sh
+cp scripts/setoaikey.example scripts/setoaikey.sh
+chmod +x scripts/setoaikey.sh
 ```
 
-Now edit the setoaikey.sh file and paste in your OpenAI API Key.
+Now edit scripts/setoaikey.sh and paste in your OpenAI API Key.
 It should look something like this:
 ```bash
 export OPENAI_API_KEY=sk-proj-....
@@ -88,7 +89,7 @@ export REDIS_PORT=6379
 ```
 
 The optional Java worker reads its Redis location (only used for Claim Check) from `spring.data.redis`
-in `java/src/main/resources/application.yaml` when run locally; see [java/README.md](../../java/README.md).
+in `interop/open_account/java/src/main/resources/application.yaml` when run locally; see [interop/open_account/java/README.md](../../../../interop/open_account/java/README.md).
 
 ## Set up Claim Check (optional)
 
@@ -101,14 +102,14 @@ replaces it with the data stored in Redis.
 
 From the repository root:
 ```bash
-cp setclaimcheck.example setclaimcheck.sh
-chmod +x setclaimcheck.sh
+cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
+chmod +x scripts/setclaimcheck.sh
 ```
 
 Claim Check is optional. The start scripts (worker, API, codec server, compliance approval) source
-`setclaimcheck.sh` if it exists; if you haven't created it, they run without Claim Check.
+`scripts/setclaimcheck.sh` if it exists; if you haven't created it, they run without Claim Check.
 
-Now edit the setclaimcheck.sh file and fill in the location of Redis
+Now edit scripts/setclaimcheck.sh and fill in the location of Redis
 It should look something like this:
 ```bash
 export USE_CLAIM_CHECK=true
@@ -133,11 +134,11 @@ If you have decided to set up the Claim Check above, you will
 most likely want to also run a Codec Server to be able to see the actual sent to 
 the workflow and activities. 
 
-Be sure you have updated the setclaimcheck.sh as mentioned above.
+Be sure you have updated scripts/setclaimcheck.sh as mentioned above.
 
 To run the Codec Server:
 ```bash
-cd src/temporal_supervisor
+cd src/python/openai_agents/temporal_supervisor
 ./startcodecserver.sh
 ```
 
@@ -159,15 +160,15 @@ extra spaces at the end of the URL or it will not work. You can turn off the two
 user access token and Include cross-origin credentials. Click on apply and you have configured 
 the codec server. 
 
-![](../../images/config-codec-server.png)
+![](../../../../docs/images/config-codec-server.png)
 
 As you run through different scenarios, you'll be able to see the decoded values in the browser.
 
-![](../../images/decoded-input.png)
+![](../../../../docs/images/decoded-input.png)
 
 If you remove the codec server settings, you won't be able to see anything other than a BASE64 Encoded ID.
 
-![](../../images/encoded-input.png)
+![](../../../../docs/images/encoded-input.png)
 
 ## Running the Demo Locally
 Start Temporal Locally.
@@ -187,7 +188,7 @@ All of the commands below start from the repository root, each in its own termin
 ### Start the Worker using Python Open Investment Account Workflow (default)
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/openai_agents/temporal_supervisor
 ./startlocalworker.sh
 ```
 
@@ -200,36 +201,36 @@ you need to specify the name of the Task Queue when running the Python worker
 doesn't register the Python Open Account workflow):
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/openai_agents/temporal_supervisor
 ./startlocalworker.sh Open-Account-Java
 ```
 and then start the Java worker, making sure you pass in the same name as you did 
 when you started the Python worker
 
 ```bash
-cd java
+cd interop/open_account/java
 ./startlocalworker.sh Open-Account-Java
 ```
 
-See [java/README.md](../../java/README.md) for details.
+See [interop/open_account/java/README.md](../../../../interop/open_account/java/README.md) for details.
 
 ### Start the API
 
 ```bash
-cd src/api
+cd src/python/openai_agents/api
 ./startlocalapi.sh
 ```
 ### Start the UX
 
 The first time, install the dependencies:
 ```bash
-cd src/frontend
+cd frontend
 npm install
 ```
 
 Then start it:
 ```bash
-cd src/frontend
+cd frontend
 npm start
 ```
 
@@ -239,7 +240,7 @@ chat gets its own workflow ID (`oai-temporal-agent-<random>`).
 If you are opening a new investment account, in another terminal
 ### Send the Compliance Reviewed Signal 
 ```bash
-cd src/temporal_supervisor
+cd src/python/openai_agents/temporal_supervisor
 ./localsendcomplianceapproval.sh <Child Workflow ID>
 ```
 
@@ -265,15 +266,14 @@ temporal workflow signal --workflow-id "<Child Workflow ID>" --name compliance_a
 
 ## Running the Demo in Temporal Cloud
 
-Copy the setcloudenv.example, located in the src/temporal_supervisor folder to the project root and name it setcloudenv.sh .
-The cloud scripts source it from there (`../../setcloudenv.sh`).
+Copy `scripts/setcloudenv.example` to `scripts/setcloudenv.sh`. The cloud scripts (worker, API, compliance approval and the Java worker) source it from there.
 
 From the repository root:
 ```bash
-cp src/temporal_supervisor/setcloudenv.example setcloudenv.sh
+cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
-Edit setcloudenv.sh to match your Temporal Cloud account:
+Edit scripts/setcloudenv.sh to match your Temporal Cloud account:
 ```bash
 export TEMPORAL_ADDRESS=<namespace>.<accountID>.tmprl.cloud:7233
 export TEMPORAL_NAMESPACE=<namespace>.<accountID>
@@ -283,7 +283,7 @@ export TEMPORAL_TLS_CLIENT_KEY_PATH="/path/to/key.key"
 
 ### Start the Worker
 ```bash
-cd src/temporal_supervisor
+cd src/python/openai_agents/temporal_supervisor
 ./startcloudworker.sh
 ```
 
@@ -291,30 +291,30 @@ If you want to use the Java Open Investment Account Workflow,
 you need to specify the name of the Task Queue when running the Python worker:
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/openai_agents/temporal_supervisor
 ./startcloudworker.sh Open-Account-Java
 ```
 and then start the Java worker, making sure you pass in the same name as you did 
 when you started the Python worker
 
 ```bash
-cd java
+cd interop/open_account/java
 ./startcloudworker.sh Open-Account-Java
 ```
 
 The Java cloud worker needs the client key in PKCS8 format; the script prints the `openssl`
-command to convert it if needed. See [java/README.md](../../java/README.md#running-with-temporal-cloud).
+command to convert it if needed. See [interop/open_account/java/README.md](../../../../interop/open_account/java/README.md#running-with-temporal-cloud).
 
 ### Start the API
 
 ```bash
-cd src/api
+cd src/python/openai_agents/api
 ./startcloudapi.sh
 ```
 ### Start the UX
 
 ```bash
-cd src/frontend
+cd frontend
 npm install   # first time only
 npm start
 ```
@@ -322,7 +322,7 @@ npm start
 If you are opening a new investment account, in another terminal
 ### Send the Compliance Reviewed Signal 
 ```bash
-cd src/temporal_supervisor
+cd src/python/openai_agents/temporal_supervisor
 ./cloudsendcomplianceapproval.sh <Child Workflow ID>
 ```
 
@@ -332,23 +332,23 @@ Find the Child Workflow ID in the Temporal Cloud UI (https://cloud.temporal.io) 
 Here are a few screenshots of the UX while opening a new account.
 
 Waiting for KYC to be confirmed:
-![](../../images/ux-waiting-kyc.png)
+![](../../../../docs/images/ux-waiting-kyc.png)
 
 Waiting for the Compliance Review to be done:
-![](../../images/ux-waiting-compliance-review.png)
+![](../../../../docs/images/ux-waiting-compliance-review.png)
 
 New account is complete and opened:
-![](../../images/ux-open-account-complete.png)
+![](../../../../docs/images/ux-open-account-complete.png)
 
 You can also add and delete beneficiaries.
 
 Here is a sample event history shown in the Temporal UX
 
-![](../../images/temporal-event-history-timeline.png)
+![](../../../../docs/images/temporal-event-history-timeline.png)
 
 And here is a sample event history for the Open Account workflow in the Temporal UX:
 
-![](../../images/child-workflow-event-history.png)
+![](../../../../docs/images/child-workflow-event-history.png)
 
 ## How the Open Account functionality works
 To demonstrate how to integrate other workflows within an Agentic system, when a user
@@ -407,20 +407,20 @@ compliance approval yourself. It stops the worker when the scenarios finish. Tem
 be running. The script can be run from any directory:
 
 ```bash
-src/temporal_supervisor/startlocalopenaccount.sh
+src/python/openai_agents/temporal_supervisor/startlocalopenaccount.sh
 ```
 
 With a task queue name, the workflow runs on that queue (`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT`), so you
-can run the same scenarios against the Java workflow (start `java/startlocalworker.sh <queue>` first):
+can run the same scenarios against the Java workflow (start `interop/open_account/java/startlocalworker.sh <queue>` first):
 
 ```bash
-src/temporal_supervisor/startlocalopenaccount.sh Open-Account-Java
+src/python/openai_agents/temporal_supervisor/startlocalopenaccount.sh Open-Account-Java
 ```
 
 When the output asks you to signal the third workflow, in another terminal run:
 
 ```bash
-cd src/temporal_supervisor
+cd src/python/openai_agents/temporal_supervisor
 ./localsendcomplianceapproval.sh testing-open-investment-account-workflow3
 ```
 
@@ -458,7 +458,7 @@ every flag off.
 | **Tool / API down** | Turn on *Core banking API down*, then ask to list your investments (or open an account, so it fails after compliance approval). Turn it off. | The activity retries (1s backoff, capped at 5s) for as long as the outage lasts. The agent waits mid-turn and answers once the API is back. Nothing is lost or re-asked. |
 | **LLM down** | Turn on *OpenAI API down* and send a message. Turn it off. | The model call is an activity, so it retries the same way (capped at 10s). The conversation picks up exactly where it was. |
 | **LLM rate limited (reactive)** | Turn on *OpenAI rate limited (429)* and send a message. | The model raises an `ApplicationError` with `next_retry_delay` (15s, like a `Retry-After` header), which overrides the retry policy's backoff. Real OpenAI 429s are handled the same way: the `OpenAIAgentsPlugin` turns the response's `Retry-After` header into the next retry delay. The OpenAI client's own retries are turned off (`max_retries=0`) so Temporal decides. |
-| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND` set (`cd src/temporal_supervisor && LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh`), then chat in several browser tabs at once. | Model calls run on their own task queue (`<TEMPORAL_TASK_QUEUE>-llm`, or `TEMPORAL_TASK_QUEUE_LLM`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
+| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND` set (`cd src/python/openai_agents/temporal_supervisor && LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh`), then chat in several browser tabs at once. | Model calls run on their own task queue (`<TEMPORAL_TASK_QUEUE>-llm`, or `TEMPORAL_TASK_QUEUE_LLM`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
 | **Business rule (non-retryable)** | Ask to open an account with $2,000,000 (or less than $100). | `validate_new_account` raises a non-retryable `ApplicationError`: one attempt, no retries. The reason goes back to the agent, which explains it to the customer. Compare it with *Tool / API down* in the Temporal UI. |
 | **Saga** | Turn on *Custodian rejects new accounts* (and *Slow account-opening steps* so you can watch), then open an account through compliance approval. Without flags: as client `123`, open an account with $300,000 (the linked bank account has $250,000). | The completed steps are undone in reverse order (refund, then remove the account). Compensations are activities too, so they are retried until they succeed. Kill the worker mid-rollback and the rollback still finishes. Transfers are idempotent (keyed by the workflow and run ID), so a retried debit or refund never moves money twice. |
 | **Bug in workflow code** | Turn on *Bug in workflow code*, then open an account through compliance approval. See below. | The workflow pauses at the failing line, keeping all its state, until a worker with fixed code picks it up. |
@@ -489,7 +489,7 @@ fix is deployed within a couple of minutes, the workflow resumes within about a 
 After the demo, re-arm the bug:
 
 ```bash
-git checkout src/temporal_supervisor/workflows/open_account_workflow.py
+git checkout src/python/openai_agents/temporal_supervisor/workflows/open_account_workflow.py
 ```
 
 ### With the Java Open Account workflow
@@ -501,14 +501,14 @@ read inside those activities and the model activity, apply unchanged. The saga u
 Temporal Java SDK's `Saga` class.
 
 The bug in the workflow code is different in Java. `BONUS_RATES` in
-`java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java`
+`interop/open_account/java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java`
 is keyed by `"WELCOME_BONUS"` (underscore), but the promo code is `"WELCOME-BONUS"` (hyphen),
 so `welcomeBonus` throws a `NullPointerException`. As in Python, an unchecked exception fails
 the workflow task, not the workflow, so it stays **Running**. The fix is the commented-out line
 above it. Restart the Java worker after fixing it, and re-arm the bug afterwards with:
 
 ```bash
-git checkout java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java
+git checkout interop/open_account/java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java
 ```
 
 ### Tests
@@ -518,6 +518,7 @@ with stub activities and, for the chat workflow, a scripted model instead of Ope
 Redis or running Temporal service is needed. From the repository root:
 
 ```bash
+cd src/python/openai_agents
 uv run pytest
 ```
 
@@ -540,7 +541,8 @@ is skipped when `OPENAI_API_KEY` is not set. `LIVE_TEST_RUNS=<n>` repeats the co
 (default 1), since model output varies. From the repository root:
 
 ```bash
-source ./setoaikey.sh
+source scripts/setoaikey.sh
+cd src/python/openai_agents
 LIVE_TEST_RUNS=10 uv run pytest tests/live_agent_handoffs.py -s
 ```
 
@@ -553,20 +555,21 @@ child workflows, ending `-Vacation-1` and `-Vacation-2`, were started. It also r
 Temporal service go through the test server instead, and client detail updates aren't saved.
 
 ```bash
-source ./setoaikey.sh
+source scripts/setoaikey.sh
+cd src/python/openai_agents
 LIVE_TEST_RUNS=3 uv run pytest tests/live_repeat_opening.py -s
 ```
 
 The Java workflow has the same failure-scenario tests, using the Temporal Java SDK's test environment (requires JDK 25):
 
 ```bash
-cd java
+cd interop/open_account/java
 ./gradlew test
 ```
 
 The web application has a smoke test:
 
 ```bash
-cd src/frontend
+cd frontend
 npm test
 ```

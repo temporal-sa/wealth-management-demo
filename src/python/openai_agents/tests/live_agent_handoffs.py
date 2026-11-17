@@ -12,9 +12,9 @@ only read data/*.json. Only the Redis-backed event stream activities are replace
 in-memory stand-ins, and the chaos flags are read as off.
 
 Not part of the default ``uv run pytest`` run (the file name doesn't match ``test_*.py``),
-because it calls the paid OpenAI API. Run it from the repository root with:
+because it calls the paid OpenAI API. Run it from src/python/openai_agents with:
 
-    source ./setoaikey.sh && uv run pytest tests/live_agent_handoffs.py -s
+    source ../../../scripts/setoaikey.sh && uv run pytest tests/live_agent_handoffs.py -s
 
 LIVE_TEST_RUNS=<n> repeats the conversation n times (default 1), since model output varies.
 Skipped when OPENAI_API_KEY is not set. Requires the Temporal test server (downloaded
@@ -45,7 +45,7 @@ from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWo
 from tests.scripted_model import send
 
 pytestmark = pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"),
-                                reason="OPENAI_API_KEY not set: source ./setoaikey.sh first")
+                                reason="OPENAI_API_KEY not set: source scripts/setoaikey.sh first")
 
 RUNS = max(1, int(os.getenv("LIVE_TEST_RUNS", "1")))
 TASK_QUEUE = "agent-handoffs-live-test"
