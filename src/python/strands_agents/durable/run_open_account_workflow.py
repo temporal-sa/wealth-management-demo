@@ -17,8 +17,8 @@ run on the Python worker's main task queue, so a Python worker must be running.
 The scenarios change data/*.json like the demo does (client 123's last name, a
 new account, the linked bank account balance); reset with ``git checkout data/``.
 
-Usage (from the project root; see startlocalopenaccount.sh):
-    uv run python src/temporal_supervisor/run_open_account_workflow.py [--scenario N ...] [--amount X]
+Usage (see startlocalopenaccount.sh):
+    cd src/python/strands_agents/durable && uv run python -m durable.run_open_account_workflow [--scenario N ...] [--amount X]
 """
 
 import argparse
@@ -33,9 +33,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from dotenv import load_dotenv
 from temporalio.client import Client, WorkflowHandle
 
-from temporal_supervisor.client_helper import connect_client
-from temporal_supervisor.model_config import OPEN_ACCOUNT_TASK_QUEUE
-from temporal_supervisor.workflows.open_account_workflow import (
+from durable.client_helper import connect_client
+from durable.model_config import OPEN_ACCOUNT_TASK_QUEUE
+from durable.workflows.open_account_workflow import (
     OpenInvestmentAccountInput,
     OpenInvestmentAccountWorkflow,
 )
@@ -127,7 +127,7 @@ async def scenario3(client: Client, run_id: str, amount: Optional[float]) -> Non
     print(f"After verifying KYC, the current state is '{await _state(handle)}'")
 
     print("*****>>> Send the compliance approval for this workflow, in another terminal:")
-    print(f"*****>>>   src/temporal_supervisor/localsendcomplianceapproval.sh {handle.id}")
+    print(f"*****>>>   src/python/strands_agents/durable/localsendcomplianceapproval.sh {handle.id}")
     state = await _state(handle)
     while state == WAITING_COMPLIANCE_REVIEW:
         await asyncio.sleep(1)

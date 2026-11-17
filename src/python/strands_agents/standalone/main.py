@@ -2,13 +2,14 @@ import logging
 import os
 import sys
 
-# Add src/ to the path so `common` / `strands_supervisor` imports work when this
-# file is run directly (e.g. `uv run python src/strands_supervisor/main.py`).
+# Add the port's folder to the path so `standalone` / `prompts` imports work when this
+# file is run directly (e.g. `uv run python standalone/main.py`). `common` comes from
+# src/python, which the editable install puts on the path.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from dotenv import load_dotenv
 
-from strands_supervisor.agents import build_supervisor
+from standalone.agents import build_supervisor
 
 load_dotenv()
 

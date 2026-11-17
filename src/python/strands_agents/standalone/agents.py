@@ -13,14 +13,14 @@ from functools import lru_cache
 from strands import Agent, tool
 from strands.models.gemini import GeminiModel
 
-from strands_supervisor.approval import ConfirmDestructive
+from standalone.approval import ConfirmDestructive
 
-from common.agent_constants import (
+from prompts.agent_constants import (
     BENE_INSTRUCTIONS,
     INVEST_INSTRUCTIONS,
     SUPERVISOR_INSTRUCTIONS,
 )
-from strands_supervisor import tools as wm_tools
+from standalone import tools as wm_tools
 
 MODEL_ID = "gemini-2.5-flash"
 

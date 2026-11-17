@@ -6,7 +6,7 @@ to specialized **Beneficiary** and **Investment** agents using the Strands
 ["agents as tools"](https://strandsagents.com/latest/documentation/docs/user-guide/concepts/multi-agent/agents-as-tools/)
 pattern.
 
-The Temporal version of this example is located [here](../temporal_supervisor/README.md).
+The Temporal version of this example is located [here](../durable/README.md).
 
 Scenarios currently implemented include:
 
@@ -39,31 +39,30 @@ The supervisor collects the client ID once, then forwards it on every delegation
 
 ## Set up the Python environment
 
-Run this in the project root (up two levels from this folder):
-
 ```bash
+cd src/python/strands_agents
 uv sync
 ```
 
 ## Set up your Gemini API key
 
-Run this in the project root:
+From the repository root:
 
 ```bash
-cp setgeminikey.example setgeminikey.sh
-chmod +x setgeminikey.sh
-# edit setgeminikey.sh and paste in your key
+cp scripts/setgeminikey.example scripts/setgeminikey.sh
+chmod +x scripts/setgeminikey.sh
+# edit scripts/setgeminikey.sh and paste in your key
 ```
 
 ## Running the agent
 
-From the project root:
+From `src/python/strands_agents`:
 
 ```bash
-source ./setgeminikey.sh
+source ../../../scripts/setgeminikey.sh
 uv run strands-supervisor
 # or, equivalently:
-uv run python src/strands_supervisor/main.py
+uv run python -m standalone.main
 ```
 
 ### Example session
@@ -98,4 +97,4 @@ Goodbye!
 
 You can also add/delete beneficiaries and open/close investment accounts.
 Try client ID `123` or `234`. These changes are written to the JSON files in
-`data/`; restore them from the project root with `git checkout data/`.
+`data/`; restore them from the repository root with `git checkout data/`.

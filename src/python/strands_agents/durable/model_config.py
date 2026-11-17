@@ -15,12 +15,15 @@ from strands.types.streaming import StreamEvent
 from temporalio.exceptions import ApplicationError
 
 from common.chaos_manager import ChaosFlag
-from temporal_supervisor.chaos import inject_failure
+from durable.chaos import inject_failure
 
 MODEL_NAME = "gemini"
 MODEL_ID = "gemini-2.5-flash"
 
-TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", "wealth-management-strands")
+# This port's default chat task queue, so its worker can run next to other ports'.
+# Start the shared API with ./startlocalapi.sh strands_agents to use it.
+DEFAULT_TASK_QUEUE = "wealth-management-strands"
+TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", DEFAULT_TASK_QUEUE)
 # Model calls run on their own task queue so they can be rate limited (and scaled)
 # independently of the tools. See run_worker.py. TEMPORAL_TASK_QUEUE_LLM matches the
 # other ports; TEMPORAL_LLM_TASK_QUEUE is still accepted for existing setups.

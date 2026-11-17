@@ -28,8 +28,8 @@ from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import UnsandboxedWorkflowRunner, Worker
 
 from common.user_message import ProcessUserMessageInput
-from temporal_supervisor.model_config import LLM_TASK_QUEUE, OPEN_ACCOUNT_TASK_QUEUE
-from temporal_supervisor.workflows.supervisor_workflow import (
+from durable.model_config import LLM_TASK_QUEUE, OPEN_ACCOUNT_TASK_QUEUE
+from durable.workflows.supervisor_workflow import (
     WealthManagementWorkflow,
     kyc_confirmed,
 )

@@ -15,11 +15,13 @@ Operations (all parameters are query parameters)
 | Method | Endpoint | Parameters | Description |
 |---|---|---|---|
 | GET | `/` | | Health check |
-| GET | `/config` | | The port the API serves: `port`, `label`, `task_queue` and `workflow_id_prefix`. The web application names each chat workflow `<workflow_id_prefix><random>` |
+| GET | `/config` | | The port the API serves: `port`, `label`, `task_queue`, `workflow_id_prefix` and `approvals`. The web application names each chat workflow `<workflow_id_prefix><random>` |
 | POST | `/start-workflow` | `workflow_id` | Starts a chat workflow with that ID on the port's task queue |
 | POST | `/send-prompt` | `workflow_id`, `prompt` | Sends the customer's message to the workflow (`process_user_message` signal) |
 | GET | `/get-chat-history` | `workflow_id`, `from_index` (default `0`) | Returns the conversation events (chat messages and account-opening status updates) stored in Redis, starting at `from_index` |
 | POST | `/end-chat` | `workflow_id` | Sends the `end_workflow` signal |
+| GET | `/pending-approval` | `workflow_id` | The approval question the chat is waiting on (e.g. before deleting a beneficiary), or `null`. Ports with `approvals` only (`get_pending_approval` query); always `null` for the others |
+| POST | `/approve` | `workflow_id`, `response` (`approve` or `deny`) | Answers the pending approval (`approve` signal). Ports with `approvals` only; `400` for the others |
 | GET | `/chaos` | | The chaos panel's failure-injection flags and the failures they recently caused |
 | POST | `/chaos` | `flag`, `enabled` (`true` / `false`) | Turns a flag on or off. Flags: `tool_down`, `llm_down`, `llm_rate_limited`, `custodian_rejects`, `slow_saga`, `workflow_bug` |
 | POST | `/chaos/reset` | | Turns every flag off and clears the failure log |
@@ -38,6 +40,7 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 |---|---|---|---|
 | [OpenAI Agents SDK](../openai_agents/durable/README.md) | `./startlocalapi.sh` (or `openai_agents`) | `Supervisor` | `oai-temporal-agent-<random>` |
 | [Pydantic AI](../pyai/durable/README.md) | `./startlocalapi.sh pyai` | `PY-AI-Supervisor` | `pyai-temporal-agent-<random>` |
+| [Strands Agents](../strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents` | `wealth-management-strands` | `strands-temporal-agent-<random>` (with approvals) |
 
 `TEMPORAL_TASK_QUEUE` and `CHAT_WORKFLOW_ID_PREFIX` override the port's values. The API prints the port,
 queue and prefix it uses when it starts.

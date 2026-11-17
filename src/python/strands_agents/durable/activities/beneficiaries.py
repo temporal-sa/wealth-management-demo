@@ -2,7 +2,7 @@ from temporalio import activity, workflow
 
 with workflow.unsafe.imports_passed_through():
     from common.beneficiaries_manager import BeneficiariesManager
-    from temporal_supervisor.chaos import core_banking_api
+    from durable.chaos import core_banking_api
 
 
 class Beneficiaries:

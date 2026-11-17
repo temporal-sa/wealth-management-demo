@@ -8,11 +8,11 @@ and driving it from a **React frontend** through a **FastAPI** backend. The plug
 Temporal Activities, so each step is recorded in Workflow history and survives
 crashes, restarts, and infrastructure failures.
 
-The vanilla Strands (CLI) version of this example is located [here](../strands_supervisor/README.md).
+The vanilla Strands (CLI) version of this example is located [here](../standalone/README.md).
 
 ## Application architecture
 
-![](../../images/application-architecture.png)
+![](../../../../docs/images/strands_agents/application-architecture.png)
 
 The React frontend uses adaptive polling (2s while awaiting the assistant, 5s
 otherwise) to read new events from Redis via the API, giving real-time status
@@ -32,7 +32,7 @@ updates as the open-account child workflow progresses.
 | **Conversation history in Redis** | `EventStreamActivities` persist chat + status events the UI polls |
 | **Retries, non-retryable errors, saga** | See [Failure scenarios](#failure-scenarios-chaos-panel) |
 | **Task queue rate limiting** | Model calls on their own task queue, optionally capped with `LLM_MAX_CALLS_PER_SECOND` (`run_worker.py`) |
-| **Polyglot child workflow** | Optional Java version of `OpenInvestmentAccountWorkflow` on its own task queue, calling the Python activities ([java/](../../java/README.md)) |
+| **Polyglot child workflow** | Optional Java version of `OpenInvestmentAccountWorkflow` on its own task queue, calling the Python activities ([interop/open_account/java/](../../../../interop/open_account/java/README.md)) |
 | **Claim check (payload codec)** | Optional: payloads stored in Redis, only their IDs sent to Temporal, with a codec server for the UI (`claim_check/`, `codec_server/`) |
 
 The chat workflow keeps the whole conversation in one run; a production version
@@ -63,7 +63,7 @@ agent, which drives the durable `OpenInvestmentAccountWorkflow` child workflow, 
 is reached via the investment agent rather than from the supervisor directly.
 
 The CLI-only
-[`strands_supervisor`](../strands_supervisor/README.md) version uses the same
+[`standalone`](../standalone/README.md) version uses the same
 "agents as tools" topology without the Temporal durability layer (there, opening an
 account is a single synchronous tool inside the investment agent rather than a child
 workflow).
@@ -79,15 +79,15 @@ workflow).
 
 ## Setup
 
-From the project root:
+From the repository root:
 
 ```bash
-uv sync
-cp setgeminikey.example setgeminikey.sh   # then edit and paste your key
+cp scripts/setgeminikey.example scripts/setgeminikey.sh   # then edit and paste your key
+cd src/python/strands_agents && uv sync
 ```
 
-The worker, API, and chat scripts `cd` to the project root and source
-`setgeminikey.sh` if it exists, so they can be run from any directory.
+The worker and chat scripts `cd` to their own folder and source
+`scripts/setgeminikey.sh` if it exists, so they can be run from any directory.
 
 Start Redis and a local Temporal dev server in separate terminals:
 
@@ -104,22 +104,22 @@ Redis location can be overridden with `REDIS_HOST` / `REDIS_PORT` (see
 
 ## Run the demo (local)
 
-**1. Start the worker** (terminal 1, from the project root):
+**1. Start the worker** (terminal 1, from the repository root):
 
 ```bash
-src/temporal_supervisor/startlocalworker.sh
+src/python/strands_agents/durable/startlocalworker.sh
 ```
 
-**2. Start the API** (terminal 2, from the project root):
+**2. Start the API** (terminal 2, from the repository root):
 
 ```bash
-src/api/startlocalapi.sh        # uvicorn on http://127.0.0.1:8000
+src/python/api/startlocalapi.sh strands_agents   # uvicorn on http://127.0.0.1:8000
 ```
 
-**3. Start the React frontend** (terminal 3, from the project root):
+**3. Start the React frontend** (terminal 3, from the repository root):
 
 ```bash
-cd src/frontend
+cd frontend
 npm install      # first time only
 npm start        # opens http://localhost:3000
 ```
@@ -140,7 +140,9 @@ sure you want to delete beneficiary John Doe?"). Answer by typing: a reply that
 starts with *yes*, *y*, *ok*, *sure*, *approve*, *confirm*, *proceed* (and a few
 similar words) approves; anything else denies. The UI sends your answer to
 `POST /approve` (`response=approve` or `deny`), which signals the workflow, and
-the agent either runs the tool or tells you it wasn't done.
+the agent either runs the tool or tells you it wasn't done. The shared API and web app do this only for
+this port, so start the API with `./startlocalapi.sh strands_agents` (its `GET /config` reports
+`"approvals": true`).
 
 ### How the Open Account functionality works
 
@@ -182,13 +184,13 @@ pauses the child after compliance approval; see
 ### Approving compliance
 
 Compliance approval is sent from a terminal (there is no button in the UI). The
-script `cd`s to the project root, so it can be run from any directory:
+script `cd`s to its own folder, so it can be run from any directory:
 
 ```bash
 # local Temporal server
-src/temporal_supervisor/localsendcomplianceapproval.sh <child-workflow-id>
-# Temporal Cloud (sources setcloudenv.sh from the project root)
-src/temporal_supervisor/sendcomplianceapproval.sh <child-workflow-id>
+src/python/strands_agents/durable/localsendcomplianceapproval.sh <child-workflow-id>
+# Temporal Cloud (sources scripts/setcloudenv.sh)
+src/python/strands_agents/durable/sendcomplianceapproval.sh <child-workflow-id>
 ```
 
 The status text does not include the child workflow ID. Its format is
@@ -205,7 +207,7 @@ temporal workflow list --query "WorkflowType='OpenInvestmentAccountWorkflow' AND
 ```
 
 The account name is used as is, so quote the ID if it contains spaces, e.g.
-`src/temporal_supervisor/localsendcomplianceapproval.sh "OpenAccount-strands-temporal-agent-k3j9x2m1q-123-Kids College-2"`.
+`src/python/strands_agents/durable/localsendcomplianceapproval.sh "OpenAccount-strands-temporal-agent-k3j9x2m1q-123-Kids College-2"`.
 Every request to open an account is a new opening with its own ID, so if you asked
 for the same account name twice the list shows both (`...-Vacation-1` and
 `...-Vacation-2`); approve the one whose KYC you confirmed.
@@ -225,19 +227,19 @@ scenarios for client `123`, each starting the workflow directly:
    KYC: client 123's last name becomes "Doenut"), then compliance approved.
 3. KYC approved, then the workflow waits in `Waiting Compliance Review` until you send the approval
    yourself. The script prints the command, for example
-   `src/temporal_supervisor/localsendcomplianceapproval.sh testing-open-account-<run>-3`.
+   `src/python/strands_agents/durable/localsendcomplianceapproval.sh testing-open-account-<run>-3`.
 
-Temporal must be running (Redis too, for the chaos flags the activities read). From the project root:
+Temporal must be running (Redis too, for the chaos flags the activities read). From the repository root:
 
 ```bash
-src/temporal_supervisor/startlocalopenaccount.sh
+src/python/strands_agents/durable/startlocalopenaccount.sh
 ```
 
 With a task queue name, the workflow runs on that queue, so you can run the same scenarios against
 the Java workflow (start `java/startlocalworker.sh <queue>` first):
 
 ```bash
-src/temporal_supervisor/startlocalopenaccount.sh Open-Account-Java
+src/python/strands_agents/durable/startlocalopenaccount.sh Open-Account-Java
 ```
 
 Further arguments go to `run_open_account_workflow.py`: `--scenario N` (repeatable) runs only some
@@ -249,27 +251,28 @@ saga roll back (client 123's linked bank account has less than that). Each run u
 
 Opening and closing accounts and editing beneficiaries change the JSON files in
 `data/` (the saga also changes linked bank account balances in
-`data/funding_accounts.json`). Restore them from the project root with
+`data/funding_accounts.json`). Restore them from the repository root with
 `git checkout data/`.
 
 ## Run with the Java open-account workflow (optional)
 
-[`java/`](../../java/README.md) has a Java (Spring Boot) version of `OpenInvestmentAccountWorkflow`
+[`interop/open_account/java`](../../../../interop/open_account/java/README.md) has a Java (Spring Boot) version of `OpenInvestmentAccountWorkflow`
 with the same states, updates, signals, saga and status updates as the Python version. It calls the
 Python activities by name on the Python worker's task queue. To use it, give both workers the same
-open-account task queue name. From the project root:
+open-account task queue name, and start the Java worker on this port's main queue
+(`TEMPORAL_TASK_QUEUE=wealth-management-strands`) so it calls this port's activities. From the repository root:
 
 ```bash
-src/temporal_supervisor/startlocalworker.sh Open-Account-Java   # terminal 1
-java/startlocalworker.sh Open-Account-Java                      # terminal 2 (needs JDK 25)
+src/python/strands_agents/durable/startlocalworker.sh Open-Account-Java   # terminal 1
+TEMPORAL_TASK_QUEUE=wealth-management-strands interop/open_account/java/startlocalworker.sh Open-Account-Java   # terminal 2 (needs JDK 25)
 ```
 
 The argument sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT`. The supervisor then starts the child workflow
 on that queue, and the Python worker doesn't register the Python version of the workflow (it still
 runs all the activities, including the ones the Java workflow calls). Without an argument everything
 runs in Python, as before. Start the API and frontend and approve compliance as usual. For Temporal
-Cloud, use `src/temporal_supervisor/startcloudworker.sh Open-Account-Java` and
-`java/startcloudworker.sh Open-Account-Java`; see [java/README.md](../../java/README.md).
+Cloud, use `src/python/strands_agents/durable/startcloudworker.sh Open-Account-Java` and
+`TEMPORAL_TASK_QUEUE=wealth-management-strands interop/open_account/java/startcloudworker.sh Open-Account-Java`; see [interop/open_account/java/README.md](../../../../interop/open_account/java/README.md).
 
 ## Claim check (optional)
 
@@ -283,10 +286,10 @@ compliance-approval and open-account scripts, and the open-account activities) i
 `connect_client` in `client_helper.py`, which adds the plugin only when `USE_CLAIM_CHECK=true`. The
 Java worker has the same codec, so the two can be mixed.
 
-From the project root:
+From the repository root:
 
 ```bash
-cp setclaimcheck.example setclaimcheck.sh
+cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
 ```
 
 It contains:
@@ -298,7 +301,7 @@ export REDIS_PORT=6379
 ```
 
 All the start scripts (worker, API, CLI chat, compliance approval, codec server, the open-account
-scenarios and the Java workers) source `setclaimcheck.sh` from the project root if it exists, and run
+scenarios and the Java workers) source `scripts/setclaimcheck.sh` if it exists, and run
 without claim check if it doesn't. Turn it on for every component or none: a client without the
 codec can't read claim-checked payloads. Redis must be running; the same Redis holds the chat history
 and the stored payloads. Every payload costs a round trip to Redis, and Redis downtime stops the
@@ -307,10 +310,10 @@ workflows, so a production deployment needs a highly available store.
 ### Codec server
 
 With claim check on, the Temporal UI shows only the IDs. To see the real payloads, run the codec
-server (it reads the same `setclaimcheck.sh`):
+server (it reads the same `scripts/setclaimcheck.sh`):
 
 ```bash
-src/temporal_supervisor/startcodecserver.sh     # http://127.0.0.1:8081
+src/python/strands_agents/durable/startcodecserver.sh     # http://127.0.0.1:8081
 ```
 
 Open the Temporal UI at exactly http://localhost:8233 (not 127.0.0.1): the codec server only accepts
@@ -334,7 +337,7 @@ every flag off.
 | **Tool / API down** | Turn on *Core banking API down*, then ask to list your investments (or open an account, so it fails after compliance approval). Turn it off. | The activity retries (1s backoff, capped at 5s) for as long as the outage lasts. The agent waits mid-turn and answers once the API is back. Nothing is lost or re-asked. |
 | **LLM down** | Turn on *Gemini API down* and send a message. Turn it off. | The model call is an activity, so it retries the same way (backoff capped at 10s). The conversation picks up exactly where it was. |
 | **LLM rate limited (reactive)** | Turn on *Gemini rate limited (429)* and send a message. | The model raises an `ApplicationError` with `next_retry_delay` (15s, like a `Retry-After` header), which overrides the retry policy's backoff. Real Gemini 429s are handled the same way (`ChaosAwareGeminiModel` in `model_config.py`). |
-| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND=0.2 src/temporal_supervisor/startlocalworker.sh`, then chat in several browser tabs at once. | Model calls run on their own task queue (`wealth-management-strands-llm` by default; set with `TEMPORAL_TASK_QUEUE_LLM`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
+| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND=0.2 src/python/strands_agents/durable/startlocalworker.sh`, then chat in several browser tabs at once. | Model calls run on their own task queue (`wealth-management-strands-llm` by default; set with `TEMPORAL_TASK_QUEUE_LLM`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
 | **Business rule (non-retryable)** | Ask to open an account with $2,000,000 (or less than $100). | `validate_new_account` raises a non-retryable `ApplicationError`: one attempt, no retries. The reason goes back to the agent, which explains it to the customer. Compare it with *Tool / API down* in the Temporal UI. |
 | **Saga** | Turn on *Custodian rejects new accounts* (and *Slow account-opening steps* so you can watch), then open an account through compliance approval. Without flags: as client `123`, open an account with $300,000 (the linked bank account has $250,000). | After compliance approval the child workflow creates the account record, transfers the deposit from the linked bank account, and registers with the custodian. When a step fails non-retryably, the completed steps are undone in reverse order (refund, then remove the account). Compensations are activities too, so they are retried until they succeed. Kill the worker mid-rollback and the rollback still finishes. Transfers are idempotent (the transfer ID is `<child workflow ID>-<run ID>-initial-deposit`, refunds `...-refund`), so a retried debit or refund never moves money twice, while opening an account with the same name again after a rollback is a new opening with a new child workflow ID, and so a new transfer. |
 | **Bug in workflow code** | Turn on *Bug in workflow code*, then open an account through compliance approval. See below. | The workflow pauses at the failing line, keeping all its state, until a worker with fixed code picks it up. |
@@ -368,7 +371,7 @@ deployed within a couple of minutes, the workflow resumes within about a minute.
 After the demo, re-arm the bug:
 
 ```bash
-git checkout src/temporal_supervisor/workflows/open_account_workflow.py
+git checkout src/python/strands_agents/durable/workflows/open_account_workflow.py
 ```
 
 ### With the Java open-account workflow
@@ -392,7 +395,7 @@ A command-line client is included for quick testing without the frontend/API (th
 worker must be running):
 
 ```bash
-src/temporal_supervisor/startchat.sh
+src/python/strands_agents/durable/startchat.sh
 ```
 
 It starts a new chat workflow (ID `wealth-management-<uuid>`, printed at start)
@@ -403,8 +406,9 @@ or `end` to stop.
 
 ## API endpoints
 
-`src/api/main.py` (FastAPI, started by `src/api/startlocalapi.sh` or
-`src/api/startcloudapi.sh` on http://127.0.0.1:8000). Needs Temporal, Redis, and the
+The shared [API](../../api/README.md), `src/python/api/main.py` (FastAPI, started by
+`src/python/api/startlocalapi.sh strands_agents` or `src/python/api/startcloudapi.sh strands_agents`
+on http://127.0.0.1:8000). Needs Temporal, Redis, and the
 worker running. CORS allows the frontend on port 3000 (`localhost` and `127.0.0.1`).
 All parameters are query parameters.
 
@@ -429,21 +433,20 @@ All parameters are query parameters.
 | `TEMPORAL_ADDRESS` | `localhost:7233` | Temporal service address |
 | `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH` | | mTLS cert and key for Temporal Cloud (both must be set) |
-| `TEMPORAL_TASK_QUEUE` | `wealth-management-strands` | Main task queue (workflows and tools). Set the same value for the worker, API, and CLI client |
+| `TEMPORAL_TASK_QUEUE` | `wealth-management-strands` (`DEFAULT_TASK_QUEUE` in `model_config.py`) | Main task queue (workflows and tools). The worker, API, Java worker and CLI client must agree: start the shared API with `./startlocalapi.sh strands_agents` and the Java worker with `TEMPORAL_TASK_QUEUE=wealth-management-strands` |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue for model calls. The older name `TEMPORAL_LLM_TASK_QUEUE` is still accepted |
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Max model calls per second dispatched from the LLM queue, across all workers |
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `<TEMPORAL_TASK_QUEUE>` | Task queue the open-account child workflow is started on. Set it with the argument to `startlocalworker.sh` / `startcloudworker.sh` (and pass the same name to `java/startlocalworker.sh` / `java/startcloudworker.sh`). When it differs from `TEMPORAL_TASK_QUEUE`, the Python worker doesn't register `OpenInvestmentAccountWorkflow` |
 | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Redis for chat history, status updates, chaos flags, and claim check payloads |
-| `USE_CLAIM_CHECK` | `false` | `true` turns on the claim check codec (`setclaimcheck.sh`); see [Claim check](#claim-check-optional) |
+| `USE_CLAIM_CHECK` | `false` | `true` turns on the claim check codec (`scripts/setclaimcheck.sh`); see [Claim check](#claim-check-optional) |
 
 The scripts pass the environment through, so you can prefix any of them, e.g.
-`LLM_MAX_CALLS_PER_SECOND=0.2 src/temporal_supervisor/startlocalworker.sh`.
+`LLM_MAX_CALLS_PER_SECOND=0.2 src/python/strands_agents/durable/startlocalworker.sh`.
 
 ## Tests
 
-From the project root:
-
 ```bash
+cd src/python/strands_agents
 uv run pytest
 ```
 
@@ -452,14 +455,15 @@ opening the same account name twice: two child workflows, each with its own KYC)
 failure scenarios (saga rollback, a new transfer ID per run, retries, tool and LLM outages retried until
 recovery, the workflow bug), the off-topic
 prompt, and the claim check codec, plugin and codec server and the open-account
-task-queue split (`tests/test_claim_check.py`). They use a scripted model, stub
+task-queue split (`tests/test_claim_check.py`), and the shared API's calls (start, message, approve, end)
+against the real chat workflow (`tests/test_api_client.py`). They use a scripted model, stub
 activities and an in-memory stand-in for Redis, so no Gemini key or Redis is
 needed; the Temporal test server is downloaded automatically on first run.
 
 The Java workflow has its own tests (JDK 25):
 
 ```bash
-cd java
+cd interop/open_account/java
 ./gradlew test
 ```
 
@@ -479,10 +483,10 @@ transferring the customer, and prints each run's transcript with that trace.
 
 It is not part of `uv run pytest` (pytest only collects `test_*.py`) because it
 calls the paid API, and it is skipped when `GEMINI_API_KEY` is not set. Run it from
-the project root with:
+`src/python/strands_agents` with:
 
 ```bash
-source ./setgeminikey.sh && uv run pytest tests/live_agent_handoffs.py -s
+source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_agent_handoffs.py -s
 ```
 
 Model output varies, so `LIVE_TEST_RUNS=<n>` repeats the conversation n times
@@ -517,23 +521,23 @@ the data files and needs no Redis.
 Like the routing test, they are not part of `uv run pytest` and are skipped when
 `GEMINI_API_KEY` is not set. Each run is a six-message conversation through up to
 three nested agents, so it makes many more model calls than the routing test and
-costs correspondingly more; `LIVE_TEST_RUNS=<n>` multiplies that. Run it from the
-project root with:
+costs correspondingly more; `LIVE_TEST_RUNS=<n>` multiplies that. Run it from
+`src/python/strands_agents` with:
 
 ```bash
-source ./setgeminikey.sh && uv run pytest tests/live_account_opening.py -s
+source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_account_opening.py -s
 # only one of them:
-source ./setgeminikey.sh && uv run pytest tests/live_account_opening.py -k same_account_twice -s
+source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_account_opening.py -k same_account_twice -s
 ```
 
 ## Run on Temporal Cloud
 
-Redis still runs locally. From the project root:
+Redis still runs locally. From the repository root:
 
 ```bash
-cp src/temporal_supervisor/setcloudenv.example setcloudenv.sh   # edit with your namespace + mTLS cert paths
+cp src/python/strands_agents/durable/setcloudenv.example setcloudenv.sh   # edit with your namespace + mTLS cert paths
 # terminal 1 (worker; the script sources setcloudenv.sh, setgeminikey.sh and setclaimcheck.sh itself):
-src/temporal_supervisor/startcloudworker.sh
+src/python/strands_agents/durable/startcloudworker.sh
 # terminal 2 (API; the script sources setcloudenv.sh itself):
 src/api/startcloudapi.sh
 # terminal 3 (frontend):
@@ -541,10 +545,10 @@ cd src/frontend && npm install && npm start
 ```
 
 Running the worker by hand still works:
-`source ./setcloudenv.sh && source ./setgeminikey.sh && uv run python src/temporal_supervisor/run_worker.py`.
+`source ./setcloudenv.sh && source ./setgeminikey.sh && uv run python src/python/strands_agents/durable/run_worker.py`.
 To use the Java open-account workflow, pass the same task queue name to
-`src/temporal_supervisor/startcloudworker.sh <queue>` and `java/startcloudworker.sh <queue>` (see
-[java/README.md](../../java/README.md#running-with-temporal-cloud)).
+`src/python/strands_agents/durable/startcloudworker.sh <queue>` and `java/startcloudworker.sh <queue>` (see
+[interop/open_account/java/README.md](../../../../interop/open_account/java/README.md#running-with-temporal-cloud)).
 
 `connect_client` (`client_helper.py`) reads `TEMPORAL_ADDRESS`,
 `TEMPORAL_NAMESPACE`, and the `TEMPORAL_TLS_CLIENT_CERT_PATH` /
@@ -554,7 +558,7 @@ Send the compliance approval with the cloud script, which sources `setcloudenv.s
 itself:
 
 ```bash
-src/temporal_supervisor/sendcomplianceapproval.sh <child-workflow-id>
+src/python/strands_agents/durable/sendcomplianceapproval.sh <child-workflow-id>
 ```
 
 `startchat.sh` does not source `setcloudenv.sh`; to use the CLI chat client against

@@ -10,14 +10,14 @@ from temporalio.workflow import ParentClosePolicy
 from common.user_message import ProcessUserMessageInput, ChatInteraction
 from common.status_update import StatusUpdate
 from common.account_context import UpdateAccountOpeningStateInput
-from common.agent_constants import (
+from prompts.agent_constants import (
     BENE_INSTRUCTIONS,
     OPEN_ACCOUNT_INSTRUCTIONS,
     TEMPORAL_INVEST_SUBAGENT_INSTRUCTIONS,
     TEMPORAL_SUPERVISOR_INSTRUCTIONS,
 )
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities
-from temporal_supervisor.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
+from durable.activities.event_stream_activities import EventStreamActivities
+from durable.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
 
 with workflow.unsafe.imports_passed_through():
     from strands import tool
@@ -25,12 +25,12 @@ with workflow.unsafe.imports_passed_through():
     from strands.types.tools import ToolContext
     from temporalio.contrib.strands import TemporalAgent
     from temporalio.contrib.strands.workflow import activity_as_tool
-    from temporal_supervisor.model_config import LLM_TASK_QUEUE, MODEL_NAME, OPEN_ACCOUNT_TASK_QUEUE
-    from temporal_supervisor.activities.beneficiaries import Beneficiaries
-    from temporal_supervisor.activities.investments import Investments
-    from temporal_supervisor.activities.open_account import OpenAccount
-    from temporal_supervisor.activities.approval import ApprovalActivities
-    from temporal_supervisor.workflows.open_account_workflow import (
+    from durable.model_config import LLM_TASK_QUEUE, MODEL_NAME, OPEN_ACCOUNT_TASK_QUEUE
+    from durable.activities.beneficiaries import Beneficiaries
+    from durable.activities.investments import Investments
+    from durable.activities.open_account import OpenAccount
+    from durable.activities.approval import ApprovalActivities
+    from durable.workflows.open_account_workflow import (
         OpenInvestmentAccountWorkflow,
         OpenInvestmentAccountInput,
     )

@@ -1,16 +1,16 @@
 #!/bin/bash
 # Send the compliance-approved signal to an open-account child workflow on
-# Temporal Cloud (settings from setcloudenv.sh in the project root).
+# Temporal Cloud (settings from scripts/setcloudenv.sh).
 # Usage: ./sendcomplianceapproval.sh <child-workflow-id>
 if [ -z "$1" ]; then
    echo "You must specify a workflow ID"
    exit 1
 fi
-cd "$(dirname "$0")/../.." || exit 1
-if [ ! -f setcloudenv.sh ]; then
-   echo "setcloudenv.sh not found in the project root (copy src/temporal_supervisor/setcloudenv.example)"
+cd "$(dirname "$0")" || exit 1
+if [ ! -f ../../../../scripts/setcloudenv.sh ]; then
+   echo "scripts/setcloudenv.sh not found (copy scripts/setcloudenv.example)"
    exit 1
 fi
-source ./setcloudenv.sh
-[ -f setclaimcheck.sh ] && source ./setclaimcheck.sh
-uv run python src/temporal_supervisor/run_send_compliance_approval.py --workflow-id "$1"
+source ../../../../scripts/setcloudenv.sh
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
+uv run python -m durable.run_send_compliance_approval --workflow-id "$1"

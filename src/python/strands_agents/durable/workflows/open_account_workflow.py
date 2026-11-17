@@ -8,11 +8,11 @@ from temporalio.exceptions import ActivityError, ApplicationError
 with workflow.unsafe.imports_passed_through():
     from common.investment_manager import InvestmentAccount
     from common.account_context import UpdateAccountOpeningStateInput
-    from temporal_supervisor.activities.clients import ClientActivities, WealthManagementClient
-    from temporal_supervisor.activities.custodian import Custodian
-    from temporal_supervisor.activities.funding import Funding
-    from temporal_supervisor.activities.investments import Investments
-    from temporal_supervisor.retry_policies import TOOL_RETRY_POLICY
+    from durable.activities.clients import ClientActivities, WealthManagementClient
+    from durable.activities.custodian import Custodian
+    from durable.activities.funding import Funding
+    from durable.activities.investments import Investments
+    from durable.retry_policies import TOOL_RETRY_POLICY
 
 
 @dataclass

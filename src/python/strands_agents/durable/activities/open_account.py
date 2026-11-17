@@ -3,8 +3,8 @@ from dataclasses import asdict, is_dataclass
 from temporalio import activity, workflow
 
 with workflow.unsafe.imports_passed_through():
-    from temporal_supervisor.client_helper import connect_client
-    from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+    from durable.client_helper import connect_client
+    from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
 
 
 class OpenAccount:

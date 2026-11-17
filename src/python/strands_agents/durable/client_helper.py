@@ -18,8 +18,8 @@ import os
 from temporalio.client import Client, TLSConfig
 from temporalio.contrib.strands import StrandsPlugin
 
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin, use_claim_check
-from temporal_supervisor.model_config import MODELS
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin, use_claim_check
+from durable.model_config import MODELS
 
 
 def _tls_config():

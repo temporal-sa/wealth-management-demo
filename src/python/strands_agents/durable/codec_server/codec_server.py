@@ -5,7 +5,7 @@ it at exactly http://localhost:8233 locally) or the Temporal Cloud UI can use
 to show the real payloads behind the claim-check IDs. The payloads are read
 from the same Redis as the workers (REDIS_HOST / REDIS_PORT).
 
-Usage (from the project root): src/temporal_supervisor/startcodecserver.sh
+Usage: src/python/strands_agents/durable/startcodecserver.sh
 """
 
 import os
@@ -20,7 +20,7 @@ from google.protobuf import json_format
 from temporalio.api.common.v1 import Payload, Payloads
 
 from common.redis_config import RedisConfig
-from temporal_supervisor.claim_check.claim_check_codec import ClaimCheckCodec
+from common.claim_check.claim_check_codec import ClaimCheckCodec
 
 HOST = "127.0.0.1"
 PORT = 8081

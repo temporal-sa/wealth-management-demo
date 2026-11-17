@@ -7,8 +7,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from dotenv import load_dotenv
 
-from temporal_supervisor.client_helper import connect_client
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.client_helper import connect_client
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
 
 load_dotenv()
 
@@ -23,7 +23,7 @@ async def approve(workflow_id: str):
 def main():
     parser = argparse.ArgumentParser(
         description="Send the compliance-approved signal to an open-account child workflow.",
-        epilog="Example: uv run python src/temporal_supervisor/run_send_compliance_approval.py --workflow-id OpenAccount-...",
+        epilog="Example: cd src/python/strands_agents/durable && ./localsendcomplianceapproval.sh OpenAccount-...",
     )
     parser.add_argument("--workflow-id", type=str, required=True, help="The open-account child workflow ID")
     args = parser.parse_args()

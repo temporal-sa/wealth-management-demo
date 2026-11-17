@@ -29,8 +29,8 @@ from temporalio.worker import Worker
 
 from common.account_context import UpdateAccountOpeningStateInput
 from common.user_message import ProcessUserMessageInput
-from temporal_supervisor.model_config import LLM_TASK_QUEUE
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.model_config import LLM_TASK_QUEUE
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 TASK_QUEUE = "test-account-opening-status"
 CLIENT_ID = "123"

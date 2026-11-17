@@ -1,7 +1,7 @@
 from temporalio import activity, workflow
 
 with workflow.unsafe.imports_passed_through():
-    from common.approval_prompts import friendly_confirmation
+    from prompts.approval_prompts import friendly_confirmation
 
 
 class ApprovalActivities:

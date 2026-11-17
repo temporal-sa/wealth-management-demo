@@ -9,9 +9,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from dotenv import load_dotenv
 
 from common.user_message import ProcessUserMessageInput
-from temporal_supervisor.client_helper import connect_client
-from temporal_supervisor.model_config import TASK_QUEUE
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.client_helper import connect_client
+from durable.model_config import TASK_QUEUE
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 load_dotenv()
 logging.getLogger("temporalio").setLevel(logging.WARNING)

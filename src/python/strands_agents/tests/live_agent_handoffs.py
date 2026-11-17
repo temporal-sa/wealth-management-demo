@@ -36,7 +36,7 @@ from temporalio.contrib.strands import StrandsPlugin
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from common.agent_constants import (
+from prompts.agent_constants import (
     BENE_INSTRUCTIONS,
     OPEN_ACCOUNT_INSTRUCTIONS,
     TEMPORAL_INVEST_SUBAGENT_INSTRUCTIONS,
@@ -44,15 +44,15 @@ from common.agent_constants import (
 )
 from common.chaos_manager import ChaosManager
 from common.user_message import ProcessUserMessageInput
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.model_config import (
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.investments import Investments
+from durable.model_config import (
     LLM_TASK_QUEUE,
     MODEL_ID,
     MODEL_NAME,
     ChaosAwareGeminiModel,
 )
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 RUNS = max(1, int(os.getenv("LIVE_TEST_RUNS", "1")))
 TASK_QUEUE = "agent-handoffs-live-test"

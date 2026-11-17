@@ -68,12 +68,12 @@ from live_agent_handoffs import (
     stub_append_status_update,
     stub_delete_conversation,
 )
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.clients import ClientActivities
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.model_config import LLM_TASK_QUEUE, MODEL_NAME, OPEN_ACCOUNT_TASK_QUEUE
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.clients import ClientActivities
+from durable.activities.investments import Investments
+from durable.model_config import LLM_TASK_QUEUE, MODEL_NAME, OPEN_ACCOUNT_TASK_QUEUE
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 RUNS = max(1, int(os.getenv("LIVE_TEST_RUNS", "1")))
 # The supervisor starts the child on OPEN_ACCOUNT_TASK_QUEUE; run both there.

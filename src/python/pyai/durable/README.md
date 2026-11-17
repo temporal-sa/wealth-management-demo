@@ -523,7 +523,7 @@ cd src/python/pyai/durable
 
 and then start the Java worker, making sure you pass in the same name as you did 
 when you started the Python worker. See
-[Running Using Temporal Cloud](../../../../interop/open_account/java/README.md#running-using-temporal-cloud) in the Java README
+[Running Using Temporal Cloud](../../../../interop/open_account/java/README.md#running-with-temporal-cloud) in the Java README
 for the PKCS8 key it needs.
 
 ```bash

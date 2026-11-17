@@ -6,12 +6,24 @@ specialized sub-agents (the Strands ["agents as tools"](https://strandsagents.co
 
 It ships in two flavors:
 
-- **Strands only** (command-line) — [`src/strands_supervisor`](src/strands_supervisor/README.md)
+- **Strands only** (command-line) — [`standalone/`](standalone/README.md)
 - **Temporal + Strands** (durable execution, with a **React frontend + FastAPI backend**) —
-  [`src/temporal_supervisor`](src/temporal_supervisor/README.md), which wraps the agentic flow with
+  [`durable/`](durable/README.md), which wraps the agentic flow with
   [Temporal](https://temporal.io) via the
   [`StrandsPlugin`](https://docs.temporal.io/develop/python/integrations/strands-agents).
-  The web app lives in [`src/frontend`](src/frontend) and the API in [`src/api`](src/api).
+  The web app is the shared [`frontend/`](../../../frontend/README.md) and the API the shared
+  [`src/python/api`](../api/README.md); start it with `./startlocalapi.sh strands_agents`.
+
+This port was imported from [temporal-sa/strands-wealth-management](https://github.com/temporal-sa/strands-wealth-management). It shares `src/python/common`, the API, the web application, the [Java worker](../../../interop/open_account/java/README.md) and `data/` with the other ports. Its own code:
+
+| Folder | What it is |
+|---|---|
+| `standalone/` | The Strands version without Temporal |
+| `durable/` | The Temporal version: workflows, activities, worker, the `StrandsPlugin` client (`client_helper.py`) and scripts |
+| `prompts/` | The agents' instructions and the confirmation wording (`approval_prompts.py`) |
+| `tests/` | The port's tests |
+
+Its chat workflows run on the `wealth-management-strands` task queue by default (`DEFAULT_TASK_QUEUE` in `durable/model_config.py`), so its worker can run next to another port's, and the web app names them `strands-temporal-agent-<random>`. Unlike the other ports, its chat workflow pauses for the customer's approval before deleting a beneficiary or closing an account; the shared API (`/pending-approval`, `/approve`) and web app support this when the API serves this port.
 
 Scenarios currently implemented include:
 
@@ -32,22 +44,22 @@ open-account flow in a child workflow.
 The Temporal version also includes a **chaos panel** in the web UI for demonstrating
 failures Temporal handles: tool and LLM outages, LLM rate limits, non-retryable
 business-rule errors, a saga rollback, and a bug in workflow code. See
-[Failure scenarios](src/temporal_supervisor/README.md#failure-scenarios-chaos-panel).
+[Failure scenarios](durable/README.md#failure-scenarios-chaos-panel).
 
 Optionally, the Temporal version can also:
 
-* run the open-account child workflow in **Java** ([`java/`](java/README.md)) on its own task queue,
+* run the open-account child workflow in **Java** ([`interop/open_account/java`](../../../interop/open_account/java/README.md)) on its own task queue,
   calling the Python activities — see
-  [Run with the Java open-account workflow](src/temporal_supervisor/README.md#run-with-the-java-open-account-workflow-optional);
+  [Run with the Java open-account workflow](durable/README.md#run-with-the-java-open-account-workflow-optional);
 * use the **claim check** pattern: payloads are stored in Redis and only their IDs are sent to
   Temporal, with a codec server so the Temporal UI can still show them — see
-  [Claim check](src/temporal_supervisor/README.md#claim-check-optional).
+  [Claim check](durable/README.md#claim-check-optional).
 
 ## Architecture
 
 A **Supervisor** agent talks to the customer and routes each request to a specialist:
 
-![](images/agent-architecture.png)
+![](../../../docs/images/strands_agents/agent-architecture.png)
 
 In the **Temporal** version, opening an investment account is delegated by the
 Investment Agent to a dedicated **Open Account Agent** that drives an
@@ -66,40 +78,42 @@ agent does list / open / close.
 * [Temporal CLI](https://docs.temporal.io/cli#install) — local Temporal service (Temporal version only)
 * [Redis](https://redis.io/downloads/) — stores conversation history, status updates, chaos flags and, optionally, claim check payloads (Temporal version only)
 * [Node.js](https://nodejs.org/) 18+ and npm — for the React frontend (Temporal version only)
-* [Java JDK 25](https://adoptium.net/) — optional, only for the Java open-account workflow ([java/README.md](java/README.md)); the Gradle wrapper is included
+* [Java JDK 25](https://adoptium.net/) — optional, only for the Java open-account workflow ([interop/open_account/java/README.md](../../../interop/open_account/java/README.md)); the Gradle wrapper is included
 
 ## Set up the Python environment
 
 ```bash
+cd src/python/strands_agents
 uv sync
 ```
 
 ## Set up your Gemini API key
 
+From the repository root:
+
 ```bash
-cp setgeminikey.example setgeminikey.sh
-chmod +x setgeminikey.sh
+cp scripts/setgeminikey.example scripts/setgeminikey.sh
+chmod +x scripts/setgeminikey.sh
 ```
 
-Edit `setgeminikey.sh` and paste in your key:
+Edit `scripts/setgeminikey.sh` and paste in your key:
 
 ```bash
 export GEMINI_API_KEY="Your API Key Goes Here"
 ```
 
-The start scripts source `setgeminikey.sh` from the project root if it exists (and
-`setclaimcheck.sh`, for the optional claim check; see `setclaimcheck.example`).
+The start scripts source `scripts/setgeminikey.sh` if it exists (and
+`scripts/setclaimcheck.sh`, for the optional claim check; see `scripts/setclaimcheck.example`).
 
 ## Getting started
 
-* Strands-only CLI version → [src/strands_supervisor/README.md](src/strands_supervisor/README.md)
-* Temporal + Strands version → [src/temporal_supervisor/README.md](src/temporal_supervisor/README.md)
+* Strands-only CLI version → [standalone/README.md](standalone/README.md)
+* Temporal + Strands version → [durable/README.md](durable/README.md)
 
 ## Running the tests
 
-From the project root:
-
 ```bash
+cd src/python/strands_agents
 uv run pytest
 ```
 
@@ -107,21 +121,21 @@ The tests use a scripted model and stub activities, so they need no Gemini API k
 and no Redis. The workflow tests start a local Temporal test server, which is
 downloaded automatically on first run.
 
-The Java open-account workflow has its own tests (JDK 25): `cd java && ./gradlew test`.
+The Java open-account workflow has its own tests (JDK 25): `cd interop/open_account/java && ./gradlew test`.
 
 A separate live test of the agent routing calls the paid Gemini API and is not part
-of that run: `source ./setgeminikey.sh && uv run pytest tests/live_agent_handoffs.py -s`
-(see [src/temporal_supervisor/README.md](src/temporal_supervisor/README.md#live-agent-routing-test-calls-the-paid-gemini-api)).
+of that run: `source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_agent_handoffs.py -s`
+(see [durable/README.md](durable/README.md#live-agent-routing-test-calls-the-paid-gemini-api)).
 Live tests of opening an account (reopening it after a rollback, and opening the same
-account name twice, each with its own KYC) also call the paid API: `source ./setgeminikey.sh && uv run pytest tests/live_account_opening.py -s`
-(see [src/temporal_supervisor/README.md](src/temporal_supervisor/README.md#live-account-opening-test-calls-the-paid-gemini-api)).
+account name twice, each with its own KYC) also call the paid API: `source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_account_opening.py -s`
+(see [durable/README.md](durable/README.md#live-account-opening-tests-call-the-paid-gemini-api)).
 
 ## Resetting the demo data
 
 Both versions read and write the JSON files in `data/` (beneficiaries, investment
 accounts, client details, and linked bank account balances), so adding or deleting
 beneficiaries and opening or closing accounts change them. To restore the original
-data:
+data, from the repository root:
 
 ```bash
 git checkout data/

@@ -2,7 +2,7 @@
 
 Shared by both versions so the wording matches:
   - the Strands CLI uses this directly inside its intervention (see
-    ``strands_supervisor.approval``), and
+    ``standalone.approval``), and
   - the Temporal version calls it from an activity (the approval hook runs in
     workflow context and must stay deterministic, so the name lookup — which
     reads the data files — happens off the workflow).

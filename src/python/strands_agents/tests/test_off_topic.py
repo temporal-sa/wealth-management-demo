@@ -8,7 +8,7 @@ block right after their first line.
 import pathlib
 import re
 
-from common.agent_constants import (
+from prompts.agent_constants import (
     BENE_INSTRUCTIONS,
     INVEST_INSTRUCTIONS,
     OPEN_ACCOUNT_INSTRUCTIONS,
@@ -23,7 +23,9 @@ other financial products), politely decline, say that you can only help with ben
 and investment accounts, and do not answer the question. Then ask how you can help with
 their beneficiaries or investment accounts."""
 
-SRC = pathlib.Path(__file__).resolve().parents[1] / "src"
+PORT = pathlib.Path(__file__).resolve().parents[1]
+# The port's code, plus the shared Python code it uses (src/python/common).
+CODE_DIRS = [PORT / "standalone", PORT / "durable", PORT / "prompts", PORT.parent / "common"]
 
 
 def test_supervisors_decline_off_topic_questions():
@@ -45,9 +47,7 @@ def test_specialists_hand_off_topic_requests_back():
 
 def test_no_guardrail_code_remains():
     pattern = re.compile(r"guardrail|tripwire|ROUTING_INSTRUCTIONS|disable_guardrails", re.IGNORECASE)
-    offenders = [
-        str(path.relative_to(SRC))
-        for path in SRC.rglob("*.py")
-        if pattern.search(path.read_text())
-    ]
+    files = [path for code_dir in CODE_DIRS for path in code_dir.rglob("*.py")]
+    assert len(files) > 20  # the scan really covers the code
+    offenders = [str(path.relative_to(PORT.parent)) for path in files if pattern.search(path.read_text())]
     assert offenders == []

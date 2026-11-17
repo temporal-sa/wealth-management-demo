@@ -8,23 +8,23 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from dotenv import load_dotenv
 from temporalio.worker import Worker
 
-from temporal_supervisor.client_helper import connect_client
-from temporal_supervisor.model_config import (
+from durable.client_helper import connect_client
+from durable.model_config import (
     LLM_MAX_CALLS_PER_SECOND,
     LLM_TASK_QUEUE,
     OPEN_ACCOUNT_TASK_QUEUE,
     TASK_QUEUE,
 )
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.activities.clients import ClientActivities
-from temporal_supervisor.activities.custodian import Custodian
-from temporal_supervisor.activities.funding import Funding
-from temporal_supervisor.activities.open_account import OpenAccount
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities
-from temporal_supervisor.activities.approval import ApprovalActivities
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.investments import Investments
+from durable.activities.clients import ClientActivities
+from durable.activities.custodian import Custodian
+from durable.activities.funding import Funding
+from durable.activities.open_account import OpenAccount
+from durable.activities.event_stream_activities import EventStreamActivities
+from durable.activities.approval import ApprovalActivities
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
 
 load_dotenv()
 

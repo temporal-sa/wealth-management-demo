@@ -16,6 +16,7 @@ and how their workflow IDs are named:
 cd src/python/api
 ./startlocalapi.sh          # OpenAI Agents SDK port: oai-temporal-agent-<random> on Supervisor
 ./startlocalapi.sh pyai     # Pydantic AI port: pyai-temporal-agent-<random> on PY-AI-Supervisor
+./startlocalapi.sh strands_agents   # Strands Agents port: strands-temporal-agent-<random> on wealth-management-strands
 ```
 
 Note that the web application communicates directly with the API and the API is what 
@@ -42,6 +43,12 @@ A browser window opens at http://localhost:3000. Click **Start Chat** to start a
 chat starts a new chat workflow with a random ID named after the port the API serves, for example
 `oai-temporal-agent-<random>` or `pyai-temporal-agent-<random>` (the prefix comes from the API's
 `GET /config`); **End Chat** ends it.
+
+When the API serves a port that pauses for approvals (the Strands Agents port; `GET /config` reports
+`"approvals": true`), the app also asks the API for a pending approval while the chat is open. Before a
+beneficiary is deleted or an account closed, the question appears in the chat; your next message
+answers it: one starting with *yes*, *ok*, *sure*, *approve*, *confirm* or *proceed* (and a few similar
+words) approves, anything else denies.
 
 Click **Chaos** in the chat header to open the chaos panel, which turns failure scenarios on and off
 at runtime and lists the failures as they happen. See

@@ -22,16 +22,16 @@ from temporalio.exceptions import ApplicationError
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from temporal_supervisor import client_helper
-from temporal_supervisor.claim_check.claim_check_codec import ClaimCheckCodec
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
-from temporal_supervisor.codec_server.codec_server import build_codec_server
-from temporal_supervisor.run_worker import choose_workflows
-from temporal_supervisor.workflows.open_account_workflow import (
+from durable import client_helper
+from common.claim_check.claim_check_codec import ClaimCheckCodec
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin
+from durable.codec_server.codec_server import build_codec_server
+from durable.run_worker import choose_workflows
+from durable.workflows.open_account_workflow import (
     OpenInvestmentAccountInput,
     OpenInvestmentAccountWorkflow,
 )
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 
 class FakeRedis:

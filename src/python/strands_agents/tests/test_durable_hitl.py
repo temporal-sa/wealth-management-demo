@@ -39,8 +39,8 @@ from strands.types.streaming import StreamEvent
 from strands.types.tools import ToolChoice, ToolSpec
 
 from common.user_message import ProcessUserMessageInput
-from temporal_supervisor.model_config import LLM_TASK_QUEUE
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.model_config import LLM_TASK_QUEUE
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 TASK_QUEUE = "test-durable-hitl"
 CLIENT_ID = "C-1"

@@ -23,7 +23,7 @@ from strands.interventions.actions import Confirm, Deny, InterventionAction, Pro
 from strands.hooks.events import BeforeToolCallEvent
 from strands.vended_interventions.hitl import HumanInTheLoop
 
-from common.approval_prompts import friendly_confirmation
+from prompts.approval_prompts import friendly_confirmation
 
 
 class ConfirmDestructive(HumanInTheLoop):
