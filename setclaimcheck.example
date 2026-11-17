@@ -1,0 +1,6 @@
+# Copy this file to setclaimcheck.sh to store payloads in Redis instead of the event history
+# (the claim check). Every component sources setclaimcheck.sh if it exists, and they must all agree.
+# USE_CLAIM_CHECK accepts true, yes or 1.
+export USE_CLAIM_CHECK=true
+export REDIS_HOST=localhost
+export REDIS_PORT=6379

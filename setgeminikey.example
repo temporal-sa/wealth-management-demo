@@ -1,0 +1,6 @@
+# Copy this file to setgeminikey.sh and put your Gemini API key in it.
+# Get a key at https://aistudio.google.com/apikey
+# setgeminikey.sh is git-ignored: never commit a real key.
+export GEMINI_API_KEY=your-gemini-api-key
+# Optional: the Gemini model every agent uses (default gemini-3.8-flash)
+# export GEMINI_MODEL=gemini-3.8-flash
