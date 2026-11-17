@@ -427,7 +427,7 @@ cd src/python/openai_agents/durable
 ## Environment variables
 
 The start scripts set most of these for you. The Python components read them through
-`common/client_helper.py`, `common/redis_config.py` and the Temporal environment configuration.
+`src/python/common/client_helper.py`, `src/python/common/redis_config.py` and the Temporal environment configuration.
 
 | Variable | Default | Used for |
 |---|---|---|

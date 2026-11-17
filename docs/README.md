@@ -1,3 +1,3 @@
 # Docs
 
-Architecture notes, the port PRD and the demo script. Images used by READMEs go in `images/`.
+Docs that cover more than one port. `images/` holds the screenshots and diagrams the READMEs use.
