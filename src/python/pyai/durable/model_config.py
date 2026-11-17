@@ -76,9 +76,9 @@ class ChaosAwareModel(WrapperModel):
     """
 
     async def request(self, *args: Any, **kwargs: Any) -> ModelResponse:
-        await inject_failure(ChaosFlag.LLM_DOWN, ConnectionError("OpenAI API unavailable"))
+        await inject_failure(ChaosFlag.LLM_DOWN, ConnectionError("LLM API unavailable (injected by the chaos panel)"))
         await inject_failure(
-            ChaosFlag.LLM_RATE_LIMITED, _rate_limited("OpenAI API rate limit exceeded (HTTP 429)")
+            ChaosFlag.LLM_RATE_LIMITED, _rate_limited("LLM API rate limit exceeded (HTTP 429, injected by the chaos panel)")
         )
         try:
             return await super().request(*args, **kwargs)
