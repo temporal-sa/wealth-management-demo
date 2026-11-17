@@ -1,0 +1,1022 @@
+import logging
+from typing import Optional
+from dataclasses import dataclass, asdict, field
+
+import re
+
+from pydantic_ai import Agent, RunContext, ModelRetry
+from pydantic_ai.messages import ToolCallPart, ToolReturnPart, UserPromptPart
+
+from common.agent_constants import (
+    AGENT_MODEL,
+    SUPERVISOR_AGENT_NAME, SUPERVISOR_INSTRUCTIONS,
+    BENE_AGENT_NAME, BENE_INSTRUCTIONS,
+    INVEST_AGENT_NAME, INVEST_INSTRUCTIONS,
+    OPEN_ACCOUNT_AGENT_NAME, OPEN_ACCOUNT_INSTRUCTIONS,
+)
+from common.beneficiaries_manager import BeneficiariesManager
+from common.investment_manager import InvestmentManager, InvestmentAccount
+from common.domain_classes import OpenInvestmentAccountInput, WealthManagementClient
+
+from temporalio import workflow
+from temporalio.exceptions import ActivityError, ApplicationError
+from temporalio.workflow import ParentClosePolicy
+from temporalio.client import Client, WorkflowHandle
+
+from common.client_helper import ClientHelper
+from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from temporal_supervisor.activities.open_account import OpenAccount
+from temporal_supervisor.activities.investments import Investments
+from temporal_supervisor.retry_policies import TOOL_RETRY_POLICY, TOOL_START_TO_CLOSE_TIMEOUT
+
+with workflow.unsafe.imports_passed_through():
+    from temporal_supervisor.chaos import core_banking_api
+    from temporal_supervisor.model_config import ChaosAwareModel, agent_model as build_agent_model
+
+logger = logging.getLogger(__name__)
+
+### Debug Configuration
+DEBUG_MODE = False  # Set to True to see handoff routing debug messages
+
+def debug_print(message: str):
+    """Print debug messages only when DEBUG_MODE is enabled"""
+    if DEBUG_MODE:
+        print(message)
+
+# Import Temporal plugins for the helper function
+try:
+    from pydantic_ai.durable_exec.temporal import PydanticAIPlugin
+    from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
+except ImportError as e:
+    logger.error(f"Unable to initialize plugins: {e}")
+    PydanticAIPlugin = None
+    ClaimCheckPlugin = None
+
+### Dependencies
+@dataclass
+class AgentDependencies:
+    client_id: Optional[str] = None
+    next_agent: Optional[str] = None  # Signals routing to another agent
+    trigger_message: Optional[str] = None  # Message for next agent
+    current_agent_name: str = SUPERVISOR_AGENT_NAME  # For debugging/logging
+    customer_message: Optional[str] = None  # The customer's latest chat message, word for word
+    kyc_pending: bool = False  # KYC details shown to the customer and awaiting their confirmation
+    pending_account_info: Optional[OpenInvestmentAccountInput] = None  # Account info being passed between agents
+    task_queue_open_account: Optional[str] = None  # Task queue for opening account child workflows
+    active_account_workflow_id: Optional[str] = None  # Workflow ID for active account opening process
+    current_client_info: Optional['WealthManagementClient'] = None  # Original client info for KYC updates
+    # Latest state reported by each open-account child workflow, keyed by its
+    # workflow ID. Updated by the update_account_opening_state signal.
+    account_opening_states: dict[str, str] = field(default_factory=dict)
+    # Account openings started so far in this conversation. Each opening's child
+    # workflow ID ends with its number, so every request opens a new one.
+    account_openings_started: int = 0
+    # Customer messages so far (set by the chat workflow), and the message in which
+    # each account opening's KYC details were shown, keyed by its workflow ID. KYC is
+    # only approved in a later message, so one opening's confirmation can't approve another.
+    turn: int = 0
+    kyc_shown_turn: dict[str, int] = field(default_factory=dict)
+
+### Handoff helpers
+
+def customer_said(ctx: RunContext[AgentDependencies]) -> str:
+    """Quote the customer's latest message for the next agent.
+
+    Agents only see the handoff message as their input, so it carries the customer's
+    words verbatim rather than a paraphrase the next agent has to guess from.
+    """
+    return f'The customer\'s latest message, word for word: "{ctx.deps.customer_message or ""}"'
+
+
+KYC_TOOLS = ("approve_client_kyc", "update_kyc_details")
+CONFIRMATION = re.compile(
+    r"^\s*(y|yes|yeah|yep|sure|ok|okay|correct|confirm(ed)?|approved?|that'?s (right|correct)|looks (good|right)|all good)\b",
+    re.IGNORECASE,
+)
+
+
+def is_unconfirmed_request(ctx: RunContext[AgentDependencies], verbs: tuple[str, ...]) -> bool:
+    """Whether the customer's latest message asks for the action rather than confirming it.
+
+    Reads customer_message rather than the message history: tools run as activities and
+    don't see the history, and after a handoff it ends with the routing call.
+    """
+    message = ctx.deps.customer_message or ""
+    return any(verb in message.lower() for verb in verbs) and not CONFIRMATION.match(message)
+
+
+def kyc_tool_ran_this_turn(ctx: RunContext[AgentDependencies]) -> bool:
+    """Whether approve_client_kyc or update_kyc_details was called since this agent run's prompt.
+
+    A call made in the same model response as the output function counts too: with
+    end_strategy='exhaustive' it runs even though its result may not be in ctx.messages yet.
+    """
+    for message in reversed(ctx.messages):
+        for part in getattr(message, 'parts', []):
+            if isinstance(part, (ToolCallPart, ToolReturnPart)) and part.tool_name in KYC_TOOLS:
+                return True
+            if isinstance(part, UserPromptPart):
+                return False
+    return False
+
+### Output Functions
+
+# Supervisor Agent Output Functions
+async def respond_to_user(ctx: RunContext[AgentDependencies], response: str) -> str:
+    """
+    Respond directly to the user when no specialized agent is needed.
+    Use this for greetings, when asking for client_id, or to decline requests
+    that are not about beneficiaries or investment accounts.
+
+    Args:
+        response: Your response to the user
+    """
+    debug_print(f"[{ctx.deps.current_agent_name}] Responding to user")
+    return response
+
+async def route_to_beneficiary_agent(ctx: RunContext[AgentDependencies], client_id: str) -> str:
+    """
+    Route to the beneficiary agent for beneficiary-related requests.
+    This function signals the handoff - the main loop will execute it.
+
+    Args:
+        client_id: The client's ID (must be provided)
+    """
+    try:
+        if not client_id or client_id.strip() == "":
+            raise ValueError("client_id is required for routing to beneficiary agent")
+
+        debug_print(f"[{ctx.deps.current_agent_name}] Routing to {BENE_AGENT_NAME}")
+
+        ctx.deps.client_id = client_id
+        ctx.deps.next_agent = BENE_AGENT_NAME
+        ctx.deps.trigger_message = f"{customer_said(ctx)}\n\nHandle the customer's latest message."
+
+        return ""  # Empty response - routing happens in main loop
+    except Exception as e:
+        logger.error(f"Error in route_to_beneficiary_agent: {e}")
+        return f"I encountered a problem with the system. Please try again. (Debug: {str(e)})"
+
+async def _current_investments(client_id: str) -> list:
+    """The client's investment accounts, read fresh from the system.
+
+    Inside the Temporal workflow this has to be an activity (no file I/O in workflow
+    code); the standalone version (py_supervisor) reads them directly.
+    """
+    if workflow.in_workflow():
+        return await workflow.execute_activity(
+            Investments.list_investments,
+            args=[client_id],
+            start_to_close_timeout=TOOL_START_TO_CLOSE_TIMEOUT,
+            retry_policy=TOOL_RETRY_POLICY,
+        )
+    return InvestmentManager().list_investment_accounts(client_id)
+
+
+async def _hand_off_to_investment_agent(ctx: RunContext[AgentDependencies], client_id: str) -> str:
+    """Route to the Investment Agent with the customer's message and their current accounts."""
+    if not client_id or client_id.strip() == "":
+        raise ValueError("client_id is required for routing to investment agent")
+
+    debug_print(f"[{ctx.deps.current_agent_name}] Routing to {INVEST_AGENT_NAME}")
+
+    ctx.deps.client_id = client_id
+    ctx.deps.next_agent = INVEST_AGENT_NAME
+
+    # ALWAYS fetch fresh investment data to ensure agent has current information
+    # This prevents stale data issues regardless of routing path
+    logger.info(f"Fetching fresh investment data for client {client_id}")
+    investments_list = await _current_investments(client_id)
+
+    # Format the data for the agent
+    if investments_list:
+        formatted_data = "CURRENT INVESTMENT ACCOUNTS (fetched fresh from database):\n"
+        for inv in investments_list:
+            formatted_data += f"- {inv['name']}: ${inv['balance']:.2f} (ID: {inv['investment_id']})\n"
+
+        investment_data = f"Here is the current investment data for client {client_id}:\n\n{formatted_data}"
+    else:
+        investment_data = f"Client {client_id} has NO investment accounts in the system."
+    ctx.deps.trigger_message = (
+        f"{customer_said(ctx)}\n\n{investment_data}\n"
+        "Handle the customer's latest message. If it asks to open a new account with a name and an amount, "
+        "route it to the Open Account Agent instead of listing the accounts."
+    )
+
+    return ""  # Empty response - routing happens in main loop
+
+
+async def route_to_investment_agent(ctx: RunContext[AgentDependencies], client_id: str) -> str:
+    """
+    Route to the investment agent for investment-related requests.
+    This function signals the handoff - the main loop will execute it.
+
+    IMPORTANT: This function ALWAYS fetches fresh investment data
+    to ensure the agent has current information, regardless of request type or routing path.
+
+    Args:
+        client_id: The client's ID (must be provided)
+    """
+    try:
+        return await _hand_off_to_investment_agent(ctx, client_id)
+    except Exception as e:
+        logger.error(f"Error in route_to_investment_agent: {e}")
+        return f"I encountered a problem with the system. Please try again. (Debug: {str(e)})"
+
+# Beneficiary Agent Output Functions
+async def respond_about_beneficiaries(ctx: RunContext[AgentDependencies], response: str) -> str:
+    """
+    Respond to the user about beneficiary matters.
+    Only use this for beneficiary-related responses.
+    Keep responses concise and professional.
+
+    Args:
+        response: Your response about beneficiaries
+    """
+    try:
+        debug_print(f"[{ctx.deps.current_agent_name}] Responding about beneficiaries")
+
+        # Check if this is a confirmation request (should not validate format)
+        is_confirmation_request = (
+            'are you sure' in response.lower() and
+            'confirm' in response.lower()
+        )
+
+        # Check if this looks like a beneficiary list response
+        # (contains "beneficiar" and has numbered list format or mentions relationships)
+        is_list_response = (
+            'beneficiar' in response.lower() and
+            (
+                ('(' in response and ')' in response) or  # Has relationship in parentheses like "(Son)"
+                (' - ' in response) or  # Has relationship with dash like "- Son"
+                any(line.strip().startswith(('1.', '2.', '3.', '4.')) for line in response.split('\n'))  # Has numbered list
+            ) and
+            not is_confirmation_request  # Don't validate confirmation requests
+        )
+
+        if is_list_response:
+            # VALIDATION DISABLED - Per MEMORY.md: Strict validation causes workflow crashes
+            # Instead of validating/retrying, we FIX the response programmatically
+
+            # Fix literal \n characters (LLM sometimes generates these instead of actual newlines)
+            if '\\n' in response:
+                response = response.replace('\\n', '\n')
+
+            # Ensure the required ending question is present
+            required_ending = "Would you like to add, delete or list your beneficiaries?"
+            if required_ending not in response:
+                # Add it if missing (non-crashing fallback)
+                if not response.endswith('\n'):
+                    response += '\n'
+                response += f"\n{required_ending}"
+
+        return response
+    except ModelRetry:
+        raise  # Re-raise ModelRetry so the model tries again
+    except Exception as e:
+        logger.error(f"Error in respond_about_beneficiaries: {e}")
+        return f"I encountered a problem with the system. Please try again. (Debug: {str(e)})"
+
+async def route_from_beneficiary_to_supervisor(ctx: RunContext[AgentDependencies], client_id: str) -> str:
+    """
+    Route back to supervisor when the request is not beneficiary-related.
+    Use this immediately if the user asks about investments or other topics.
+
+    Args:
+        client_id: The client's ID
+    """
+    try:
+        if not client_id or client_id.strip() == "":
+            raise ValueError("client_id is required for routing")
+
+        debug_print(f"[{ctx.deps.current_agent_name}] Routing back to {SUPERVISOR_AGENT_NAME}")
+
+        ctx.deps.client_id = client_id
+        ctx.deps.next_agent = SUPERVISOR_AGENT_NAME
+        ctx.deps.trigger_message = (
+            f"{customer_said(ctx)}\n\nRoute it to the appropriate agent, or decline it if it is not about "
+            "beneficiaries or investment accounts.")
+
+        return ""  # Empty response - routing happens in main loop
+    except Exception as e:
+        logger.error(f"Error in route_from_beneficiary_to_supervisor: {e}")
+        return f"I encountered a problem with the system. Please try again. (Debug: {str(e)})"
+
+# Investment Agent Output Functions
+async def respond_about_investments(ctx: RunContext[AgentDependencies], response: str) -> str:
+    """
+    Respond to the user about investment matters.
+    Only use this for investment-related responses.
+    Keep responses concise and professional.
+
+    Args:
+        response: Your response about investments
+    """
+    try:
+        debug_print(f"[{ctx.deps.current_agent_name}] Responding about investments")
+
+        # Check if this is a confirmation request (should not validate format)
+        is_confirmation_request = (
+            'are you sure' in response.lower() and
+            'confirm' in response.lower()
+        )
+
+        # Check if this looks like an investment list response
+        # (contains "investment" or "account" and mentions money/balance)
+        is_list_response = (
+            ('investment' in response.lower() or 'account' in response.lower()) and
+            ('$' in response or 'balance' in response.lower()) and
+            not is_confirmation_request  # Don't validate confirmation requests
+        )
+
+        # VALIDATION: If trying to list investments, ensure tool was called
+        # NOTE: Tool call validation disabled - it caused workflow crashes.
+        # The LLM strongly prefers responding from memory over calling tools.
+        # Even with ModelRetry telling it to call the tool, it retries without calling,
+        # leading to "Exceeded maximum retries" and workflow failure.
+        #
+        # Known limitation: First "list investments" after opening account may show stale data.
+        # Instructions remain to encourage tool calls, but no enforcement.
+
+        if is_list_response:
+            # VALIDATION DISABLED - Per MEMORY.md: Strict validation causes workflow crashes
+            # Instead of validating/retrying, we FIX the response programmatically
+
+            # Fix literal \n characters (LLM sometimes generates these instead of actual newlines)
+            if '\\n' in response:
+                response = response.replace('\\n', '\n')
+
+            # Ensure the required ending question is present
+            required_ending = "Would you like to open, close or list your investment accounts?"
+            if required_ending not in response:
+                # Add it if missing (non-crashing fallback)
+                if not response.endswith('\n'):
+                    response += '\n'
+                response += f"\n{required_ending}"
+
+        return response
+    except ModelRetry:
+        raise  # Re-raise ModelRetry so the model tries again
+    except Exception as e:
+        logger.error(f"Error in respond_about_investments: {e}")
+        return f"I encountered a problem with the system. Please try again. (Debug: {str(e)})"
+
+async def route_from_investment_to_supervisor(ctx: RunContext[AgentDependencies], client_id: str) -> str:
+    """
+    Route back to supervisor when the request is not investment-related.
+    Use this immediately if the user asks about beneficiaries or other topics.
+
+    Args:
+        client_id: The client's ID
+    """
+    try:
+        if not client_id or client_id.strip() == "":
+            raise ValueError("client_id is required for routing")
+
+        debug_print(f"[{ctx.deps.current_agent_name}] Routing back to {SUPERVISOR_AGENT_NAME}")
+
+        ctx.deps.client_id = client_id
+        ctx.deps.next_agent = SUPERVISOR_AGENT_NAME
+        ctx.deps.trigger_message = (
+            f"{customer_said(ctx)}\n\nRoute it to the appropriate agent, or decline it if it is not about "
+            "beneficiaries or investment accounts.")
+
+        return ""  # Empty response - routing happens in main loop
+    except Exception as e:
+        logger.error(f"Error in route_from_investment_to_supervisor: {e}")
+        return f"I encountered a problem with the system. Please try again. (Debug: {str(e)})"
+
+async def route_from_investment_to_open_account(ctx: RunContext[AgentDependencies], client_id: str, account_info: OpenInvestmentAccountInput) -> str:
+    """
+    Route to Open Account Agent when the request is for opening a new investment account.
+
+    Args:
+        client_id: The client's ID
+        account_info: The account details (account_name, initial_amount)
+    """
+    try:
+        if not client_id or client_id.strip() == "":
+            raise ValueError("client_id is required for routing")
+
+        # Clean the account name - remove " account" or " Account" suffix if present
+        cleaned_name = account_info.account_name.strip()
+        if cleaned_name.lower().endswith(" account"):
+            cleaned_name = cleaned_name[:-8].strip()
+
+        # Create cleaned account_info
+        cleaned_account_info = OpenInvestmentAccountInput(
+            client_id=account_info.client_id,
+            account_name=cleaned_name,
+            initial_amount=account_info.initial_amount
+        )
+
+        debug_print(f"[{ctx.deps.current_agent_name}] Routing to {OPEN_ACCOUNT_AGENT_NAME} with account info: {cleaned_account_info}")
+
+        ctx.deps.client_id = client_id
+
+        if not workflow.in_workflow():
+            # Standalone version (py_supervisor): no account opening workflow, so the
+            # account is simply added, like the open_investment tool of the OpenAI
+            # Agents SDK standalone version.
+            InvestmentManager().add_investment_account(
+                InvestmentAccount(client_id, cleaned_name, account_info.initial_amount))
+            return (f"Your {cleaned_name} account has been opened with "
+                    f"${account_info.initial_amount:,.2f}.")
+
+        # Store the cleaned account info so the Open Account Agent can access it
+        ctx.deps.pending_account_info = cleaned_account_info
+        ctx.deps.next_agent = OPEN_ACCOUNT_AGENT_NAME
+        ctx.deps.trigger_message = f"The user wants to open a new account: {cleaned_name} with ${account_info.initial_amount}"
+
+        return ""  # Empty response - routing happens in main loop
+
+    except Exception as e:
+        logger.error(f"Error in route_from_investment_to_open_account: {e}")
+        return f"I encountered a problem with the system. Please try again. (Debug: {str(e)})" 
+
+# Open Account Output Functions
+
+async def respond_about_account_opening(ctx: RunContext[AgentDependencies], response: str) -> str:
+    """
+    Respond to the user about account opening matters.
+
+    AUTOMATIC PROCESSING: If pending_account_info exists, this function will automatically:
+    1. Start the account opening workflow
+    2. Retrieve client KYC information
+    3. Format and return a response with the client details
+
+    This removes the need for the LLM to orchestrate the tool calls.
+
+    Args:
+        response: Your response about the account opening process (used if no pending_account_info)
+    """
+    debug_print(f"[{ctx.deps.current_agent_name}] Responding about account opening")
+
+    # VALIDATION: Detect if agent is trying to handle non-KYC requests
+    # These keywords indicate the user is asking about something OTHER than the current KYC process
+    forbidden_keywords = [
+        'list', 'show', 'display', 'what investments', 'what accounts',
+        'my investments', 'my accounts', 'beneficiaries', 'close',
+        'checking', 'savings', '401k', 'existing'
+    ]
+
+    response_lower = response.lower()
+    for keyword in forbidden_keywords:
+        if keyword in response_lower:
+            workflow.logger.warning(
+                f"⚠️ VALIDATION FAILED: respond_about_account_opening called with forbidden keyword '{keyword}'. "
+                f"Agent should use route_from_open_account_to_investment_agent instead!"
+            )
+            raise ModelRetry(
+                "respond_about_account_opening is ONLY for KYC approval/update responses. "
+                "For requests about listing accounts, viewing investments, or other operations, "
+                "you MUST use route_from_open_account_to_investment_agent(client_id) instead."
+            )
+
+    # A customer confirming their KYC details must reach the workflow. Telling them it's
+    # approved without calling the tool leaves the account opening waiting for KYC.
+    if ctx.deps.kyc_pending:
+        if kyc_tool_ran_this_turn(ctx):
+            ctx.deps.kyc_pending = False
+        elif CONFIRMATION.match(ctx.deps.customer_message or ""):
+            raise ModelRetry(
+                "The customer confirmed their information is correct, but approve_client_kyc() has not "
+                "been called, so the account opening is still waiting for KYC. Call approve_client_kyc() "
+                "now, then respond with respond_about_account_opening."
+            )
+
+    # AUTO-HANDLE: If we have pending_account_info, automatically process the account opening
+    if ctx.deps.pending_account_info is not None:
+        account_info = ctx.deps.pending_account_info
+        workflow.logger.info(f"Auto-processing account opening for {account_info.account_name}")
+
+        # Business rules are checked before the account opening starts. A violation is
+        # non-retryable: one attempt, and the reason is passed back to the customer.
+        try:
+            await workflow.execute_activity(
+                Investments.validate_new_account,
+                args=[account_info.client_id, account_info.account_name, account_info.initial_amount],
+                start_to_close_timeout=TOOL_START_TO_CLOSE_TIMEOUT,
+                retry_policy=TOOL_RETRY_POLICY,
+            )
+        except ActivityError as e:
+            ctx.deps.pending_account_info = None
+            if isinstance(e.__cause__, ApplicationError):
+                return f"The {account_info.account_name} account cannot be opened: {e.__cause__.message}."
+            raise
+
+        # The promotion is looked up in an activity, so the workflow-bug chaos flag
+        # only changes the child workflow's input, never the workflow code path itself.
+        account_info.promo_code = await workflow.execute_activity(
+            Investments.find_promotion,
+            args=[account_info.client_id],
+            start_to_close_timeout=TOOL_START_TO_CLOSE_TIMEOUT,
+            retry_policy=TOOL_RETRY_POLICY,
+        )
+
+        try:
+            # 1. Start the child workflow automatically by calling the tool function directly
+            workflow_id = await start_account_opening_workflow(ctx, account_info)
+            workflow.logger.info(f"Started workflow: {workflow_id}")
+
+            # Store workflow_id in deps so agent can access it for subsequent operations
+            ctx.deps.active_account_workflow_id = workflow_id
+
+            # 2. Get client KYC info automatically
+            client = await workflow.execute_activity(
+                OpenAccount.get_current_client_info,
+                args=[workflow_id],
+                start_to_close_timeout=TOOL_START_TO_CLOSE_TIMEOUT,
+                retry_policy=TOOL_RETRY_POLICY,
+            )
+
+            workflow.logger.info(f"Retrieved client info for {client.first_name} {client.last_name}")
+
+            # Store client info in deps so agent can use it for updates
+            ctx.deps.current_client_info = client
+
+            # 3. Format response with actual KYC info
+            response = f"""I've started opening your {account_info.account_name} account. Let me verify your information:
+
+- First Name: {client.first_name}
+- Last Name: {client.last_name}
+- Address: {client.address}
+- Phone: {client.phone}
+- Email: {client.email}
+- Marital Status: {client.marital_status}
+
+Is this information correct and up to date? Please confirm.
+
+(Workflow ID: {workflow_id})"""
+
+            # Clear pending_account_info since we've processed it
+            ctx.deps.pending_account_info = None
+            ctx.deps.kyc_pending = True
+            ctx.deps.kyc_shown_turn[workflow_id] = ctx.deps.turn
+            workflow.logger.info("Cleared pending_account_info")
+
+        except Exception as e:
+            logger.error(f"Error auto-processing account opening: {e}", exc_info=True)
+            return f"I encountered an error starting the account opening process: {str(e)}"
+
+    return response
+
+# helper function
+async def get_workflow_handle(workflow_id) -> WorkflowHandle:
+    client_helper = ClientHelper()
+    print(f"(OpenAccount.get_temporal_client) address is {client_helper.address}")
+    the_client = await Client.connect(**client_helper.client_config,
+                                      plugins=[ PydanticAIPlugin(), ClaimCheckPlugin() ])
+    return the_client.get_workflow_handle_for(OpenInvestmentAccountWorkflow.run, workflow_id)
+
+async def get_current_client_info(workflow_id: str) -> WealthManagementClient:
+    # get the handle from the workflow id
+    logger.info(f"Retrieving current client info for {workflow_id}")
+    handle = await get_workflow_handle(workflow_id)
+    client = await handle.execute_update("get_client_details")
+    return client; 
+
+async def approve_kyc(workflow_id: str):
+    handle = await get_workflow_handle(workflow_id)
+    await handle.signal(OpenInvestmentAccountWorkflow.verify_kyc)
+        
+async def update_client_details(workflow_id: str, client_details: WealthManagementClient) -> str: 
+    handle = await get_workflow_handle(workflow_id)
+    # convert the data class to a dict
+    client_details_dict = asdict(client_details)
+    result = await handle.execute_update(OpenInvestmentAccountWorkflow.update_client_details,
+        args=[client_details_dict])
+    return result
+
+
+async def route_from_open_account_to_investment_agent(ctx: RunContext[AgentDependencies], client_id: str) -> str:
+    """
+    Hand back to the Investment Agent when the request is not about this account opening,
+    or once the account opening has finished.
+    Use this immediately if the user asks about their investments, beneficiaries or other topics.
+
+    Args:
+        ctx: The run context with dependencies
+        client_id: The client's ID
+    """
+    try:
+        return await _hand_off_to_investment_agent(ctx, client_id)
+    except Exception as e:
+        logger.error(f"Error in route_from_open_account_to_investment_agent: {e}")
+        return f"I encountered a problem with the system. Please try again. (Debug: {str(e)})"
+
+### Managers
+
+beneficiaries_mgr = BeneficiariesManager()
+# No shared InvestmentManager: it reads the file once, and accounts are also opened
+# and removed by activities, so a shared one goes stale and saves over their changes.
+
+### Agents
+
+# Honors the LLM chaos flags and turns OpenAI 429s into a Retry-After style delay.
+agent_model = ChaosAwareModel(build_agent_model(AGENT_MODEL))
+
+supervisor_agent = Agent(
+    agent_model,
+    name=SUPERVISOR_AGENT_NAME,
+    deps_type=AgentDependencies,
+    output_type=[
+        respond_to_user,
+        route_to_beneficiary_agent,
+        route_to_investment_agent
+    ],
+    instructions=SUPERVISOR_INSTRUCTIONS,
+)
+
+beneficiary_agent = Agent(
+    agent_model,
+    name=BENE_AGENT_NAME,
+    deps_type=AgentDependencies,
+    output_type=[
+        respond_about_beneficiaries,
+        route_from_beneficiary_to_supervisor
+    ],
+    instructions=BENE_INSTRUCTIONS,
+)
+
+investment_agent = Agent(
+    agent_model,
+    name=INVEST_AGENT_NAME,
+    deps_type=AgentDependencies,
+    output_type=[
+        respond_about_investments,
+        route_from_investment_to_supervisor,
+        route_from_investment_to_open_account,
+    ],
+    instructions=INVEST_INSTRUCTIONS,
+)
+
+open_account_agent = Agent(
+    agent_model,
+    name=OPEN_ACCOUNT_AGENT_NAME,
+    deps_type=AgentDependencies,
+    output_type=[
+        respond_about_account_opening,
+        route_from_open_account_to_investment_agent,
+    ],
+    instructions=OPEN_ACCOUNT_INSTRUCTIONS,
+    end_strategy='exhaustive',
+    # Room for the output checks in respond_about_account_opening to send the model back.
+    output_retries=3,
+)
+
+### Tools
+
+@supervisor_agent.tool
+async def get_client_id(context: RunContext[AgentDependencies]) -> str:
+    """
+    Check if a client_id is already stored.
+
+    Returns:
+        The stored client_id if available, or a message indicating it's not set.
+    """
+    debug_print(f"Retrieveing client id {context.deps.client_id}")
+
+    if context.deps.client_id:
+        return f"Client ID is already set to: {context.deps.client_id}"
+    else:
+        return "No client_id is currently stored."
+
+@supervisor_agent.tool
+async def set_client_id(context: RunContext[AgentDependencies], client_id: str) -> str:
+    """
+    Store the client ID for future operations. Only call this when the user provides an actual identifier.
+
+    Args:
+        client_id: The client ID provided by the user (e.g., "12345", "c-01922", "client_abc")
+    """
+
+    if not client_id or client_id.strip() == "":
+        return "ERROR: Cannot set empty client_id. Ask the user for their client_id."
+
+    context.deps.client_id = client_id
+
+    debug_print(f"****>>> Deps.client id is now set to {context.deps.client_id}")
+    return f"Client ID set to: {client_id}"
+
+
+@beneficiary_agent.tool
+async def add_beneficiaries(
+        context: RunContext[AgentDependencies],
+        first_name: str, last_name: str, relationship: str
+) -> None:
+    await core_banking_api()
+    beneficiaries_mgr.add_beneficiary(context.deps.client_id, first_name, last_name, relationship)
+
+@beneficiary_agent.tool
+async def list_beneficiaries(
+        context: RunContext[AgentDependencies],
+        client_id: str
+) -> list:
+    """
+    List the beneficiaries for the given client id.
+    """
+    await core_banking_api()
+    return beneficiaries_mgr.list_beneficiaries(context.deps.client_id)
+
+@beneficiary_agent.tool
+async def delete_beneficiaries(
+        context: RunContext[AgentDependencies],
+        beneficiary_id: str,
+        user_confirmed: bool = False):
+        """
+        Delete a beneficiary by their beneficiary id. REQUIRES user confirmation before calling this.
+
+        Use the beneficiary id from list_beneficiaries that is mapped to the customer's choice.
+
+        CRITICAL: You MUST call this tool after the user confirms deletion.
+        Do NOT just say "I will proceed to delete" - actually call this tool!
+
+        IMPORTANT: When calling this tool after user confirmation, you MUST set user_confirmed=True.
+        Example: delete_beneficiaries(beneficiary_id="b-1a2b3c4d", user_confirmed=True)
+
+        Args:
+            beneficiary_id: The beneficiary id (from list_beneficiaries) of the beneficiary to delete
+            user_confirmed: Set to True when the user has explicitly confirmed the deletion (default: False)
+
+        Returns:
+            Success message or error if confirmation not provided or beneficiary not found
+        """
+        # Check for confirmation parameter
+        if not user_confirmed:
+            raise ModelRetry(
+                "CRITICAL ERROR: You attempted to delete a beneficiary WITHOUT user confirmation. "
+                "You MUST:\n"
+                "1. Ask: 'Are you sure you want to delete [Name]? Please confirm.'\n"
+                "2. Wait for user response\n"
+                "3. When user confirms (says 'yes', 'confirm', etc.), call this tool with user_confirmed=True\n\n"
+                "Example: delete_beneficiaries(beneficiary_id=\"b-1a2b3c4d\", user_confirmed=True)\n\n"
+                "Do NOT call this tool again until the user has confirmed."
+            )
+
+        # The model sometimes passes user_confirmed=True on the request itself
+        if is_unconfirmed_request(context, ("remove", "delete")):
+            raise ModelRetry(
+                "CRITICAL ERROR: The customer's latest message was a delete REQUEST, not a confirmation. "
+                f"Their message: '{context.deps.customer_message}'\n\n"
+                "This is Step 1, not Step 2! You MUST:\n"
+                "1. First ASK: 'Are you sure you want to delete [Name]? Please confirm.'\n"
+                "2. WAIT for user to respond with 'yes', 'confirm', etc.\n"
+                "3. ONLY THEN call this tool with user_confirmed=True\n\n"
+                "Do NOT call this tool until the user explicitly confirms!"
+            )
+
+        await core_banking_api()
+        beneficiaries = beneficiaries_mgr.list_beneficiaries(context.deps.client_id)
+        matching = next((b for b in beneficiaries if b['beneficiary_id'] == beneficiary_id), None)
+        if not matching:
+            return (f"ERROR: No beneficiary with id '{beneficiary_id}'. Call list_beneficiaries and use "
+                    "the beneficiary id mapped to the customer's choice.")
+
+        name = f"{matching['first_name']} {matching['last_name']}"
+        debug_print(f"Tool: Deleting beneficiary {name} (ID: {beneficiary_id}) from account {context.deps.client_id}")
+        beneficiaries_mgr.delete_beneficiary(context.deps.client_id, beneficiary_id)
+        return f"Successfully deleted {name}"
+
+
+@investment_agent.tool
+async def list_investments(
+    context: RunContext[AgentDependencies],
+    get_fresh_data: bool = True
+) -> list:
+    """
+    Get the current list of investment accounts from the system.
+    Call this whenever the user asks to see, list, or show their investments.
+    This returns fresh data directly from the database.
+
+    Args:
+        get_fresh_data: Always set to True to retrieve current account data (default: True)
+
+    Returns:
+        list: Current investment accounts for the client
+    """
+    # An open request with an amount should be routed to the Open Account Agent, not listed.
+    # Reads customer_message for the reasons given in is_unconfirmed_request.
+    message = (context.deps.customer_message or "").lower()
+    if 'open' in message and re.search(r'\$\s*\d+|\d+\s*dollars?', message):
+        raise ModelRetry(
+            "ERROR: You called list_investments, but the user asked to OPEN an account with specific details! "
+            "The user's request contains 'open' and a dollar amount. "
+            "You should NOT list accounts - instead, extract the account name and amount, then call "
+            "route_from_investment_to_open_account(client_id, account_info) immediately. "
+            "Re-read the user's request and route to Open Account Agent!"
+        )
+
+    await core_banking_api()
+    return InvestmentManager().list_investment_accounts(context.deps.client_id)
+
+
+@investment_agent.tool
+async def close_investment(context: RunContext[AgentDependencies],
+    investment_id: str,
+    user_confirmed: bool = False):
+    """
+    Close an investment account. REQUIRES user confirmation before calling this.
+
+    CRITICAL: You MUST call this tool after the user confirms closing the account.
+    Do NOT just say "I will proceed to close" - actually call this tool!
+
+    IMPORTANT: When calling this tool after user confirmation, you MUST set user_confirmed=True.
+    Example: close_investment(investment_id="12345", user_confirmed=True)
+
+    Args:
+        investment_id: The ID of the investment account to close
+        user_confirmed: Set to True when the user has explicitly confirmed closing the account (default: False)
+
+    Returns:
+        Success message or error if confirmation not provided or account not found
+    """
+    # Check for confirmation parameter
+    if not user_confirmed:
+        raise ModelRetry(
+            "CRITICAL ERROR: You attempted to close an investment account WITHOUT user confirmation. "
+            "You MUST:\n"
+            "1. Ask: 'Are you sure you want to close [Account Name]? Please confirm.'\n"
+            "2. Wait for user response\n"
+            "3. When user confirms (says 'yes', 'confirm', etc.), call this tool with user_confirmed=True\n\n"
+            "Example: close_investment(investment_id=\"12345\", user_confirmed=True)\n\n"
+            "Do NOT call this tool again until the user has confirmed."
+        )
+
+    # The model sometimes passes user_confirmed=True on the request itself
+    if is_unconfirmed_request(context, ("close",)):
+        raise ModelRetry(
+            "CRITICAL ERROR: The customer's latest message was a close REQUEST, not a confirmation. "
+            f"Their message: '{context.deps.customer_message}'\n\n"
+            "This is Step 1, not Step 2! You MUST:\n"
+            "1. First ASK: 'Are you sure you want to close [Account Name]? Please confirm.'\n"
+            "2. WAIT for user to respond with 'yes', 'confirm', etc.\n"
+            "3. ONLY THEN call this tool with user_confirmed=True\n\n"
+            "Do NOT call this tool until the user explicitly confirms!"
+        )
+
+    await core_banking_api()
+    return InvestmentManager().delete_investment_account(
+        client_id=context.deps.client_id,
+        investment_id=investment_id)
+
+
+# Open Account Agent Tools
+
+# Called directly from respond_about_account_opening rather than registered as a tool:
+# TemporalAgent runs tools as activities, where workflow.start_child_workflow is unavailable.
+async def start_account_opening_workflow(ctx: RunContext[AgentDependencies], account_input: OpenInvestmentAccountInput) -> str:
+    """
+    Start a new investment account opening workflow.
+    Returns the workflow ID which you'll need for subsequent operations.
+
+    Every call starts a new account opening, even for an account name opened (or being
+    opened) earlier in this conversation: the workflow ID ends with the opening's number.
+
+    Args:
+        account_input: The account details (client_id, account_name, initial_amount)
+
+    Returns:
+        The workflow ID (format: "OpenAccount-{parent_workflow_id}-{client_id}-{account_name}-{n}",
+        n being the number of account openings started in this conversation, this one included)
+    """
+    try:
+        if not workflow.in_workflow():
+            return "Account opening is only available when running in a workflow context."
+
+        task_queue = ctx.deps.task_queue_open_account
+        if not task_queue:
+            raise ValueError("task_queue_open_account not set in AgentDependencies")
+
+        current_workflow_id = workflow.info().workflow_id
+        opening_number = ctx.deps.account_openings_started + 1
+        child_workflow_id = (f"OpenAccount-{current_workflow_id}-{account_input.client_id}-"
+                             f"{account_input.account_name}-{opening_number}")
+
+        workflow.logger.info(f"Starting open account child workflow with ID: {child_workflow_id}")
+
+        await workflow.start_child_workflow(
+            OpenInvestmentAccountWorkflow.run,
+            args=[account_input],
+            id=child_workflow_id,
+            parent_close_policy=ParentClosePolicy.TERMINATE,
+            task_queue=task_queue
+        )
+        # Counted only once the opening has started
+        ctx.deps.account_openings_started = opening_number
+        # Known from the start, so a status check right away doesn't report "not found"
+        # before the child's first state update arrives.
+        ctx.deps.account_opening_states.setdefault(child_workflow_id, "Initializing")
+
+        return child_workflow_id
+    except Exception as e:
+        # Raised rather than returned: the caller uses the result as a workflow ID.
+        logger.error(f"Error starting account opening workflow: {e}")
+        raise
+
+@open_account_agent.tool
+async def get_account_opening_status(ctx: RunContext[AgentDependencies], workflow_id: str = "") -> str:
+    """Get the current status of an account opening.
+
+    Args:
+        workflow_id: The workflow ID shown when the account opening was started.
+            Leave empty for the current account opening.
+
+    Returns:
+        The latest status the account opening reported. "Complete" means the account
+        was opened; a status starting with "Rolled back" means it was not opened.
+        Either way, that account opening is finished.
+    """
+    workflow_id = workflow_id.strip() or ctx.deps.active_account_workflow_id or ""
+    state = ctx.deps.account_opening_states.get(workflow_id)
+    if state is None:
+        return f"No account opening with workflow ID {workflow_id} was found in this conversation."
+    return state
+
+
+def kyc_not_confirmed_yet(deps: AgentDependencies, workflow_id: str) -> Optional[str]:
+    """Why KYC can't be approved for this account opening yet, or None if it can.
+
+    The customer must have seen this opening's details and replied since: a confirmation
+    given for an earlier account opening doesn't count for a new one.
+    """
+    shown_turn = deps.kyc_shown_turn.get(workflow_id)
+    if shown_turn is None or shown_turn >= deps.turn:
+        return ("KYC was not approved: the customer has not yet confirmed their details for this account "
+                "opening. They have just been shown; wait for the customer's next message.")
+    return None
+
+
+@open_account_agent.tool
+async def approve_client_kyc(ctx: RunContext[AgentDependencies]) -> str:
+    """
+    Approve the client's KYC information and advance the account opening workflow.
+    Call this whenever the user confirms their information (says "yes", "confirm", "correct", etc.).
+    The workflow_id is automatically retrieved.
+
+    Returns:
+        Success message
+    """
+    workflow_id = ctx.deps.active_account_workflow_id
+    logger.info(f"approve_client_kyc: Retrieved workflow_id from deps: {workflow_id}")
+
+    if not workflow_id:
+        return "Error: No active account opening workflow found. Please start the account opening process first."
+    if refusal := kyc_not_confirmed_yet(ctx.deps, workflow_id):
+        return refusal
+
+    logger.info(f"approve_client_kyc: Calling approve_kyc with workflow_id: {workflow_id}")
+    await approve_kyc(workflow_id)
+    return "KYC information approved. The account is now pending compliance review."
+
+
+@open_account_agent.tool
+async def update_kyc_details(ctx: RunContext[AgentDependencies], client_details: WealthManagementClient) -> str:
+    """
+    Update the client's KYC information after collecting updated values from the user.
+
+    CRITICAL: Only call this tool AFTER you have collected the updated values from the user!
+    - If user just said "no" or "incorrect", DO NOT call this tool yet
+    - First ask which fields need updating using respond_about_account_opening()
+    - Then collect the new values through conversation
+    - Finally, call this tool with the updated values
+
+    AUTOMATIC MERGING: You only need to provide the fields that changed!
+    - The tool automatically merges your updates with the original client info
+    - Fields set to None will be filled from ctx.deps.current_client_info
+    - Example: If only address changed, provide WealthManagementClient with address="456 Oak St" and other fields as None
+
+    Args:
+        client_details: WealthManagementClient object with the UPDATED fields.
+                       Unchanged fields can be None - they'll be automatically filled from the original client info.
+
+    Returns:
+        Success or error message
+    """
+    workflow_id = ctx.deps.active_account_workflow_id
+    if not workflow_id:
+        return "Error: No active account opening workflow found. Please start the account opening process first."
+    if refusal := kyc_not_confirmed_yet(ctx.deps, workflow_id):
+        return refusal
+
+    # Check if original client info is available for merging
+    if not ctx.deps.current_client_info:
+        return "Error: Original client information not found. Please restart the account opening process."
+
+    # Auto-merge: If any fields are None, fill them from the original client info
+    # This allows the agent to provide just the updated fields
+    original = ctx.deps.current_client_info
+    merged_client = WealthManagementClient(
+        client_id=client_details.client_id if client_details and client_details.client_id else original.client_id,
+        first_name=client_details.first_name if client_details and client_details.first_name else original.first_name,
+        last_name=client_details.last_name if client_details and client_details.last_name else original.last_name,
+        address=client_details.address if client_details and client_details.address else original.address,
+        phone=client_details.phone if client_details and client_details.phone else original.phone,
+        email=client_details.email if client_details and client_details.email else original.email,
+        marital_status=client_details.marital_status if client_details and client_details.marital_status else original.marital_status,
+    )
+
+    logger.info(f"Merged client details - Original: {original}, Updates: {client_details}, Merged: {merged_client}")
+
+    return await update_client_details(workflow_id, merged_client)
+
