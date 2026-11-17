@@ -216,6 +216,8 @@ See [interop/open_account/java/README.md](../../../../interop/open_account/java/
 
 ### Start the API
 
+This port is the API's default, so it needs no argument (other ports pass theirs, e.g. `./startlocalapi.sh pyai`):
+
 ```bash
 cd src/python/api
 ./startlocalapi.sh

@@ -8,7 +8,15 @@ It uses the [API](../src/python/api/README.md) to interact with Temporal.
 [Node.js](https://nodejs.org/en/download): Version 18 or higher, with npm.
 
 The web application relies on the API to communicate with Temporal. 
-Be sure to follow the instructions to run the API, which can be found [here](../src/python/api/README.md)
+Be sure to follow the instructions to run the API, which can be found [here](../src/python/api/README.md).
+Start it for the port whose worker you're running, because that decides which task queue chats start on
+and how their workflow IDs are named:
+
+```bash
+cd src/python/api
+./startlocalapi.sh          # OpenAI Agents SDK port: oai-temporal-agent-<random> on Supervisor
+./startlocalapi.sh pyai     # Pydantic AI port: pyai-temporal-agent-<random> on PY-AI-Supervisor
+```
 
 Note that the web application communicates directly with the API and the API is what 
 communicates with Temporal running locally or in the cloud.
