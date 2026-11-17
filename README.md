@@ -16,8 +16,11 @@ scripts/              Scripts that work with any language (compliance approval, 
 src/<language>/
   common/             Code shared by that language's ports
   api/                REST API for the front end (works with every framework)
-  <framework>/        One port: its own src/ and tests/, keeping its folder names
-                      (e.g. <x>_supervisor/ standalone, temporal_supervisor/ Temporal version)
+  <framework>/        One port, with its own dependency file:
+    standalone/       Framework-only CLI chat (was <x>_supervisor/)
+    durable/          Temporal version: workflows, activities, worker, scripts (was temporal_supervisor/)
+    api/  common/     Until they're shared at the language level
+    tests/
 ```
 
 ## Ports
@@ -26,8 +29,8 @@ src/<language>/
 |---|---|---|---|
 | OpenAI Agents SDK (reference) | Python | `src/python/openai_agents` | temporal-sa/oai-temporal-wealth-management |
 | Google ADK | Python | `src/python/google_adk` | temporal-sa/adk-wealth-management |
-| Pydantic AI | Python | `src/python/pydantic_ai` | temporal-sa/pyai-wealth-management |
-| Strands Agents | Python | `src/python/strands` | temporal-sa/strands-wealth-management |
+| Pydantic AI | Python | `src/python/pyai` | temporal-sa/pyai-wealth-management |
+| Strands Agents | Python | `src/python/strands_agents` | temporal-sa/strands-wealth-management |
 | Pure Python (LiteLLM) | Python | `src/python/pure` | temporal-sa/pure-wealth-management |
 | Vercel AI SDK | TypeScript | `src/typescript/vercel_ai` | temporal-sa/vai-wealth-management |
 | Google ADK | TypeScript | `src/typescript/google_adk` | temporal-sa/adk-ts-wealth-management |
@@ -35,7 +38,7 @@ src/<language>/
 
 ## Adding an integration
 
-Create `src/<language>/<framework>/` with the standalone version, the Temporal version, tests and its own dependency file. Reuse that language's `common/` and `api/`, and match the Temporal contracts so the Java worker and shared scripts work unchanged.
+Create `src/<language>/<framework>/` with `standalone/`, `durable/`, `tests/` and its own dependency file. Don't name the folder after the library's import name (for example `pydantic_ai` or `strands`), so it can never hide the real library on `sys.path`. Reuse that language's `common/` and `api/`, and match the Temporal contracts so the Java worker and shared scripts work unchanged.
 
 ## Open decisions before migrating code
 

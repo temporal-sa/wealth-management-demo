@@ -12,24 +12,24 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from common.client_helper import ClientHelper
-from temporal_supervisor.activities.clients import ClientActivities
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities
-from temporal_supervisor.activities.open_account import OpenAccount
+from durable.activities.clients import ClientActivities
+from durable.activities.event_stream_activities import EventStreamActivities
+from durable.activities.open_account import OpenAccount
 from temporalio.contrib.openai_agents import OpenAIAgentsPlugin, ModelActivityParameters
 
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
+from durable.claim_check.claim_check_plugin import ClaimCheckPlugin
 
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.custodian import Custodian
-from temporal_supervisor.activities.funding import Funding
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.model_config import ChaosAwareOpenAIModel
-from temporal_supervisor.retry_policies import LLM_RETRY_POLICY
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.custodian import Custodian
+from durable.activities.funding import Funding
+from durable.activities.investments import Investments
+from durable.model_config import ChaosAwareOpenAIModel
+from durable.retry_policies import LLM_RETRY_POLICY
 
-from temporal_supervisor.workflows.supervisor_workflow import (
+from durable.workflows.supervisor_workflow import (
     WealthManagementWorkflow
 )
-from temporal_supervisor.workflows.open_account_workflow import (
+from durable.workflows.open_account_workflow import (
     OpenInvestmentAccountWorkflow
 )
 

@@ -34,14 +34,14 @@ from temporalio.contrib.openai_agents import ModelActivityParameters, OpenAIAgen
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-import temporal_supervisor.chaos as chaos
+import durable.chaos as chaos
 from common.agent_constants import BENE_AGENT_NAME, INVEST_AGENT_NAME, SUPERVISOR_AGENT_NAME
 from common.chaos_manager import ChaosFlag
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.model_config import ChaosAwareOpenAIModel
-from temporal_supervisor.retry_policies import LLM_RETRY_POLICY
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.investments import Investments
+from durable.model_config import ChaosAwareOpenAIModel
+from durable.retry_policies import LLM_RETRY_POLICY
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from tests.scripted_model import send
 
 pytestmark = pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"),
@@ -109,7 +109,7 @@ def _agent_name(system_instructions: str | None) -> str:
 def live_client(client: Client) -> Client:
     """A copy of the client whose workers run model calls against OpenAI, on their own task
     queue, as the real worker does, recording what each agent said."""
-    from temporal_supervisor.run_worker import CustomModelProvider
+    from durable.run_worker import CustomModelProvider
 
     class RecordingModel(ChaosAwareOpenAIModel):
         async def get_response(self, system_instructions, *args, **kwargs):

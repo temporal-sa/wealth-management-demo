@@ -16,15 +16,15 @@ from common.agent_constants import BENE_AGENT_NAME, BENE_HANDOFF, BENE_INSTRUCTI
     INVEST_INSTRUCTIONS, SUPERVISOR_AGENT_NAME, SUPERVISOR_HANDOFF, SUPERVISOR_INSTRUCTIONS, \
     OPEN_ACCOUNT_AGENT_NAME, OPEN_ACCOUNT_HANDOFF, OPEN_ACCOUNT_INSTRUCTIONS
 
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities
+from durable.activities.event_stream_activities import EventStreamActivities
 
-from temporal_supervisor.activities.open_account import OpenAccount, open_new_investment_account
+from durable.activities.open_account import OpenAccount, open_new_investment_account
 from common.account_context import UpdateAccountOpeningStateInput
-from temporal_supervisor.retry_policies import TOOL_RETRY_POLICY
+from durable.retry_policies import TOOL_RETRY_POLICY
 
 with workflow.unsafe.imports_passed_through():
-    from temporal_supervisor.activities.beneficiaries import Beneficiaries
-    from temporal_supervisor.activities.investments import Investments
+    from durable.activities.beneficiaries import Beneficiaries
+    from durable.activities.investments import Investments
     from agents import (
         Agent,
         HandoffOutputItem,

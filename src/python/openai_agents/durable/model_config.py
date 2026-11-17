@@ -12,7 +12,7 @@ from agents import OpenAIChatCompletionsModel
 from temporalio.exceptions import ApplicationError
 
 from common.chaos_manager import ChaosFlag
-from temporal_supervisor.chaos import inject_failure
+from durable.chaos import inject_failure
 
 # Stands in for the Retry-After header of a real 429.
 RATE_LIMIT_RETRY_AFTER = timedelta(seconds=15)

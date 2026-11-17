@@ -35,22 +35,22 @@ chat starts a new chat workflow with a random ID (`oai-temporal-agent-<random>`)
 
 Click **Chaos** in the chat header to open the chaos panel, which turns failure scenarios on and off
 at runtime and lists the failures as they happen. See
-[Failure scenarios](../src/python/openai_agents/temporal_supervisor/README.md#failure-scenarios-chaos-panel).
+[Failure scenarios](../src/python/openai_agents/durable/README.md#failure-scenarios-chaos-panel).
 
 Remember, if you are opening a new investment account, in another terminal
 send the compliance approval to the Open Account child workflow. See
-[How to find the Child Workflow ID](../src/python/openai_agents/temporal_supervisor/README.md#send-the-compliance-reviewed-signal).
+[How to find the Child Workflow ID](../src/python/openai_agents/durable/README.md#send-the-compliance-reviewed-signal).
 
 ### Send the Compliance Reviewed Signal (Local)
 ```bash
-cd src/python/openai_agents/temporal_supervisor
+cd src/python/openai_agents/durable
 ./localsendcomplianceapproval.sh <Child Workflow ID>
 ```
 
 or
 ### Send the Compliance Reviewed Signal (Cloud)
 ```bash
-cd src/python/openai_agents/temporal_supervisor
+cd src/python/openai_agents/durable
 ./cloudsendcomplianceapproval.sh <Child Workflow ID>
 ```
 

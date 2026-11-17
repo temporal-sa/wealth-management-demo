@@ -24,7 +24,7 @@ from common.investment_manager import InvestmentAccount, InvestmentManager
 
 ### Logging Configuration
 # logging.basicConfig(level=logging.INFO,
-#                     filename="oai_supervisor.log",
+#                     filename="standalone.log",
 #                     format="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

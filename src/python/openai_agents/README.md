@@ -5,8 +5,8 @@ wrap the agentic flow with Temporal.
 
 ![](../../../docs/images/architecture.png)
 
-The vanilla OpenAI Agents SDK version of this example is located [here](oai_supervisor/README.md).
-The Temporal version of this example is located [here](temporal_supervisor/README.md).
+The vanilla OpenAI Agents SDK version of this example is located [here](standalone/README.md).
+The Temporal version of this example is located [here](durable/README.md).
 
 Scenarios currently implemented include
 * Add Beneficiary - add a new beneficiary to your account
@@ -65,5 +65,5 @@ export OPENAI_API_KEY=sk-proj-....
 
 ## Getting Started
 
-* The OpenAI Agents SDK version of this example is located [here](oai_supervisor/README.md).
-* The Temporal version of this example is located [here](temporal_supervisor/README.md).
+* The OpenAI Agents SDK version of this example is located [here](standalone/README.md).
+* The Temporal version of this example is located [here](durable/README.md).

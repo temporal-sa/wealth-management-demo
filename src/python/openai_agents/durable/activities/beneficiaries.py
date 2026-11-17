@@ -8,7 +8,7 @@ from common.beneficiaries_manager import BeneficiariesManager
 
 with workflow.unsafe.imports_passed_through():
     from pydantic import BaseModel
-    from temporal_supervisor.chaos import core_banking_api
+    from durable.chaos import core_banking_api
 
 @dataclass
 class Beneficiary:

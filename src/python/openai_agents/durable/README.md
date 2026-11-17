@@ -138,7 +138,7 @@ Be sure you have updated scripts/setclaimcheck.sh as mentioned above.
 
 To run the Codec Server:
 ```bash
-cd src/python/openai_agents/temporal_supervisor
+cd src/python/openai_agents/durable
 ./startcodecserver.sh
 ```
 
@@ -188,7 +188,7 @@ All of the commands below start from the repository root, each in its own termin
 ### Start the Worker using Python Open Investment Account Workflow (default)
 
 ```bash
-cd src/python/openai_agents/temporal_supervisor
+cd src/python/openai_agents/durable
 ./startlocalworker.sh
 ```
 
@@ -201,7 +201,7 @@ you need to specify the name of the Task Queue when running the Python worker
 doesn't register the Python Open Account workflow):
 
 ```bash
-cd src/python/openai_agents/temporal_supervisor
+cd src/python/openai_agents/durable
 ./startlocalworker.sh Open-Account-Java
 ```
 and then start the Java worker, making sure you pass in the same name as you did 
@@ -240,7 +240,7 @@ chat gets its own workflow ID (`oai-temporal-agent-<random>`).
 If you are opening a new investment account, in another terminal
 ### Send the Compliance Reviewed Signal 
 ```bash
-cd src/python/openai_agents/temporal_supervisor
+cd src/python/openai_agents/durable
 ./localsendcomplianceapproval.sh <Child Workflow ID>
 ```
 
@@ -283,7 +283,7 @@ export TEMPORAL_TLS_CLIENT_KEY_PATH="/path/to/key.key"
 
 ### Start the Worker
 ```bash
-cd src/python/openai_agents/temporal_supervisor
+cd src/python/openai_agents/durable
 ./startcloudworker.sh
 ```
 
@@ -291,7 +291,7 @@ If you want to use the Java Open Investment Account Workflow,
 you need to specify the name of the Task Queue when running the Python worker:
 
 ```bash
-cd src/python/openai_agents/temporal_supervisor
+cd src/python/openai_agents/durable
 ./startcloudworker.sh Open-Account-Java
 ```
 and then start the Java worker, making sure you pass in the same name as you did 
@@ -322,7 +322,7 @@ npm start
 If you are opening a new investment account, in another terminal
 ### Send the Compliance Reviewed Signal 
 ```bash
-cd src/python/openai_agents/temporal_supervisor
+cd src/python/openai_agents/durable
 ./cloudsendcomplianceapproval.sh <Child Workflow ID>
 ```
 
@@ -407,20 +407,20 @@ compliance approval yourself. It stops the worker when the scenarios finish. Tem
 be running. The script can be run from any directory:
 
 ```bash
-src/python/openai_agents/temporal_supervisor/startlocalopenaccount.sh
+src/python/openai_agents/durable/startlocalopenaccount.sh
 ```
 
 With a task queue name, the workflow runs on that queue (`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT`), so you
 can run the same scenarios against the Java workflow (start `interop/open_account/java/startlocalworker.sh <queue>` first):
 
 ```bash
-src/python/openai_agents/temporal_supervisor/startlocalopenaccount.sh Open-Account-Java
+src/python/openai_agents/durable/startlocalopenaccount.sh Open-Account-Java
 ```
 
 When the output asks you to signal the third workflow, in another terminal run:
 
 ```bash
-cd src/python/openai_agents/temporal_supervisor
+cd src/python/openai_agents/durable
 ./localsendcomplianceapproval.sh testing-open-investment-account-workflow3
 ```
 
@@ -458,7 +458,7 @@ every flag off.
 | **Tool / API down** | Turn on *Core banking API down*, then ask to list your investments (or open an account, so it fails after compliance approval). Turn it off. | The activity retries (1s backoff, capped at 5s) for as long as the outage lasts. The agent waits mid-turn and answers once the API is back. Nothing is lost or re-asked. |
 | **LLM down** | Turn on *OpenAI API down* and send a message. Turn it off. | The model call is an activity, so it retries the same way (capped at 10s). The conversation picks up exactly where it was. |
 | **LLM rate limited (reactive)** | Turn on *OpenAI rate limited (429)* and send a message. | The model raises an `ApplicationError` with `next_retry_delay` (15s, like a `Retry-After` header), which overrides the retry policy's backoff. Real OpenAI 429s are handled the same way: the `OpenAIAgentsPlugin` turns the response's `Retry-After` header into the next retry delay. The OpenAI client's own retries are turned off (`max_retries=0`) so Temporal decides. |
-| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND` set (`cd src/python/openai_agents/temporal_supervisor && LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh`), then chat in several browser tabs at once. | Model calls run on their own task queue (`<TEMPORAL_TASK_QUEUE>-llm`, or `TEMPORAL_TASK_QUEUE_LLM`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
+| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND` set (`cd src/python/openai_agents/durable && LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh`), then chat in several browser tabs at once. | Model calls run on their own task queue (`<TEMPORAL_TASK_QUEUE>-llm`, or `TEMPORAL_TASK_QUEUE_LLM`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
 | **Business rule (non-retryable)** | Ask to open an account with $2,000,000 (or less than $100). | `validate_new_account` raises a non-retryable `ApplicationError`: one attempt, no retries. The reason goes back to the agent, which explains it to the customer. Compare it with *Tool / API down* in the Temporal UI. |
 | **Saga** | Turn on *Custodian rejects new accounts* (and *Slow account-opening steps* so you can watch), then open an account through compliance approval. Without flags: as client `123`, open an account with $300,000 (the linked bank account has $250,000). | The completed steps are undone in reverse order (refund, then remove the account). Compensations are activities too, so they are retried until they succeed. Kill the worker mid-rollback and the rollback still finishes. Transfers are idempotent (keyed by the workflow and run ID), so a retried debit or refund never moves money twice. |
 | **Bug in workflow code** | Turn on *Bug in workflow code*, then open an account through compliance approval. See below. | The workflow pauses at the failing line, keeping all its state, until a worker with fixed code picks it up. |
@@ -489,7 +489,7 @@ fix is deployed within a couple of minutes, the workflow resumes within about a 
 After the demo, re-arm the bug:
 
 ```bash
-git checkout src/python/openai_agents/temporal_supervisor/workflows/open_account_workflow.py
+git checkout src/python/openai_agents/durable/workflows/open_account_workflow.py
 ```
 
 ### With the Java Open Account workflow

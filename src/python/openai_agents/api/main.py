@@ -13,8 +13,8 @@ from common.chaos_manager import CHAOS_FLAGS, ChaosFlag, ChaosManager
 from common.event_stream_manager import EventStreamManager
 from common.client_helper import ClientHelper
 from common.user_message import ProcessUserMessageInput
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.claim_check.claim_check_plugin import ClaimCheckPlugin
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 temporal_client: Optional[Client] = None
 task_queue: Optional[str] = None

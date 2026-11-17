@@ -8,12 +8,12 @@ from temporalio.exceptions import ActivityError, ApplicationError
 from temporalio.workflow import ParentClosePolicy
 
 from common.client_helper import ClientHelper
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow, OpenInvestmentAccountInput
-from temporal_supervisor.activities.clients import WealthManagementClient
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.retry_policies import TOOL_RETRY_POLICY
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow, OpenInvestmentAccountInput
+from durable.activities.clients import WealthManagementClient
+from durable.activities.investments import Investments
+from durable.retry_policies import TOOL_RETRY_POLICY
 
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
+from durable.claim_check.claim_check_plugin import ClaimCheckPlugin
 
 with workflow.unsafe.imports_passed_through():
     from agents import RunContextWrapper, function_tool

@@ -5,7 +5,7 @@ from temporalio.converter import DataConverter
 
 from common.redis_config import RedisConfig
 from common.util import str_to_bool
-from temporal_supervisor.claim_check.claim_check_codec import ClaimCheckCodec
+from durable.claim_check.claim_check_codec import ClaimCheckCodec
 
 class ClaimCheckPlugin(Plugin):
     def __init__(self):

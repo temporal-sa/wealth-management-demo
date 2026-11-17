@@ -23,10 +23,10 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 * [uv](https://docs.astral.sh/uv/) - Python Dependency Management
 * Temporal running (`temporal server start-dev` locally, or Temporal Cloud)
 * [Redis](https://redis.io/downloads/) running (`REDIS_HOST` / `REDIS_PORT`, default `localhost:6379`)
-* The worker running (`src/python/openai_agents/temporal_supervisor/startlocalworker.sh` or `startcloudworker.sh`). The API
+* The worker running (`src/python/openai_agents/durable/startlocalworker.sh` or `startcloudworker.sh`). The API
   and the worker must use the same `TEMPORAL_TASK_QUEUE`.
 
-See the [Temporal README](../temporal_supervisor/README.md) for setting these up.
+See the [Temporal README](../durable/README.md) for setting these up.
 
 ## Set up Python Environment
 From the repository root:
@@ -49,7 +49,7 @@ cd src/python/openai_agents/api
 ```
 
 #### Connect to Temporal Cloud
-Be sure to have created scripts/setcloudenv.sh. See the [Temporal README](../temporal_supervisor/README.md#running-the-demo-in-temporal-cloud) for more details.
+Be sure to have created scripts/setcloudenv.sh. See the [Temporal README](../durable/README.md#running-the-demo-in-temporal-cloud) for more details.
 ```bash
 cd src/python/openai_agents/api
 ./startcloudapi.sh

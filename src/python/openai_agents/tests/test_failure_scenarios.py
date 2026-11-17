@@ -22,12 +22,12 @@ from temporalio.exceptions import ApplicationError
 from temporalio.testing import ActivityEnvironment, WorkflowEnvironment
 from temporalio.worker import Worker
 
-import temporal_supervisor.chaos as chaos
-import temporal_supervisor.model_config as model_config
+import durable.chaos as chaos
+import durable.model_config as model_config
 from common.chaos_manager import ChaosFlag
 from common.funding_manager import FundingManager, InsufficientFundsError
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.workflows.open_account_workflow import (
+from durable.activities.investments import Investments
+from durable.workflows.open_account_workflow import (
     OpenInvestmentAccountInput,
     OpenInvestmentAccountWorkflow,
 )

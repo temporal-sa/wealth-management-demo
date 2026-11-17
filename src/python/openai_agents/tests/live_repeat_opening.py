@@ -36,12 +36,12 @@ from temporalio.service import RPCError, RPCStatusCode
 from temporalio.worker import Worker
 
 from common.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.clients import ClientActivities
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.activities.open_account import client_helper
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.clients import ClientActivities
+from durable.activities.investments import Investments
+from durable.activities.open_account import client_helper
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from tests import live_agent_handoffs as live
 from tests.live_agent_handoffs import (AGENT_BY_INSTRUCTIONS, AGENT_MESSAGES, chaos_off,  # noqa: F401
                                        live_client, memory_append_chat_interaction,

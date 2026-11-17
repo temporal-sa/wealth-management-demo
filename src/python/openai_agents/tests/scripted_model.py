@@ -18,7 +18,7 @@ from temporalio.common import RetryPolicy
 from temporalio.contrib.openai_agents import ModelActivityParameters, OpenAIAgentsPlugin
 
 from common.user_message import ProcessUserMessageInput
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 SCRIPT: list = []
 INSTRUCTIONS: list = []

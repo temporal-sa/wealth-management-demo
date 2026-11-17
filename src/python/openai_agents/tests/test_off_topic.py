@@ -1,8 +1,8 @@
 """Off-topic questions are declined by the supervisor's prompt, not by a guardrail."""
 
 import common.agent_constants as agent_constants
-import oai_supervisor.main as standalone
-import temporal_supervisor.workflows.supervisor_workflow as supervisor_workflow
+import standalone.main as standalone
+import durable.workflows.supervisor_workflow as supervisor_workflow
 
 DECLINE_BLOCK = [
     "You only help with wealth management: the customer's beneficiaries and investment accounts.",

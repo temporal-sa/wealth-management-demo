@@ -1,7 +1,7 @@
 # Wealth Management Agent Example using OpenAI Agents SDK
 Demonstrates how to use OpenAI Agents SDK using handoffs to other agents. 
 
-The Temporal version of this example is located [here](../temporal_supervisor/README.md).
+The Temporal version of this example is located [here](../durable/README.md).
 
 Scenarios currently implemented include
 * Add Beneficiary - add a new beneficiary to your account
@@ -47,7 +47,7 @@ From the repository root:
 ```bash
 source scripts/setoaikey.sh
 cd src/python/openai_agents
-uv run python oai_supervisor/main.py
+uv run python standalone/main.py
 ```
 
 Example Output

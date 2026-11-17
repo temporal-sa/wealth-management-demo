@@ -3,7 +3,7 @@
 # in ../../../scripts/setcloudenv.sh (see scripts/setcloudenv.example) and the claim check
 # settings in ../../../scripts/setclaimcheck.sh.
 # The argument is the Open Account task queue; pass the same value to
-# src/python/openai_agents/temporal_supervisor/startcloudworker.sh so the Python supervisor starts the workflow there.
+# src/python/openai_agents/durable/startcloudworker.sh so the Python supervisor starts the workflow there.
 if [ -z "$1" ]
   then
     echo "**** Missing required parameter: Task Queue Name for the Open Account Workflow"
