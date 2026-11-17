@@ -1,8 +1,12 @@
-# Secrets: commit only .example files
+# Secrets and local settings (scripts/): commit only .example files
 set*key.sh
 setcloudenv.sh
+setclaimcheck.sh
 *.pem
 *.key
+
+# Redis
+dump.rdb
 
 # Python
 __pycache__/

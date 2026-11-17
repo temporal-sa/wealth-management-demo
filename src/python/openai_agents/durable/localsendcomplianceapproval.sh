@@ -1,0 +1,7 @@
+#!/bin/bash
+if [ -z "$1" ]; then
+   echo "You must specify a workflow ID"
+   exit 1
+fi
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
+uv run python run_send_compliance_approval.py --workflow-id "$1"

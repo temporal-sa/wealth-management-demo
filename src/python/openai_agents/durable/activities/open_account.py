@@ -1,0 +1,128 @@
+from dataclasses import asdict
+from datetime import timedelta
+from typing import Any
+
+from temporalio import workflow, activity
+from temporalio.client import WorkflowHandle, Client
+from temporalio.exceptions import ActivityError, ApplicationError
+from temporalio.workflow import ParentClosePolicy
+
+from common.client_helper import ClientHelper
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow, OpenInvestmentAccountInput
+from durable.activities.clients import WealthManagementClient
+from durable.activities.investments import Investments
+from durable.retry_policies import TOOL_RETRY_POLICY
+
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin
+
+with workflow.unsafe.imports_passed_through():
+    from agents import RunContextWrapper, function_tool
+
+# Don't like making this a global, but I need to get access to Task Queue name
+# in the open_new_investment_account
+client_helper = ClientHelper()
+
+@function_tool
+async def open_new_investment_account(ctx: RunContextWrapper[Any], client_id: str, account_name: str,
+                                      initial_amount: float) -> str:
+    """Begin opening a new investment account.
+
+    Args:
+        client_id: The customer's client ID.
+        account_name: The name for the new investment account.
+        initial_amount: The initial deposit amount.
+
+    Returns:
+        The workflow ID of the account opening, which the other open-account tools
+        require, or the reason the account cannot be opened.
+    """
+    # We are in the context of the main workflow
+
+    # Business rules are checked up front. A violation is a non-retryable error:
+    # it fails on the first attempt, and the reason goes back to the agent.
+    try:
+        await workflow.execute_activity(
+            Investments.validate_new_account,
+            args=[client_id, account_name, initial_amount],
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=TOOL_RETRY_POLICY)
+    except ActivityError as e:
+        # The agent would only see str(e), which is "Activity task failed";
+        # pass the business reason through instead.
+        if isinstance(e.__cause__, ApplicationError):
+            return f"The account cannot be opened: {e.__cause__.message}"
+        raise
+
+    # Read in an activity so the result is recorded in history and replays the same.
+    promo_code = await workflow.execute_activity(
+        Investments.find_promotion,
+        client_id,
+        start_to_close_timeout=timedelta(seconds=5),
+        retry_policy=TOOL_RETRY_POLICY)
+    account_input = OpenInvestmentAccountInput(client_id=client_id,
+                                               account_name=account_name,
+                                               initial_amount=initial_amount,
+                                               promo_code=promo_code)
+
+    # Every request starts a new account opening, even for an account name that was
+    # opened, or is still being opened, earlier in the conversation. The ID ends with
+    # the number of openings started in this conversation, counting this one. The count
+    # is kept in the chat workflow's state (WealthManagementContext), so it is
+    # deterministic and survives replay.
+    opening_number = ctx.context.account_openings_started + 1
+    current_workflow_id = workflow.info().workflow_id
+    child_workflow_id = (f"OpenAccount-{current_workflow_id}-{account_input.client_id}-"
+                         f"{account_input.account_name}-{opening_number}")
+    await workflow.start_child_workflow(
+        OpenInvestmentAccountWorkflow.run,
+        args=[account_input],
+        id=child_workflow_id,
+        parent_close_policy=ParentClosePolicy.TERMINATE,
+        task_queue=client_helper.taskQueueOpenAccount
+    )
+    ctx.context.account_openings_started = opening_number
+    # Known from the start, so a status check right away doesn't report "not found"
+    # before the child's first state update arrives.
+    ctx.context.account_opening_states.setdefault(child_workflow_id, "Initializing")
+    # can't return the handle as we need something serializable for the other activities
+    return child_workflow_id
+
+class OpenAccount:
+
+    @staticmethod
+    async def get_workflow_handle(workflow_id) -> WorkflowHandle:
+        client_helper = ClientHelper()
+        print(f"(OpenAccount.get_temporal_client) address is {client_helper.address}")
+        the_client = await Client.connect(**client_helper.client_config,
+                                          plugins=[
+                                             # OpenAIAgentsPlugin(),
+                                             ClaimCheckPlugin()
+                                         ])
+        return the_client.get_workflow_handle_for(OpenInvestmentAccountWorkflow.run, workflow_id)
+
+    @staticmethod
+    @activity.defn
+    async def get_current_client_info(workflow_id: str) -> WealthManagementClient:
+        # get the handle from the workflow id
+        handle = await OpenAccount.get_workflow_handle(workflow_id)
+        client = await handle.execute_update("get_client_details")
+        # client = await handle.execute_update(OpenInvestmentAccountWorkflow.get_client_details)
+        return client
+
+    @staticmethod
+    @activity.defn
+    async def approve_kyc(workflow_id: str):
+        # get the handle from the workflow id
+        handle = await OpenAccount.get_workflow_handle(workflow_id)
+        await handle.signal(OpenInvestmentAccountWorkflow.verify_kyc)
+
+    @staticmethod
+    @activity.defn
+    async def update_client_details(workflow_id: str, client_details: WealthManagementClient) -> str:
+        # get the handle from the workflow id
+        handle = await OpenAccount.get_workflow_handle(workflow_id)
+        # convert the dataclass to a dict
+        client_details_dict = asdict(client_details)
+        result = await handle.execute_update(OpenInvestmentAccountWorkflow.update_client_details,
+                                             args=[client_details_dict])
+        return result

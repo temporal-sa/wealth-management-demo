@@ -1,5 +1,69 @@
-# OpenAI Agents SDK (Python) — reference port
+# Wealth Management Agent Example using OpenAI Agents SDK
+Demonstrates how to use [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) using handoffs to other agents. 
+Shows an example of just using OpenAI Agents SDK and another version that leverages [Temporal](https://temporal.io) to 
+wrap the agentic flow with Temporal.
 
-From [temporal-sa/oai-temporal-wealth-management](https://github.com/temporal-sa/oai-temporal-wealth-management).
+![](../../../docs/images/architecture.png)
 
-Holds that repo's `src/` and `tests/` (and its dependency file), keeping its own folder names, such as the standalone `*_supervisor/` and `temporal_supervisor/`. Its own dependency file keeps framework versions from conflicting with other ports. Code that turns out to be identical across ports moves up to `../common` and `../api`.
+The vanilla OpenAI Agents SDK version of this example is located [here](standalone/README.md).
+The Temporal version of this example is located [here](durable/README.md).
+
+Scenarios currently implemented include
+* Add Beneficiary - add a new beneficiary to your account
+* List Beneficiaries - shows a list of beneficiaries and their relationship to the account owner
+* Delete Beneficiary - delete a beneficiary from your account
+* Open Investment Account - opens a new investment account
+  * In the Temporal version this uses a **child workflow** with KYC confirmation, a compliance review, and a saga that rolls back on failure.
+    There are Python and Java versions of this workflow. By default, the Python version is used.
+    Every request to open an account starts a new account opening (a new child workflow) with its own KYC, even if an account
+    with the same name was opened, or is still being opened, earlier in the conversation.
+  * The OpenAI Agents SDK (non-Temporal) version opens the account directly with a simple tool (no KYC, compliance review or saga).
+* List Investments - shows a list of accounts and their current balances
+* Close Investment Account - closes an investment account
+* Off-topic questions - questions that aren't about beneficiaries or investment accounts are politely declined by the supervisor agent (handled in the agents' prompts)
+
+You can run through the scenarios with the Temporal version using a [Web Application](../../../frontend/README.md).
+The OpenAI Agents SDK version runs as a command-line chat.
+
+The demo data lives in the `data/` folder (`beneficiaries.json`, `clients.json`, `funding_accounts.json`, `investments.json`),
+which is tracked by git. Adding or deleting beneficiaries, opening or closing accounts, and updating client details during KYC change these files.
+To reset the demo data:
+
+```bash
+git checkout data/
+```
+
+## Prerequisites
+
+* [uv](https://docs.astral.sh/uv/) - Python Dependency Management. The project requires Python 3.13 (`requires-python = ">=3.13,<3.14"`); `uv sync` installs it if needed.
+* [OpenAI API Key](https://platform.openai.com/api-keys) - Your key to accessing OpenAI's LLM
+* [Temporal CLI](https://docs.temporal.io/cli#install) - Local Temporal service (Temporal version)
+* [Redis](https://redis.io/downloads/) - Stores conversation history, real-time status updates and the chaos panel's flags (Temporal version)
+* [Node.js](https://nodejs.org/en/download) 18 or later, with npm - Runs the web application (Temporal version)
+* [Java JDK 25](https://adoptium.net/) - Optional. Only needed for the Java version of the Open Investment Account workflow. The Gradle wrapper is included, so no separate Gradle install is needed. See [interop/open_account/java/README.md](../../../interop/open_account/java/README.md).
+
+## Set up Python Environment
+From the repository root:
+```bash
+cd src/python/openai_agents
+uv sync
+```
+
+## Set up your OpenAI API Key
+
+From the repository root:
+```bash
+cp scripts/setoaikey.example scripts/setoaikey.sh
+chmod +x scripts/setoaikey.sh
+```
+
+Now edit scripts/setoaikey.sh and paste in your OpenAI API Key.
+It should look something like this:
+```text
+export OPENAI_API_KEY=sk-proj-....
+```
+
+## Getting Started
+
+* The OpenAI Agents SDK version of this example is located [here](standalone/README.md).
+* The Temporal version of this example is located [here](durable/README.md).
