@@ -6,21 +6,27 @@ import ChaosPanel from './ChaosPanel';
 // Used if the API doesn't report its port's prefix (an API without GET /config).
 const DEFAULT_WORKFLOW_ID_PREFIX = 'oai-temporal-agent-';
 
-// The chat workflow ID prefix of the port the API serves (e.g. pyai-temporal-agent-),
-// so each workflow ID names the SDK that runs it.
-async function fetchWorkflowIdPrefix() {
+// A typed reply to a pending approval counts as approval when it starts affirmatively;
+// anything else is a denial.
+const AFFIRMATIVE = /^\s*(y|yes|yeah|yep|sure|ok|okay|approve|confirm|proceed|do it)\b/i;
+
+// What the API says about the port it serves: the chat workflow ID prefix (e.g.
+// pyai-temporal-agent-), so each workflow ID names the SDK that runs it, and whether its
+// chat workflow pauses for the customer's approval (the Strands Agents port does).
+async function fetchConfig() {
   try {
     const response = await fetch(`${API_BASE_URL}/config`);
     if (response.ok) {
       const config = await response.json();
-      if (config.workflow_id_prefix) {
-        return config.workflow_id_prefix;
-      }
+      return {
+        workflowIdPrefix: config.workflow_id_prefix || DEFAULT_WORKFLOW_ID_PREFIX,
+        approvals: Boolean(config.approvals),
+      };
     }
   } catch (error) {
-    console.log(`Couldn't read the API's config, using the default workflow ID prefix: ${error}`);
+    console.log(`Couldn't read the API's config, using the defaults: ${error}`);
   }
-  return DEFAULT_WORKFLOW_ID_PREFIX;
+  return { workflowIdPrefix: DEFAULT_WORKFLOW_ID_PREFIX, approvals: false };
 }
 
 const SHOW_CHAOS_KEY = 'showChaosPanel';
@@ -49,6 +55,16 @@ function App() {
   const defaultHeaderText = 'Chat session started.';
   const [workflow_id, setWorkflowId] = useState('');
   const [showChaos, setShowChaos] = useState(loadShowChaos);
+  // Approvals (only for ports whose chat workflow pauses for them, per GET /config)
+  const approvalsRef = useRef(false);
+  const [pendingApproval, setPendingApproval] = useState(null);
+  // The approval question currently shown in the chat, so it is added only once.
+  const approvalShownRef = useRef(null);
+  // An approval already answered, until the workflow clears it.
+  const answeredApprovalRef = useRef(null);
+  // User messages shown as they were sent, until the chat history records their turn.
+  const pendingEchoesRef = useRef([]);
+  const fetchPendingApprovalRef = useRef(null);
 
   const handleToggleChaos = () => {
     const next = !showChaos;
@@ -75,6 +91,9 @@ function App() {
       const pollApi = async () => {
         try {
            await fetchChatHistoryRef.current(defaultHeaderText)
+           if (approvalsRef.current) {
+             await fetchPendingApprovalRef.current();
+           }
         } catch (error) {
           console.error('Error polling API:', error);
         }
@@ -102,7 +121,8 @@ function App() {
     try {
       let response;
       const newSessionId = Math.random().toString(36).substring(2, 15);
-      const newWorkflowId = (await fetchWorkflowIdPrefix()) + newSessionId;
+      const config = await fetchConfig();
+      const newWorkflowId = config.workflowIdPrefix + newSessionId;
       console.log(`Getting ready to start workflow with id ${newWorkflowId}`);
       response = await fetch(`${API_BASE_URL}/start-workflow?workflow_id=${newWorkflowId}`, { method: 'POST' });
       if (response.ok) {
@@ -112,6 +132,11 @@ function App() {
         if (result.message === 'Workflow started.') {
           console.log('Workflow has been started.');
           setWorkflowId(newWorkflowId);
+          approvalsRef.current = config.approvals;
+          setPendingApproval(null);
+          approvalShownRef.current = null;
+          answeredApprovalRef.current = null;
+          pendingEchoesRef.current = [];
           setMessages([{text: defaultHeaderText, type: 'bot'}]);
           setIsChatActive(true);
           eventCountRef.current = 0;
@@ -143,8 +168,22 @@ function App() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsWaitingForAIResponse(true); // Switch to faster polling (2s) while waiting for AI response
-    console.log("before sending the prompt, messages are ", messages);
 
+    // While the chat waits for an approval, this message is the answer: send it to the
+    // approve signal instead. It isn't a turn of its own in the chat history.
+    if (pendingApproval) {
+      const response = AFFIRMATIVE.test(input) ? 'approve' : 'deny';
+      answeredApprovalRef.current = pendingApproval;
+      setPendingApproval(null);
+      try {
+        await fetch(`${API_BASE_URL}/approve?workflow_id=${workflow_id}&response=${response}`, { method: 'POST' });
+      } catch (error) {
+        console.error('Error sending approval:', error);
+      }
+      return;
+    }
+
+    pendingEchoesRef.current.push(input);
     try {
       const encodedInput = encodeURIComponent(input);
       const response = await fetch(`${API_BASE_URL}/send-prompt?workflow_id=${workflow_id}&prompt=${encodedInput}`, {
@@ -224,13 +263,20 @@ function App() {
     let receivedBotResponse = false;
     data.forEach(item => {
       switch (item.type) {
-        case 'chat_interaction':
-          newMessages.push(
-            { text: item.content.user_prompt, type: 'user' },
-            { text: item.content.text_response, type: 'bot' }
-          );
+        case 'chat_interaction': {
+          // The user's message is already shown if it was sent from this page: add only the
+          // reply. Matching by text (not by position) copes with an approval question and
+          // answer shown between the message and its reply.
+          const echoIndex = pendingEchoesRef.current.indexOf(item.content.user_prompt);
+          if (echoIndex !== -1) {
+            pendingEchoesRef.current.splice(echoIndex, 1);
+          } else {
+            newMessages.push({ text: item.content.user_prompt, type: 'user' });
+          }
+          newMessages.push({ text: item.content.text_response, type: 'bot' });
           receivedBotResponse = true;
           break;
+        }
         case 'status_update':
           setStatusContent(item.content.status);
           break;
@@ -243,20 +289,38 @@ function App() {
       setIsWaitingForAIResponse(false);
     }
     if (newMessages.length > 0) {
-      setMessages(prev => {
-        // Check if first new message is duplicate of last existing message
-        if (prev.length > 0 && 
-            newMessages[0].type === prev[prev.length - 1].type && 
-            newMessages[0].text === prev[prev.length - 1].text) {
-          // Skip the duplicate first message
-          return [...prev, ...newMessages.slice(1)];
-        }
-        
-        return [...prev, ...newMessages];
-      });
+      setMessages(prev => [...prev, ...newMessages]);
     }
   };
   fetchChatHistoryRef.current = fetchChatHistory;
+
+  // Shows the approval question the chat is waiting on (once), so the customer can answer
+  // it by typing a reply (see handleSend).
+  const fetchPendingApproval = async () => {
+    let question = null;
+    try {
+      const response = await fetch(`${API_BASE_URL}/pending-approval?workflow_id=${workflow_id}`);
+      question = (await response.json()).pending || null;
+    } catch (error) {
+      return; // try again on the next poll
+    }
+    if (!question) {
+      answeredApprovalRef.current = null;
+      approvalShownRef.current = null;
+      setPendingApproval(null);
+      return;
+    }
+    if (question === answeredApprovalRef.current) {
+      return; // answered; waiting for the workflow to clear it
+    }
+    setPendingApproval(question);
+    if (approvalShownRef.current !== question) {
+      approvalShownRef.current = question;
+      setMessages(prev => [...prev, { text: question, type: 'bot' }]);
+      setIsWaitingForAIResponse(false);
+    }
+  };
+  fetchPendingApprovalRef.current = fetchPendingApproval;
 
   return (
     <div className="layout">

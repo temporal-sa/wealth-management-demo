@@ -33,6 +33,8 @@ class StubChatWorkflow:
     def __init__(self) -> None:
         self.messages: list = []
         self.ended = False
+        self.pending_approval = None
+        self.approval_responses: list = []
 
     @workflow.run
     async def run(self) -> list:
@@ -46,6 +48,24 @@ class StubChatWorkflow:
     @workflow.signal(name="end_workflow")
     async def end_workflow(self) -> None:
         self.ended = True
+
+    # Approvals, as in the Strands Agents port's chat workflow
+    @workflow.signal(name="test_request_approval")
+    async def request_approval(self, question: str) -> None:
+        self.pending_approval = question
+
+    @workflow.query(name="get_pending_approval")
+    def get_pending_approval(self):
+        return self.pending_approval
+
+    @workflow.signal(name="approve")
+    async def approve(self, response: str) -> None:
+        self.approval_responses.append(response)
+        self.pending_approval = None
+
+    @workflow.query(name="approval_responses")
+    def get_approval_responses(self) -> list:
+        return self.approval_responses
 
     @workflow.query(name="messages")
     def get_messages(self) -> list:
@@ -186,6 +206,7 @@ async def test_config_reports_the_default_port(http):
         "label": "OpenAI Agents SDK",
         "task_queue": TASK_QUEUE,
         "workflow_id_prefix": "oai-temporal-agent-",
+        "approvals": False,
     }
 
 
@@ -197,6 +218,7 @@ async def test_chat_port_picks_the_ports_task_queue_and_workflow_id_prefix(tempo
             "label": "Pydantic AI",
             "task_queue": "PY-AI-Supervisor",
             "workflow_id_prefix": "pyai-temporal-agent-",
+            "approvals": False,
         }
 
         workflow_id = config["workflow_id_prefix"] + uuid.uuid4().hex[:12]
@@ -217,5 +239,48 @@ async def test_settings_override_the_ports_values(temporal_env, tmp_path_factory
 def test_an_unknown_chat_port_is_rejected(monkeypatch):
     from api.ports import selected_port
     monkeypatch.setenv("CHAT_PORT", "nope")
-    with pytest.raises(ValueError, match="openai_agents, pyai"):
+    with pytest.raises(ValueError, match="openai_agents, pyai, strands_agents"):
         selected_port()
+
+
+async def test_ports_without_approvals_have_none_pending_and_reject_answers(http):
+    workflow_id = await start_chat(http)
+
+    assert (await asyncio.to_thread(http.get, "/pending-approval", params={"workflow_id": workflow_id})).json() == {
+        "pending": None
+    }
+    response = await asyncio.to_thread(http.post, "/approve", params={"workflow_id": workflow_id, "response": "approve"})
+    assert response.status_code == 400
+
+
+async def test_the_strands_port_relays_approvals(temporal_env, tmp_path_factory):
+    with api(temporal_env, tmp_path_factory, CHAT_PORT="strands_agents", TEMPORAL_TASK_QUEUE=TASK_QUEUE) as client:
+        config = (await asyncio.to_thread(client.get, "/config")).json()
+        assert (config["port"], config["workflow_id_prefix"], config["approvals"]) == (
+            "strands_agents", "strands-temporal-agent-", True)
+
+        workflow_id = config["workflow_id_prefix"] + uuid.uuid4().hex[:12]
+        await post(client, "/start-workflow", workflow_id=workflow_id)
+        handle = temporal_env.client.get_workflow_handle(workflow_id)
+
+        pending = lambda: asyncio.to_thread(client.get, "/pending-approval", params={"workflow_id": workflow_id})
+        assert (await pending()).json() == {"pending": None}
+
+        await handle.signal("test_request_approval", "Delete beneficiary Joan Doe?")
+        assert (await pending()).json() == {"pending": "Delete beneficiary Joan Doe?"}
+
+        bad = await asyncio.to_thread(client.post, "/approve", params={"workflow_id": workflow_id, "response": "yes"})
+        assert bad.status_code == 400
+
+        assert await post(client, "/approve", workflow_id=workflow_id, response="approve") == {
+            "message": "Approval response 'approve' sent."}
+        for _ in range(40):
+            if await handle.query("approval_responses"):
+                break
+            await asyncio.sleep(0.25)
+        assert await handle.query("approval_responses") == ["approve"]
+        assert (await pending()).json() == {"pending": None}
+
+        assert (await asyncio.to_thread(client.get, "/pending-approval", params={"workflow_id": "missing"})).json() == {
+            "pending": None}
+    await handle.terminate()
