@@ -23,7 +23,7 @@ This port was imported from [temporal-sa/strands-wealth-management](https://gith
 | `prompts/` | The agents' instructions and the confirmation wording (`approval_prompts.py`) |
 | `tests/` | The port's tests |
 
-Its chat workflows run on the `wealth-management-strands` task queue by default (`DEFAULT_TASK_QUEUE` in `durable/model_config.py`), so its worker can run next to another port's, and the web app names them `strands-temporal-agent-<random>`. Unlike the other ports, its chat workflow pauses for the customer's approval before deleting a beneficiary or closing an account; the shared API (`/pending-approval`, `/approve`) and web app support this when the API serves this port.
+Its chat workflows run on the `wealth-management-strands` task queue by default (`DEFAULT_TASK_QUEUE` in `durable/model_config.py`), so its worker can run next to another port's, and the web app names them `strands-temporal-agent-<random>`. As in every port, the customer confirms a delete or close in the chat. Here the chat workflow waits for that answer with a Strands interrupt (the `get_pending_approval` query and `approve` signal), which the shared API (`/pending-approval`, `/approve`) and web app handle when the API serves this port.
 
 Scenarios currently implemented include:
 

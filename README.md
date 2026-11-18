@@ -45,7 +45,6 @@ Create `src/<language>/<framework>/` with `standalone/`, `durable/`, `tests/` an
 
 ## Open decisions before migrating code
 
-- **Approvals:** only the Strands Agents port's chat workflow pauses for the customer's approval before deleting a beneficiary or closing an account (Strands interrupts). The shared API and web app support it for that port (`approvals` in `ports.py`); the other ports confirm in the conversation instead. Decide whether the ports should converge.
 - **Task queues:** the OpenAI Agents port defaults to `Supervisor`, the Pydantic AI port to `PY-AI-Supervisor` and the Strands Agents port to `wealth-management-strands`, so they can run at once. The shared API takes the port as an argument (`./startlocalapi.sh pyai`, `./startlocalapi.sh strands_agents`; see `src/python/api/ports.py`); the Java worker defaults to `Supervisor`, so start it with `TEMPORAL_TASK_QUEUE` set to the port's queue. Decide whether every port gets its own default.
 - **Python ADK port:** it has drifted from the PRD (own front end, own data, chaos flags per browser session). Decide whether to bring it back to the reference first.
 - **History:** import each repo the way the first two were: on a branch, `git mv` its files into place in rename-only commits, remove the files the monorepo already shares, then merge with `--allow-unrelated-histories`. The ports started from the same layout, so `git log --follow` on a moved file can show commits from more than one port; `git log <path-in-the-original-repo>` on the import's second parent shows one port's history.
