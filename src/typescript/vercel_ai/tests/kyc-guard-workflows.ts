@@ -2,8 +2,8 @@
 // for an Open Account workflow that records whether KYC was approved.
 import { condition, defineQuery, defineSignal, setHandler } from '@temporalio/workflow';
 
-export { WealthManagementWorkflow } from '../workflows/wealth-management';
-export { OpenInvestmentAccountWorkflow } from '../workflows/open-account';
+export { WealthManagementWorkflow } from '../durable/workflows/wealth-management';
+export { OpenInvestmentAccountWorkflow } from '../durable/workflows/open-account';
 
 export const kycApprovedQuery = defineQuery<boolean>('kyc_approved');
 

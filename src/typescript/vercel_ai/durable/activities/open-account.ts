@@ -1,5 +1,6 @@
-import { ClientHelper, getSharedClient } from '../../common/client-helper';
-import { WealthManagementClient } from '../shared';
+import { getSharedClient } from '../../../common/client-helper';
+import { clientHelper } from '../task-queues';
+import { WealthManagementClient } from '../../../common/shared';
 
 /**
  * The current client details from the OpenInvestmentAccountWorkflow child workflow. It is an update,
@@ -35,7 +36,7 @@ export async function update_client_details(
 /**
  * The task queue for the OpenInvestmentAccountWorkflow child workflow, or null to run it on this
  * worker's task queue. Set TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT to run it on another worker, such as
- * the Java one in /java. Workflow code can't read the environment, so it asks this activity.
+ * the Java one in interop/open_account/java. Workflow code can't read the environment, so it asks this activity.
  * Not part of the shared Temporal contract.
  */
 export async function get_open_account_task_queue(): Promise<string | null> {
@@ -48,5 +49,5 @@ export async function get_open_account_task_queue(): Promise<string | null> {
  * Temporal contract.
  */
 export async function get_llm_task_queue(): Promise<string> {
-  return new ClientHelper().taskQueueLLM;
+  return clientHelper().taskQueueLLM;
 }

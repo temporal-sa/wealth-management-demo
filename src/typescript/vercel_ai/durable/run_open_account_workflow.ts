@@ -23,8 +23,8 @@
  */
 import { randomUUID } from 'crypto';
 import type { Client, WorkflowHandle } from '@temporalio/client';
-import { ClientHelper } from '../common/client-helper';
-import type { OpenInvestmentAccountInput, OpenInvestmentAccountOutput, WealthManagementClient } from './shared';
+import { clientHelper } from './task-queues';
+import type { OpenInvestmentAccountInput, OpenInvestmentAccountOutput, WealthManagementClient } from '../../common/shared';
 import type { OpenInvestmentAccountWorkflow } from './workflows/open-account';
 
 const CLIENT_ID = '123';
@@ -156,7 +156,7 @@ class Runner {
     await followStates(handle, (s) => s === WAITING_COMPLIANCE_REVIEW, undefined, seen);
 
     console.log('*****>>> Send the compliance approval for this workflow, in another terminal:');
-    console.log(`*****>>>   src/temporal_supervisor/localsendcomplianceapproval.sh "${handle.workflowId}"`);
+    console.log(`*****>>>   src/typescript/vercel_ai/durable/localsendcomplianceapproval.sh "${handle.workflowId}"`);
     await followStates(handle, (s) => s !== WAITING_COMPLIANCE_REVIEW, 24 * 60 * 60 * 1000, seen);
     console.log('Compliance approved');
     await finish(handle, seen);
@@ -209,7 +209,7 @@ function parseArgs(argv: string[]): { scenarios: number[]; amount?: number } {
 
 async function main(): Promise<void> {
   const { scenarios, amount } = parseArgs(process.argv.slice(2));
-  const helper = new ClientHelper();
+  const helper = clientHelper();
   const taskQueue = process.env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT || helper.taskQueue;
   const { connection, client } = await helper.connectClient();
   try {

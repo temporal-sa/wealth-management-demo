@@ -1,10 +1,10 @@
 import { NativeConnection, Worker, Runtime, DefaultLogger } from '@temporalio/worker';
 import type { LogEntry } from '@temporalio/worker';
 import { AiSdkPlugin } from '@temporalio/ai-sdk';
-import { google } from '@ai-sdk/google';
+import { gemini } from '../gemini';
 import * as activities from './activities/activities';
-import { ClientHelper } from '../common/client-helper';
-import { buildDataConverter, useClaimCheck } from '../common/data-converter';
+import { clientHelper } from './task-queues';
+import { buildDataConverter, useClaimCheck } from '../../common/data-converter';
 import { chaosAwareProvider } from './chaos-model';
 import { workflowsModule } from './worker-workflows';
 
@@ -51,14 +51,14 @@ function llmMaxCallsPerSecond(): number | undefined {
 
 async function run() {
   logClaimCheckStatus();
-  const helper = new ClientHelper();
+  const helper = clientHelper();
   const openAccountQueue = process.env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT;
   logOpenAccountTaskQueue(helper.taskQueue, openAccountQueue);
   // Without the Open Account workflow when the Java worker runs it
   const workflows = workflowsModule(helper.taskQueue, openAccountQueue);
   const connection = await NativeConnection.connect(helper.nativeConnectionOptions);
   try {
-    const plugin = new AiSdkPlugin({ modelProvider: chaosAwareProvider(google) });
+    const plugin = new AiSdkPlugin({ modelProvider: chaosAwareProvider(gemini()) });
     const worker = await Worker.create({
       connection,
       namespace: helper.namespace,

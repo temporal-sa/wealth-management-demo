@@ -1,4 +1,4 @@
-import { BeneficiariesManager, Beneficiary } from '../../common/beneficiaries-manager';
+import { BeneficiariesManager, Beneficiary } from '../../../common/beneficiaries-manager';
 import { coreBankingApi } from '../chaos';
 
 const mgr = new BeneficiariesManager();

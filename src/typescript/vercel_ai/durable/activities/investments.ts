@@ -1,7 +1,7 @@
 import { ApplicationFailure } from '@temporalio/common';
-import { InvestmentManager, InvestmentAccount } from '../../common/investment-manager';
-import { ChaosFlag } from '../../common/chaos-manager';
-import { formatUsd } from '../../common/funding-manager';
+import { InvestmentManager, InvestmentAccount } from '../../../common/investment-manager';
+import { ChaosFlag } from '../../../common/chaos-manager';
+import { formatUsd } from '../../../common/funding-manager';
 import { coreBankingApi, isEnabled, maybeSlowDown } from '../chaos';
 
 const mgr = new InvestmentManager();

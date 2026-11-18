@@ -17,9 +17,9 @@ import type {
   LanguageModelV3GenerateResult,
   ProviderV3,
 } from '@ai-sdk/provider';
-import { KYC_NOT_APPROVED, kycApprovalRefusal } from '../workflows/agent-loop';
-import { validate_new_account } from '../activities/investments';
-import type { ChatInteraction, WealthManagementClient } from '../shared';
+import { KYC_NOT_APPROVED, kycApprovalRefusal } from '../durable/workflows/agent-loop';
+import { validate_new_account } from '../durable/activities/investments';
+import type { ChatInteraction, WealthManagementClient } from '../../common/shared';
 import { KycRecorderWorkflow, kycApprovedQuery, WealthManagementWorkflow } from './kyc-guard-workflows';
 
 const OPENING = 'OpenAccount-chat-123-education-2';

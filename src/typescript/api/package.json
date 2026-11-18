@@ -1,0 +1,31 @@
+{
+  "name": "@wealth-management/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "REST API for the front end, for the TypeScript ports",
+  "scripts": {
+    "start": "ts-node server.ts",
+    "start.watch": "nodemon server.ts",
+    "test": "mocha --exit --require ts-node/register 'tests/*.test.ts'"
+  },
+  "nodemonConfig": {
+    "execMap": {
+      "ts": "ts-node"
+    },
+    "ext": "ts",
+    "watch": [
+      ".",
+      "../common"
+    ]
+  },
+  "dependencies": {
+    "@temporalio/client": "^1.16.0",
+    "@temporalio/common": "^1.16.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6"
+  }
+}

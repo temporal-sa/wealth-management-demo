@@ -1,5 +1,5 @@
 import { ApplicationFailure } from '@temporalio/common';
-import { ChaosFlag } from '../../common/chaos-manager';
+import { ChaosFlag } from '../../../common/chaos-manager';
 import { injectFailure, maybeSlowDown } from '../chaos';
 
 /** Register a new investment account with the third-party custodian that holds its assets. Returns its reference. */

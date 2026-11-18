@@ -1,8 +1,8 @@
-# Wealth Management Agent Example using Vercel AI SDK (CLI)
+# Vercel AI SDK port: standalone version (CLI)
 
 Demonstrates how to use the [Vercel AI SDK](https://ai-sdk.dev/) using tools to hand off to other agents.
 
-The Temporal version of this example is located [here](../temporal_supervisor/README.md)
+The Temporal version of this example is located [here](../durable/README.md).
 
 Scenarios currently implemented include
 * Add Beneficiary - add a new beneficiary to your account
@@ -18,11 +18,11 @@ Scenarios currently implemented include
 ## Prerequisites
 
 - [Node.js 20+](https://nodejs.org/) and npm
-- A [Google Gemini API key](https://aistudio.google.com/app/apikey)
+- A [Google Gemini API key](https://aistudio.google.com/app/apikey) (the model is `gemini-2.5-pro`)
 
 ## Install dependencies
 
-From the project root:
+The TypeScript code is one set of npm workspaces. From `src/typescript`:
 
 ```bash
 npm install
@@ -30,20 +30,21 @@ npm install
 
 ## Set up your Gemini API key
 
-Create `setllmkey.sh` at the project root with your key:
+From the repository root, copy the shared Gemini key file and fill in your key:
 
 ```bash
-export GOOGLE_GENERATIVE_AI_API_KEY="<your-key-here>"
+cp scripts/setgeminikey.example scripts/setgeminikey.sh
 ```
 
-`setllmkey.sh` is gitignored. The CLI has no start script, so source it yourself as shown below.
+It sets `GEMINI_API_KEY` (the Vercel AI SDK's own `GOOGLE_GENERATIVE_AI_API_KEY` also works) and is gitignored.
+The CLI has no start script, so source it yourself as shown below.
 
 ## Run
 
-From the project root:
+From `src/typescript/vercel_ai`:
 
 ```bash
-source setllmkey.sh && npm run vai
+source ../../../scripts/setgeminikey.sh && npm run vai
 ```
 
 Type `end`, `exit` or `quit` to leave.
@@ -82,8 +83,8 @@ Enter your message: end
 
 You can also add and delete beneficiaries and open and close investment accounts.
 
-These changes are saved to the JSON files in `data/` (tracked by git). To reset the demo data, from the
-project root:
+These changes are saved to the JSON files in [data/](../../../../data) (shared by every port and tracked by
+git). To reset the demo data, from the repository root:
 
 ```bash
 git checkout data/

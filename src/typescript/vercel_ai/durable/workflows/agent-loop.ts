@@ -17,9 +17,9 @@ import {
   SUPERVISOR_AGENT_NAME, SUPERVISOR_HANDOFF, SUPERVISOR_INSTRUCTIONS,
   OPEN_ACCOUNT_AGENT_NAME, OPEN_ACCOUNT_HANDOFF, OPEN_ACCOUNT_INSTRUCTIONS,
   HANDOFF_PROMPT_PREFIX,
-} from '../../common/agent-constants';
-import { ClientContext } from '../../common/account-context';
-import { ChatInteraction, OpenInvestmentAccountInput } from '../shared';
+} from '../../prompts/agent-constants';
+import { ClientContext } from '../../../common/account-context';
+import { ChatInteraction, OpenInvestmentAccountInput } from '../../../common/shared';
 import { LLM_RETRY_POLICY, TOOL_RETRY_POLICY } from '../retry-policies';
 import type * as beneficiaryActivities from '../activities/beneficiaries';
 import type * as investmentActivities from '../activities/investments';

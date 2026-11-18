@@ -10,13 +10,13 @@ import type {
   ProcessUserMessageInput,
   UpdateAccountOpeningStateInput,
   StatusUpdate,
-} from '../shared';
+} from '../../../common/shared';
 import {
   PROCESS_USER_MESSAGE_SIGNAL,
   END_WORKFLOW_SIGNAL,
   UPDATE_ACCOUNT_OPENING_STATE_SIGNAL,
   accountStatusText,
-} from '../shared';
+} from '../../../common/shared';
 import type * as eventStreamActivities from '../activities/event-stream';
 import type * as openAccountActivities from '../activities/open-account';
 import type { ModelMessage } from 'ai';

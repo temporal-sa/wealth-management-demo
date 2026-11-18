@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const FUNDING_FILE = path.join(__dirname, '../../data/funding-accounts.json');
+const FUNDING_FILE = path.join(__dirname, '../../../data/funding_accounts.json');
 
 export interface FundingAccount {
   name: string;

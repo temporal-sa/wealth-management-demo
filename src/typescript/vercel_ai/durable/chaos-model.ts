@@ -1,7 +1,7 @@
 import { APICallError, wrapProvider } from 'ai';
 import { ApplicationFailure } from '@temporalio/common';
 import type { AiSdkPluginOptions } from '@temporalio/ai-sdk';
-import { ChaosFlag } from '../common/chaos-manager';
+import { ChaosFlag } from '../../common/chaos-manager';
 import { injectFailure } from './chaos';
 
 type ProviderV3 = AiSdkPluginOptions['modelProvider'];

@@ -2,14 +2,15 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { WorkflowIdReusePolicy } from '@temporalio/common';
 import { ClientHelper } from '../common/client-helper';
+import { selectedFramework } from './frameworks';
 import { useClaimCheck } from '../common/data-converter';
-import { EventStreamManager } from '../temporal_supervisor/redis/event-stream-manager';
+import { EventStreamManager } from '../common/event-stream-manager';
 import { ChaosManager, isChaosFlag } from '../common/chaos-manager';
 import {
   ProcessUserMessageInput,
   PROCESS_USER_MESSAGE_SIGNAL,
   END_WORKFLOW_SIGNAL,
-} from '../temporal_supervisor/shared';
+} from '../common/shared';
 
 const HOST = process.env.API_HOST ?? '127.0.0.1';
 const PORT = Number(process.env.API_PORT ?? 8000);
@@ -28,9 +29,11 @@ async function run(): Promise<void> {
   console.log('API is starting up...');
   logClaimCheckStatus();
 
-  const helper = new ClientHelper();
+  const framework = selectedFramework();
+  const helper = new ClientHelper(framework.taskQueue);
   const { client } = await helper.connectClient();
   const taskQueue = helper.taskQueue;
+  console.log(`Serving ${framework.label} (${framework.name}) on task queue ${taskQueue}`);
   const events = new EventStreamManager();
   const chaos = new ChaosManager();
 
@@ -44,7 +47,17 @@ async function run(): Promise<void> {
   );
 
   app.get('/', (_req: Request, res: Response) => {
-    res.json({ message: 'Vercel AI + Temporal Agent!' });
+    res.json({ message: 'Wealth Management Agent API' });
+  });
+
+  // The AI framework this API serves, so the web application can name its chat workflows after it
+  app.get('/config', (_req: Request, res: Response) => {
+    res.json({
+      framework: framework.name,
+      label: framework.label,
+      task_queue: taskQueue,
+      workflow_id_prefix: framework.workflowIdPrefix,
+    });
   });
 
   app.get('/get-chat-history', async (req: Request, res: Response) => {

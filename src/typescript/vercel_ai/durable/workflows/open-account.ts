@@ -16,8 +16,8 @@ import type {
   OpenInvestmentAccountOutput,
   WealthManagementClient,
   UpdateAccountOpeningStateInput,
-} from '../shared';
-import { UPDATE_ACCOUNT_OPENING_STATE_SIGNAL } from '../shared';
+} from '../../../common/shared';
+import { UPDATE_ACCOUNT_OPENING_STATE_SIGNAL } from '../../../common/shared';
 import { TOOL_RETRY_POLICY } from '../retry-policies';
 import type * as clientActivities from '../activities/clients';
 import type * as investmentActivities from '../activities/investments';

@@ -1,5 +1,5 @@
 import { ApplicationFailure } from '@temporalio/common';
-import { FundingManager, InsufficientFundsError, Transfer } from '../../common/funding-manager';
+import { FundingManager, InsufficientFundsError, Transfer } from '../../../common/funding-manager';
 import { maybeSlowDown } from '../chaos';
 
 // Moves money to and from the client's linked bank account. Each call takes a transfer ID

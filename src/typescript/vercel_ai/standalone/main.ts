@@ -8,7 +8,7 @@ import {
   ToolModelMessage,
   ToolSet,
 } from 'ai';
-import { google } from '@ai-sdk/google';
+import { gemini } from '../gemini';
 import { z } from 'zod';
 
 import {
@@ -22,10 +22,10 @@ import {
   SUPERVISOR_HANDOFF,
   SUPERVISOR_INSTRUCTIONS,
   HANDOFF_PROMPT_PREFIX,
-} from '../common/agent-constants';
-import { ClientContext } from '../common/account-context';
-import { BeneficiariesManager } from '../common/beneficiaries-manager';
-import { InvestmentManager } from '../common/investment-manager';
+} from '../prompts/agent-constants';
+import { ClientContext } from '../../common/account-context';
+import { BeneficiariesManager } from '../../common/beneficiaries-manager';
+import { InvestmentManager } from '../../common/investment-manager';
 
 // ---------------------------------------------------------------------------
 // Managers
@@ -243,7 +243,7 @@ async function runAgent(
     const def = agentDefs[currentAgent];
 
     const result = await generateText({
-      model: google('gemini-2.5-pro'),
+      model: gemini()('gemini-2.5-pro'),
       system: buildSystemPrompt(currentAgent),
       messages: currentMessages,
       tools: def.tools as any,

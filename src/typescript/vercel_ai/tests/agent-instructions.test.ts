@@ -8,7 +8,7 @@ import {
   STANDALONE_INVEST_INSTRUCTIONS,
   OPEN_ACCOUNT_INSTRUCTIONS,
   INVEST_AGENT_NAME,
-} from '../../common/agent-constants';
+} from '../prompts/agent-constants';
 
 const DECLINE_BLOCK = `You only help with wealth management: the customer's beneficiaries and investment accounts.
 If the customer asks about anything else (for example general knowledge, weather, news, or
@@ -59,8 +59,9 @@ describe('agent instructions', () => {
   });
 
   it('has no guardrail code', () => {
-    const srcDir = path.resolve(__dirname, '../..');
-    for (const file of sourceFiles(srcDir)) {
+    // This port's code and the TypeScript common code
+    const dirs = ['../standalone', '../durable', '../prompts', '../../common'].map((d) => path.resolve(__dirname, d));
+    for (const file of dirs.flatMap(sourceFiles)) {
       assert.ok(!/guardrail|tripwire/i.test(fs.readFileSync(file, 'utf8')), `guardrail code found in ${file}`);
     }
   });

@@ -10,12 +10,12 @@ import { ApplicationFailure } from '@temporalio/common';
 import type { WorkflowHandle } from '@temporalio/client';
 import { temporal } from '@temporalio/proto';
 import { FundingManager, InsufficientFundsError } from '../../common/funding-manager';
-import { translateModelError } from '../chaos-model';
-import { remove_investment, validate_new_account } from '../activities/investments';
+import { translateModelError } from '../durable/chaos-model';
+import { remove_investment, validate_new_account } from '../durable/activities/investments';
 import { useClaimCheck } from '../../common/data-converter';
-import { workflowsModule } from '../worker-workflows';
-import { openAccountWorkflowId } from '../workflows/start-open-account';
-import type { OpenInvestmentAccountInput, OpenInvestmentAccountOutput, WealthManagementClient } from '../shared';
+import { workflowsModule } from '../durable/worker-workflows';
+import { openAccountWorkflowId } from '../durable/workflows/start-open-account';
+import type { OpenInvestmentAccountInput, OpenInvestmentAccountOutput, WealthManagementClient } from '../../common/shared';
 import { OpenInvestmentAccountWorkflow, StartOpenAccountRepeatedlyWorkflow, TestParentWorkflow } from './test-workflows';
 
 const TASK_QUEUE = 'failure-scenarios-test';
@@ -467,7 +467,7 @@ describe('worker workflows', () => {
   });
 
   it('leaves the Open Account workflow out of the supervisor-only bundle', () => {
-    const workflowsDir = path.join(__dirname, '../workflows');
+    const workflowsDir = path.join(__dirname, '../durable/workflows');
     const exportsOf = (module: string) => Object.keys(require(path.join(workflowsDir, module)) as object).sort();
     assert.deepStrictEqual(exportsOf('supervisor-only'), ['WealthManagementWorkflow']);
     assert.deepStrictEqual(exportsOf('index'), ['OpenInvestmentAccountWorkflow', 'WealthManagementWorkflow']);

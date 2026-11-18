@@ -8,10 +8,12 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./lib"
   },
   "include": [
-    "src/**/*.ts"
+    "common/**/*.ts",
+    "api/**/*.ts",
+    "vercel_ai/**/*.ts"
   ]
 }

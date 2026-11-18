@@ -5,11 +5,12 @@
 # scenarios finish.
 # Usage: startlocalopenaccount.sh [open-account-task-queue] [run_open_account_workflow.ts args]
 # With a task queue name, the workflow runs on that queue: start the Java worker with the same
-# name first (cd java && ./startlocalworker.sh <queue>).
+# name first (interop/open_account/java/startlocalworker.sh <queue>, with
+# TEMPORAL_TASK_QUEUE=VAI-Supervisor so it calls this port's activities).
 # Extra arguments after the queue go to run_open_account_workflow.ts
 # (e.g. --scenario 1 --amount 300000).
-cd "$(dirname "$0")/../.." || exit 1
-[ -f setclaimcheck.sh ] && source ./setclaimcheck.sh
+cd "$(dirname "$0")/.." || exit 1
+[ -f ../../../scripts/setclaimcheck.sh ] && source ../../../scripts/setclaimcheck.sh
 if [ -n "$1" ] && [ "${1#-}" = "$1" ]; then
   export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"
   echo "*** Running the open-account workflow on task queue $1 (the Java worker must poll it). ***"
@@ -18,7 +19,7 @@ fi
 echo "Starting the worker and running the scenarios for the open-account workflow."
 # No LLM key needed: these scenarios make no model calls. ts-node is started directly (not through
 # npm run temporal:worker) so that $! is the worker's own PID and the trap can stop it.
-node_modules/.bin/ts-node src/temporal_supervisor/worker.ts &
+../node_modules/.bin/ts-node durable/worker.ts &
 WORKER_PID=$!
 trap 'kill $WORKER_PID 2>/dev/null; wait $WORKER_PID 2>/dev/null' EXIT
 npm run --silent open-account.scenarios -- "$@"

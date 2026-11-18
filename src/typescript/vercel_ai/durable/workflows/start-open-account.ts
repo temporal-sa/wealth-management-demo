@@ -1,5 +1,5 @@
 import { startChild } from '@temporalio/workflow';
-import type { OpenInvestmentAccountInput } from '../shared';
+import type { OpenInvestmentAccountInput } from '../../../common/shared';
 
 /**
  * The Open Account workflow ID for a chat, client, account name and opening number, e.g.

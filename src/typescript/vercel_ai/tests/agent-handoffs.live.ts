@@ -10,7 +10,7 @@
 // investment activities (which only read data/*.json).
 //
 // Not part of `npm test`, because it calls the paid Gemini API. Run it with:
-//   source setllmkey.sh && npm run test:live
+//   source ../../../scripts/setgeminikey.sh && npm run test:live
 // LIVE_TEST_RUNS=<n> repeats the conversation n times (default 1), since model output varies.
 // Requires the Temporal test server (downloaded automatically on first run). Redis is optional:
 // without it, the chaos flags read as off.
@@ -18,10 +18,10 @@ import assert from 'assert';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 import { AiSdkPlugin } from '@temporalio/ai-sdk';
-import { google } from '@ai-sdk/google';
-import * as activities from '../activities/activities';
-import type { ChatInteraction } from '../shared';
-import { WealthManagementWorkflow } from '../workflows/wealth-management';
+import { gemini, geminiApiKey } from '../gemini';
+import * as activities from '../durable/activities/activities';
+import type { ChatInteraction } from '../../common/shared';
+import { WealthManagementWorkflow } from '../durable/workflows/wealth-management';
 
 const RUNS = Math.max(1, Number(process.env.LIVE_TEST_RUNS ?? 1));
 // Client 123's accounts in data/investments.json
@@ -34,8 +34,8 @@ describe('Agent handoffs (live Gemini)', function () {
   let env: TestWorkflowEnvironment;
 
   before(async function () {
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      this.skip(); // no key: source setllmkey.sh first
+    if (!geminiApiKey()) {
+      this.skip(); // no key: source scripts/setgeminikey.sh first
     }
     env = await TestWorkflowEnvironment.createLocal();
   });
@@ -49,8 +49,8 @@ describe('Agent handoffs (live Gemini)', function () {
     const worker = await Worker.create({
       connection: env.nativeConnection,
       taskQueue: TASK_QUEUE,
-      workflowsPath: require.resolve('../workflows/index'),
-      plugins: [new AiSdkPlugin({ modelProvider: google })],
+      workflowsPath: require.resolve('../durable/workflows/index'),
+      plugins: [new AiSdkPlugin({ modelProvider: gemini() })],
       bundlerOptions: { ignoreModules: ['@temporalio/activity', '@temporalio/client', 'crypto'] },
       activities: {
         ...activities,

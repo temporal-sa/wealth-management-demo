@@ -1,13 +1,7 @@
-// The reference port's default task queue, so the shared scripts and the Java worker find the activities
-export const TASK_QUEUE_NAME = 'Supervisor';
+// The Temporal contract every port shares (signal names and payloads), so the APIs, the Java
+// open-account worker and any port's workers work together.
 
-// Model calls run on their own task queue, so the server can rate limit them across all workers.
-// This is the default name; TEMPORAL_TASK_QUEUE_LLM overrides it (see ClientHelper.taskQueueLLM).
-export function llmTaskQueue(taskQueue: string): string {
-  return `${taskQueue}-llm`;
-}
-
-// Signal names — must match the Python temporal_supervisor signal definitions exactly
+// Signal names — must match the other ports' signal definitions exactly
 export const PROCESS_USER_MESSAGE_SIGNAL = 'process_user_message';
 export const END_WORKFLOW_SIGNAL = 'end_workflow';
 export const UPDATE_ACCOUNT_OPENING_STATE_SIGNAL = 'update_account_opening_state';

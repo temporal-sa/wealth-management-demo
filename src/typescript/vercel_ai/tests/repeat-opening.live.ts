@@ -13,19 +13,19 @@
 // Temporal server are stubbed.
 //
 // Not part of `npm test`, because it calls the paid Gemini API. Run it with:
-//   source setllmkey.sh && npm run test:live
+//   source ../../../scripts/setgeminikey.sh && npm run test:live
 // LIVE_TEST_RUNS=<n> repeats the conversation n times (default 1), since model output varies.
 // Requires the Temporal test server (downloaded automatically on first run).
 import assert from 'assert';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 import { AiSdkPlugin } from '@temporalio/ai-sdk';
-import { google } from '@ai-sdk/google';
+import { gemini, geminiApiKey } from '../gemini';
 import { BeneficiariesManager } from '../../common/beneficiaries-manager';
 import { InvestmentManager } from '../../common/investment-manager';
-import { get_client, validate_new_account } from '../activities/activities';
-import type { ChatInteraction, WealthManagementClient } from '../shared';
-import { WealthManagementWorkflow } from '../workflows/wealth-management';
+import { get_client, validate_new_account } from '../durable/activities/activities';
+import type { ChatInteraction, WealthManagementClient } from '../../common/shared';
+import { WealthManagementWorkflow } from '../durable/workflows/wealth-management';
 
 const RUNS = Math.max(1, Number(process.env.LIVE_TEST_RUNS ?? 1));
 const OPEN_VACATION = 'Open Vacation with $13,000';
@@ -45,8 +45,8 @@ describe('Opening the same account twice (live Gemini)', function () {
   let env: TestWorkflowEnvironment;
 
   before(async function () {
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      this.skip(); // no key: source setllmkey.sh first
+    if (!geminiApiKey()) {
+      this.skip(); // no key: source scripts/setgeminikey.sh first
     }
     env = await TestWorkflowEnvironment.createLocal();
   });
@@ -62,8 +62,8 @@ describe('Opening the same account twice (live Gemini)', function () {
     const worker = await Worker.create({
       connection: env.nativeConnection,
       taskQueue: TASK_QUEUE,
-      workflowsPath: require.resolve('../workflows/index'),
-      plugins: [new AiSdkPlugin({ modelProvider: google })],
+      workflowsPath: require.resolve('../durable/workflows/index'),
+      plugins: [new AiSdkPlugin({ modelProvider: gemini() })],
       bundlerOptions: { ignoreModules: ['@temporalio/activity', '@temporalio/client', 'crypto'] },
       activities: {
         // Read data/*.json, without the chaos flags (Redis)

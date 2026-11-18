@@ -1,7 +1,7 @@
 // Failure injection for the chaos panel. These helpers do I/O, so they may only be
 // called from activities (including the model activity), never from workflow code.
 import { Context } from '@temporalio/activity';
-import { ChaosFlag, ChaosManager } from '../common/chaos-manager';
+import { ChaosFlag, ChaosManager } from '../../common/chaos-manager';
 
 const SLOW_STEP_MS = 4000;
 const FLAG_READ_TIMEOUT_MS = 1000;

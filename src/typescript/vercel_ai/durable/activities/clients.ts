@@ -1,5 +1,5 @@
-import { ClientsManager } from '../../common/clients-manager';
-import { WealthManagementClient } from '../shared';
+import { ClientsManager } from '../../../common/clients-manager';
+import { WealthManagementClient } from '../../../common/shared';
 
 const mgr = new ClientsManager();
 

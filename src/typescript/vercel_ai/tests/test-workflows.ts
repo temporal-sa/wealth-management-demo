@@ -9,11 +9,11 @@ import {
   startChild,
   workflowInfo,
 } from '@temporalio/workflow';
-import type { OpenInvestmentAccountInput, UpdateAccountOpeningStateInput } from '../shared';
-import { UPDATE_ACCOUNT_OPENING_STATE_SIGNAL, accountStatusText } from '../shared';
-import { startOpenAccount } from '../workflows/start-open-account';
+import type { OpenInvestmentAccountInput, UpdateAccountOpeningStateInput } from '../../common/shared';
+import { UPDATE_ACCOUNT_OPENING_STATE_SIGNAL, accountStatusText } from '../../common/shared';
+import { startOpenAccount } from '../durable/workflows/start-open-account';
 
-import { OpenInvestmentAccountWorkflow } from '../workflows/open-account';
+import { OpenInvestmentAccountWorkflow } from '../durable/workflows/open-account';
 
 export { OpenInvestmentAccountWorkflow };
 

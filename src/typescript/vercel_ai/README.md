@@ -1,69 +1,132 @@
-# Wealth Management Agent Example using Vercel AI SDK
+# Wealth Management Agent Demo: Vercel AI SDK (TypeScript)
 
-A multi-agent wealth-management demo built with the [Vercel AI SDK](https://ai-sdk.dev) and [Temporal](https://temporal.io).
+A multi-agent banking chat built with the [Vercel AI SDK](https://ai-sdk.dev) and [Temporal](https://temporal.io).
+A customer lists, adds and deletes beneficiaries, and lists, opens and closes investment accounts. Opening an
+account starts a child workflow with KYC, a human compliance approval and a saga.
 
-A supervisor agent routes customer requests to specialist sub-agents (beneficiaries, investments, open account). Two versions are included:
+A supervisor agent routes requests to specialist agents (beneficiaries, investments, open account), which hand
+off to each other with tools. The model is Gemini (`gemini-2.5-pro`). In the Temporal version, every model call
+runs as an activity through Temporal's AI SDK plugin (`@temporalio/ai-sdk`).
 
-- A **non-Temporal CLI** that runs the same agent loop in a single process — useful for iterating on prompts and tools. It opens accounts directly with a simple tool (no KYC, compliance approval or saga).
-- A **Temporal-integrated** version where the agent runs inside a Temporal Workflow as a durable, replayable, long-running conversation. A child workflow handles a multi-step "open new investment account" flow with KYC and compliance checkpoints. The child workflow can optionally run in [Java](java/README.md), showing a polyglot (TypeScript + Java) application.
+This port was imported from [temporal-sa/vai-wealth-management](https://github.com/temporal-sa/vai-wealth-management).
+It is the first TypeScript port: it shares [`src/typescript/common`](../common) and the TypeScript
+[API](../api/README.md) with the TypeScript ports to come, and the [web application](../../../frontend/README.md),
+the [Java worker](../../../interop/open_account/java/README.md), `scripts/` and `data/` with every port. Its chat
+workflows keep the same Temporal contract as the Python ports, so the [Python API](../../python/api/README.md)
+serves it too.
 
-The Temporal version also has a **Chaos Panel** that injects failures at runtime (API and LLM outages, rate limits, a saga rollback, a bug in workflow code) to show how Temporal recovers. See [Failure scenarios](src/temporal_supervisor/README.md#failure-scenarios-chaos-panel).
+Its chat workflows run on the `VAI-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in
+[durable/task-queues.ts](durable/task-queues.ts)), so its worker can run next to another port's. Start either API
+for it with the `vercel_ai` AI framework (`./startlocalapi.sh vercel_ai`); the web app then names its chats
+`vai-temporal-agent-<random>`.
 
-![Architecture](images/architecture.png)
+The demo is implemented twice:
+
+* **[Standalone](standalone/README.md)**: the agents as a command-line chat, with no Temporal. Accounts are
+  opened directly, without KYC, compliance review or a saga.
+* **[Temporal](durable/README.md)**: the agent loop running inside a workflow as a durable, long-running
+  conversation. Includes the web UI, the account-opening child workflow (which can run in Java) and the chaos
+  panel for failure demos.
+
+![Architecture](../../../docs/images/vercel_ai/architecture.png)
 
 ## Prerequisites
 
-- [Node.js 20+](https://nodejs.org/) and npm
-- [Temporal CLI](https://github.com/temporalio/cli) (only required for the Temporal version)
-- [Redis](https://redis.io/) (used by the Temporal version for chat history and the chaos panel; optionally for the claim-check payload codec)
-- A [Google Gemini API key](https://aistudio.google.com/app/apikey)
-- JDK 25 or later — optional, only to run the Open Account workflow in [Java](java/README.md) (the Gradle wrapper is included; no separate Gradle install needed)
+| Tool | Needed for |
+|------|------------|
+| [Node.js](https://nodejs.org/) 20 or later, and npm | Everything |
+| [Temporal CLI](https://docs.temporal.io/cli) | Temporal version (local dev server) |
+| [Redis](https://redis.io/) | Temporal version (chat history, chaos flags, optional claim check) |
+| [Java JDK](https://adoptium.net/) 25 | Optional Java open-account worker only |
+| A [Gemini API key](https://aistudio.google.com/app/apikey) | Both versions, and the live tests |
 
-## Install dependencies
-
-From the project root:
+Install the dependencies. The TypeScript code (this port, `common` and the API) is one set of npm workspaces
+with one `node_modules`, so from the repository root:
 
 ```bash
+cd src/typescript
 npm install
 ```
 
-The React UX has its own dependencies: run `npm install` in `frontend/` too (see the [frontend README](frontend/README.md)).
+## Gemini key setup
 
-## Set up your Gemini API key
-
-Create `setllmkey.sh` at the project root with your key:
+From the repository root, copy the shared Gemini key file (the Strands Agents and Google ADK ports use it too)
+and fill in your key. `scripts/setgeminikey.sh` is ignored by git.
 
 ```bash
-export GOOGLE_GENERATIVE_AI_API_KEY="<your-key-here>"
+cp scripts/setgeminikey.example scripts/setgeminikey.sh
 ```
 
-`setllmkey.sh` is gitignored. The Temporal worker start scripts source it; for the CLI, source it yourself (see the [CLI README](src/vai_supervisor/README.md#run)).
+It sets `GEMINI_API_KEY`; the Vercel AI SDK's own `GOOGLE_GENERATIVE_AI_API_KEY` also works. The worker start
+scripts source it.
 
-Claim check is optional (see the [Temporal README](src/temporal_supervisor/README.md#set-up-claim-check-optional)). If you don't create `setclaimcheck.sh`, the worker, API and codec server start scripts print a harmless `setclaimcheck.sh: No such file or directory` message.
+## Running the demo
 
-The demo data lives in JSON files in `data/` (tracked by git), which the demo updates as you open and close accounts and edit beneficiaries or client details. Reset it with `git checkout data/` from the project root.
+Quick start for the Temporal version with the web UI. Each command runs in its own terminal, from the
+repository root:
 
-## Getting Started
+```bash
+temporal server start-dev
+```
 
-Pick the version you want to run:
+```bash
+redis-server
+```
 
-- **[Vercel AI SDK Only CLI](src/vai_supervisor/README.md)** — run the agent using Vercel AI SDK via the command line.
-- **[Temporal Version](src/temporal_supervisor/README.md)** — run the durable agent Temporal version
-- **[Open Account workflow in Java](java/README.md)** — run the Open Account child workflow in Java alongside the TypeScript supervisor
+```bash
+./src/typescript/vercel_ai/durable/startlocalworker.sh
+```
 
-Also see the [API](api/README.md) and [React UX](frontend/README.md) READMEs.
+```bash
+./src/typescript/api/startlocalapi.sh vercel_ai
+```
+
+```bash
+cd frontend && npm install && npm start
+```
+
+Open http://localhost:3000 and chat. To approve an account opening as the compliance officer:
+
+```bash
+./src/typescript/vercel_ai/durable/localsendcomplianceapproval.sh "<open-account workflow ID>"
+```
+
+The [Temporal README](durable/README.md) covers the details, including running the open-account workflow on the
+Java worker, claim check, the codec server and Temporal Cloud. The [standalone README](standalone/README.md)
+covers the command-line chat.
+
+## Demo data
+
+The JSON files in [data/](../../../data) are the system of record, and the demo changes them. They are tracked
+by git, so after a demo you can reset them with (from the repository root):
+
+```bash
+git checkout data/
+```
 
 ## Tests
 
-Run each from the project root:
+The default suite needs no Gemini key, no Redis and no running Temporal service. It uses Temporal's local test
+server (downloaded on first run), stub activities and a scripted model. From `src/typescript/vercel_ai`:
 
 ```bash
-npm test                            # TypeScript workflow tests
-(cd frontend && CI=true npm test)   # React UX tests (after npm install in frontend/)
-(cd java && ./gradlew test)         # Java workflow tests (JDK 25)
-source setllmkey.sh && npm run test:live   # live agent handoff test (calls the Gemini API)
+npm test
 ```
 
-To exercise the Open Account workflow by hand without the chat or the LLM, run `src/temporal_supervisor/startlocalopenaccount.sh` (needs Temporal running; see [Testing the open-account workflow on its own](src/temporal_supervisor/README.md#testing-the-open-account-workflow-on-its-own)).
+`npm test` in `src/typescript` runs every TypeScript workspace's tests (this port's and the API's). The live
+tests call Gemini and are not part of the default run; see
+[Running the tests](durable/README.md#running-the-tests).
 
-The TypeScript tests download the Temporal test server on the first run. See [Running the tests](src/temporal_supervisor/README.md#running-the-tests).
+## Layout
+
+| Path | Holds |
+|------|-------|
+| [standalone/](standalone) | Standalone version (`main.ts`) and its README |
+| [durable/](durable) | Temporal version: workflows, activities, worker, runners, scripts, README |
+| [prompts/](prompts) | The agents' instructions |
+| [tests/](tests) | Default tests (`*.test.ts`) and live tests (`*.live.ts`) |
+| [gemini.ts](gemini.ts) | The Gemini provider and API key, used by both versions |
+| [package.json](package.json) | This port's dependencies and npm scripts |
+
+The TypeScript tooling (`tsconfig.json`, ESLint, Prettier, `.nvmrc` and the lock file) is in `src/typescript`,
+shared by every TypeScript workspace.

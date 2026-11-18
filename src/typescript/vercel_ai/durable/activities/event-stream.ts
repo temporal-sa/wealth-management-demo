@@ -1,5 +1,5 @@
-import { EventStreamManager } from '../redis/event-stream-manager';
-import { ChatInteraction, StatusUpdate } from '../shared';
+import { EventStreamManager } from '../../../common/event-stream-manager';
+import { ChatInteraction, StatusUpdate } from '../../../common/shared';
 
 export async function append_chat_interaction(workflowId: string, interaction: ChatInteraction): Promise<number> {
   const mgr = new EventStreamManager();

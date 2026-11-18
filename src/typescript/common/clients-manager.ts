@@ -1,10 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { WealthManagementClient } from '../temporal_supervisor/shared';
+import { WealthManagementClient } from './shared';
 
-const CLIENTS_FILE = path.join(__dirname, '../../data/clients.json');
+const CLIENTS_FILE = path.join(__dirname, '../../../data/clients.json');
 
-type ClientsData = Record<string, WealthManagementClient>;
+type ClientsData = Record<string, Omit<WealthManagementClient, 'client_id'>>;
 
 export class ClientsManager {
   private filePath: string;
@@ -32,20 +32,25 @@ export class ClientsManager {
     fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
   }
 
+  // The shared data/clients.json keys each client by ID without repeating it in the record, so
+  // the ID is added here.
   getClient(clientId: string): WealthManagementClient | null {
-    return this.data[clientId] ?? null;
+    const client = this.data[clientId];
+    return client ? { ...client, client_id: clientId } : null;
   }
 
   addClient(client: WealthManagementClient): WealthManagementClient {
-    this.data[client.client_id] = client;
+    const { client_id: clientId, ...record } = client;
+    this.data[clientId] = record;
     this.saveData();
     return client;
   }
 
   updateClient(clientId: string, fields: Partial<WealthManagementClient>): WealthManagementClient | null {
     if (!this.data[clientId]) return null;
-    this.data[clientId] = { ...this.data[clientId], ...fields };
+    const { client_id: _id, ...changes } = fields;
+    this.data[clientId] = { ...this.data[clientId], ...changes };
     this.saveData();
-    return this.data[clientId];
+    return this.getClient(clientId);
   }
 }

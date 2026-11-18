@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 
-const BENEFICIARIES_FILE = path.join(__dirname, '../../data/beneficiaries.json');
+const BENEFICIARIES_FILE = path.join(__dirname, '../../../data/beneficiaries.json');
 
 export interface Beneficiary {
   beneficiary_id: string;
