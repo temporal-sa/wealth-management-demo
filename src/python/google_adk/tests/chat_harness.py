@@ -16,8 +16,8 @@ from temporalio.worker import Worker
 
 from common.status_update import StatusUpdate
 from common.user_message import ChatInteraction, ProcessUserMessageInput
-from temporal_supervisor.task_queues import LLM_TASK_QUEUE
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.task_queues import LLM_TASK_QUEUE
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 import tests.scripted_model as model
 
 TASK_QUEUE = "test-chat"

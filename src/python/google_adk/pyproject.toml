@@ -1,14 +1,12 @@
 [project]
 name = "adk-wealth-management"
 version = "0.1.0"
-description = "Google ADK Wealth Management Demo"
+description = "Wealth management demo: the Google ADK port for Python (with a Temporal durable-execution version)"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "google-adk>=2.8.0",
     "pydantic>=2.11.7",
-    "fastapi>=0.115.0",
-    "uvicorn>=0.35.0",
     "redis>=6.2.0",
     "aiohttp>=3.12.0",
     "temporalio[google-adk]>=1.35.0",
@@ -16,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-adk-supervisor = "adk_supervisor.main:main"
+adk-supervisor = "standalone.main:main"
 
 [tool.uv]
 package = true
@@ -31,12 +29,16 @@ dev = [
     "pytest-asyncio>=0.24.0",
 ]
 
+[tool.hatch.build]
+# The port's own packages, plus src/python for the shared common/ package.
+dev-mode-dirs = [".", ".."]
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/adk_supervisor", "src/common", "src/temporal_supervisor", "src/api"]
+packages = ["standalone", "durable", "prompts"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "module"
 asyncio_default_test_loop_scope = "module"
 testpaths = ["tests"]
-pythonpath = ["src", "."]
+pythonpath = [".", ".."]

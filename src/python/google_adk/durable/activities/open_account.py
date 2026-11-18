@@ -5,14 +5,14 @@ from temporalio.client import WorkflowHandle, Client
 from temporalio.exceptions import ActivityError, ApplicationError
 from temporalio.workflow import ParentClosePolicy
 
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin
 
 with workflow.unsafe.imports_passed_through():
     from common.client_helper import ClientHelper
-    from temporal_supervisor.activities.investments import Investments
-    from temporal_supervisor.retry_policies import TOOL_RETRY_POLICY
-    from temporal_supervisor.task_queues import OPEN_ACCOUNT_TASK_QUEUE
-    from temporal_supervisor.workflows.open_account_workflow import (
+    from durable.activities.investments import Investments
+    from durable.retry_policies import TOOL_RETRY_POLICY
+    from durable.task_queues import DEFAULT_TASK_QUEUE, OPEN_ACCOUNT_TASK_QUEUE
+    from durable.workflows.open_account_workflow import (
         OpenInvestmentAccountWorkflow,
         OpenInvestmentAccountInput,
     )
@@ -87,7 +87,7 @@ async def open_new_investment_account(
 class OpenAccount:
     @staticmethod
     async def _get_workflow_handle(workflow_id: str) -> WorkflowHandle:
-        client_helper = ClientHelper()
+        client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
         the_client = await Client.connect(**client_helper.client_config,
                                           plugins=[ClaimCheckPlugin()])
         return the_client.get_workflow_handle_for(

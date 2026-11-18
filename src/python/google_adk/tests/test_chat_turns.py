@@ -23,12 +23,12 @@ from temporalio.worker import Worker
 
 import tests.scripted_model as model
 from common.account_context import UpdateAccountOpeningStateInput
-from temporal_supervisor.workflows.supervisor_workflow import (
+from durable.workflows.supervisor_workflow import (
     EMPTY_RESPONSE_FALLBACK,
     WealthManagementWorkflow,
 )
-from temporal_supervisor.task_queues import OPEN_ACCOUNT_TASK_QUEUE
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.task_queues import OPEN_ACCOUNT_TASK_QUEUE
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
 from tests.chat_harness import CLIENT_DETAILS, CLIENT_ID, end_chat, kyc_approvals, say as say_turn, start_chat
 from tests.scripted_model import empty, text, tool, transfer
 

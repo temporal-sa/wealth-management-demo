@@ -4,7 +4,7 @@ Exposes POST /encode and POST /decode endpoints that the Temporal Web UI
 (default: http://localhost:8233) can use to inspect workflow event history.
 
 Usage:
-    uv run python -m temporal_supervisor.codec_server.codec_server
+    uv run python -m durable.codec_server.codec_server
 """
 
 from functools import partial
@@ -15,7 +15,7 @@ from google.protobuf import json_format
 from temporalio.api.common.v1 import Payload, Payloads
 
 from common.redis_config import RedisConfig
-from temporal_supervisor.claim_check.claim_check_codec import ClaimCheckCodec
+from common.claim_check.claim_check_codec import ClaimCheckCodec
 
 TEMPORAL_UI_ORIGIN = "http://localhost:8233"
 ALLOWED_ORIGINS = {TEMPORAL_UI_ORIGIN, "https://cloud.temporal.io"}

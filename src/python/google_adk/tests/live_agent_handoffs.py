@@ -34,14 +34,14 @@ from temporalio.google_adk._model import invoke_model as real_invoke_model
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-import temporal_supervisor.chaos as chaos
+import durable.chaos as chaos
 from common.status_update import StatusUpdate
 from common.user_message import ChatInteraction, ProcessUserMessageInput
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.model_config import register_chaos_aware_gemini
-from temporal_supervisor.task_queues import LLM_TASK_QUEUE
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.investments import Investments
+from durable.model_config import register_chaos_aware_gemini
+from durable.task_queues import LLM_TASK_QUEUE
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 RUNS = max(1, int(os.getenv("LIVE_TEST_RUNS", "1")))
 TASK_QUEUE = "live-agent-handoffs"

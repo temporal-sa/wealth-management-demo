@@ -16,7 +16,7 @@ from temporalio.client import WorkflowExecutionStatus
 from temporalio.exceptions import ActivityError, CancelledError, RetryState
 
 import tests.scripted_model as model
-from temporal_supervisor.workflows.supervisor_workflow import init_agents, tool_error_to_model
+from durable.workflows.supervisor_workflow import init_agents, tool_error_to_model
 from tests.chat_harness import FAILING_OPENING, end_chat, say, start_chat
 from tests.scripted_model import text, tool, transfer
 

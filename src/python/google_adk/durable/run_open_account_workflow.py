@@ -13,13 +13,13 @@ The workflow is started on TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT (default: the main
 task queue), so it runs on whichever worker polls that queue: the Python worker,
 or the Java worker in java/ when the queues are split. The activities it calls
 run on the Python worker's main task queue, so a Python worker must be running
-(SKIP_ADK_PLUGIN=True runs it without the Google ADK plugin, so no Gemini key).
+(SKIP_AGENTS=True runs it without the Google ADK plugin, so no Gemini key).
 
 The scenarios change data/*.json like the demo does (client 123's last name, a
 new account, the linked bank account balance); reset with ``git checkout data/``.
 
 Usage (from the project root; see startlocalopenaccount.sh):
-    uv run python src/temporal_supervisor/run_open_account_workflow.py [--scenario N ...] [--amount X]
+    cd src/python/google_adk && uv run python -m durable.run_open_account_workflow [--scenario N ...] [--amount X]
 """
 
 import argparse
@@ -31,9 +31,9 @@ from typing import Optional
 from temporalio.client import Client, WorkflowHandle
 
 from common.client_helper import ClientHelper
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
-from temporal_supervisor.task_queues import OPEN_ACCOUNT_TASK_QUEUE
-from temporal_supervisor.workflows.open_account_workflow import (
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin
+from durable.task_queues import DEFAULT_TASK_QUEUE, OPEN_ACCOUNT_TASK_QUEUE
+from durable.workflows.open_account_workflow import (
     OpenInvestmentAccountInput,
     OpenInvestmentAccountWorkflow,
 )
@@ -46,7 +46,7 @@ SCENARIOS = {1: ("Vacation", 150.78), 2: ("Vacation2", 350.72), 3: ("Vacation3",
 
 
 async def _connect() -> Client:
-    client_helper = ClientHelper()
+    client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
     print(f"address is {client_helper.address}")
     # The claim check plugin uses the same data converter as the worker
     # (the Redis claim check codec when USE_CLAIM_CHECK=true).
@@ -140,7 +140,7 @@ async def scenario3(client: Client, run_id: str, amount: Optional[float]) -> Non
     print(f"After verifying KYC, the current state is '{await _state(handle)}'")
 
     print("*****>>> Send the compliance approval for this workflow, in another terminal:")
-    print(f"*****>>>   cd src/temporal_supervisor && ./localsendcomplianceapproval.sh {handle.id}")
+    print(f"*****>>>   src/python/google_adk/durable/localsendcomplianceapproval.sh {handle.id}")
     state = await _state(handle)
     while state == WAITING_COMPLIANCE_REVIEW:
         await asyncio.sleep(1)

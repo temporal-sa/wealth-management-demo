@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from common.agent_constants import SUPERVISOR_INSTRUCTIONS
+from prompts.agent_constants import SUPERVISOR_INSTRUCTIONS
 
 DECLINE_BLOCK = """You only help with wealth management: the customer's beneficiaries and investment accounts.
 If the customer asks about anything else (for example general knowledge, weather, news, or
@@ -37,9 +37,9 @@ def _all_agents(root):
 def test_every_agent_starts_with_handoff_prefix():
     """Every agent can transfer (to a sub-agent or back to its parent), so every instruction starts
     with HANDOFF_PROMPT_PREFIX, and the supervisor's decline block follows it unchanged."""
-    from adk_supervisor import main as standalone
-    from common.agent_constants import HANDOFF_PROMPT_PREFIX
-    from temporal_supervisor.workflows.supervisor_workflow import init_agents
+    from standalone import main as standalone
+    from prompts.agent_constants import HANDOFF_PROMPT_PREFIX
+    from durable.workflows.supervisor_workflow import init_agents
 
     assert "{" not in HANDOFF_PROMPT_PREFIX  # would be read as an ADK session-state placeholder
     assert "transfer_to_agent" in HANDOFF_PROMPT_PREFIX

@@ -14,17 +14,18 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-# Add src/ to the path so common imports work
+# Add the port's folder to the path so `prompts` imports work when this file is run
+# directly. `common` comes from src/python, which the editable install puts on the path.
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from common.agent_constants import (
+from prompts.agent_constants import (
     HANDOFF_PROMPT_PREFIX,
     BENE_AGENT_NAME, BENE_HANDOFF, BENE_INSTRUCTIONS,
     INVEST_AGENT_NAME, INVEST_HANDOFF, STANDALONE_INVEST_INSTRUCTIONS,
     SUPERVISOR_AGENT_NAME, SUPERVISOR_HANDOFF, SUPERVISOR_INSTRUCTIONS,
 )
-from common.client_id_memory import remember_client_id
+from prompts.client_id_memory import remember_client_id
 from common.beneficiaries_manager import BeneficiariesManager
 from common.investment_manager import InvestmentManager, InvestmentAccount
 

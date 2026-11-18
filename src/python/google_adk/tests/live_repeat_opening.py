@@ -29,14 +29,14 @@ from temporalio.client import Client
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-import temporal_supervisor.chaos as chaos
-from temporal_supervisor.activities.clients import ClientActivities
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.model_config import register_chaos_aware_gemini
-from temporal_supervisor.task_queues import LLM_TASK_QUEUE, OPEN_ACCOUNT_TASK_QUEUE
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+import durable.chaos as chaos
+from durable.activities.clients import ClientActivities
+from durable.activities.investments import Investments
+from durable.activities.beneficiaries import Beneficiaries
+from durable.model_config import register_chaos_aware_gemini
+from durable.task_queues import LLM_TASK_QUEUE, OPEN_ACCOUNT_TASK_QUEUE
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from tests.live_agent_handoffs import (
     Turn, append_chat_interaction, append_status_update, chaos_off, delete_conversation, model_outputs,
     recording_plugin, say, transcript,

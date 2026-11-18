@@ -7,17 +7,19 @@ from temporalio.worker import Worker
 from temporalio.google_adk import GoogleAdkPlugin
 
 from common.client_helper import ClientHelper
-from temporal_supervisor.claim_check.claim_check_plugin import ClaimCheckPlugin
-from temporal_supervisor.activities.clients import ClientActivities
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities
-from temporal_supervisor.activities.open_account import OpenAccount
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.custodian import Custodian
-from temporal_supervisor.activities.funding import Funding
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.model_config import register_chaos_aware_gemini
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from common.util import str_to_bool
+from common.claim_check.claim_check_plugin import ClaimCheckPlugin
+from durable.activities.clients import ClientActivities
+from durable.activities.event_stream_activities import EventStreamActivities
+from durable.activities.open_account import OpenAccount
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.custodian import Custodian
+from durable.activities.funding import Funding
+from durable.activities.investments import Investments
+from durable.model_config import register_chaos_aware_gemini
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.task_queues import DEFAULT_TASK_QUEUE
 
 
 def choose_workflows(client_helper: ClientHelper) -> list:
@@ -33,11 +35,14 @@ async def main():
         format="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s",
     )
 
-    client_helper = ClientHelper()
+    client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
+    # Without the agents (no chat workflow, no model calls), for the open-account scenarios.
+    # SKIP_AGENTS is the monorepo's name; SKIP_ADK_PLUGIN, this port's older one, still works.
+    skip_agents = client_helper.skipAgents or str_to_bool(os.getenv("SKIP_ADK_PLUGIN", "False"))
     # Model calls go through ChaosAwareGemini, so the chaos panel can fail them
     register_chaos_aware_gemini()
 
-    plugins = [ ClaimCheckPlugin() ] if client_helper.skipADKPlugin else \
+    plugins = [ ClaimCheckPlugin() ] if skip_agents else \
         [ GoogleAdkPlugin(),
           ClaimCheckPlugin()
         ]
@@ -79,7 +84,7 @@ async def main():
     print(
         f"Running worker on {client_helper.address}, task queue: {client_helper.taskQueue}"
     )
-    if client_helper.skipADKPlugin:
+    if skip_agents:
         await worker.run()
         return
 

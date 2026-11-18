@@ -8,13 +8,11 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
-    { name = "fastapi" },
     { name = "google-adk" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "redis" },
     { name = "temporalio", extra = ["google-adk"] },
-    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -26,13 +24,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.12.0" },
-    { name = "fastapi", specifier = ">=0.115.0" },
     { name = "google-adk", specifier = ">=2.8.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "redis", specifier = ">=6.2.0" },
     { name = "temporalio", extras = ["google-adk"], specifier = ">=1.35.0" },
-    { name = "uvicorn", specifier = ">=0.35.0" },
 ]
 
 [package.metadata.requires-dev]

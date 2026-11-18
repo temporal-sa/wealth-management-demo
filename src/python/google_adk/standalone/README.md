@@ -1,7 +1,7 @@
 # Wealth Management Agent Example using Google ADK
 Demonstrates how to use [Google ADK](https://adk.dev/) using subagents and instructions to delegate to other agents. 
 
-The Temporal version of this example is located [here](../temporal_supervisor/README.md)
+The Temporal version of this example is located [here](../durable/README.md)
 
 Scenarios currently implemented include
 * Add Beneficiary - add a new beneficiary to your account
@@ -23,32 +23,32 @@ The agents remember the client ID once you've given it, so you're only asked for
 * [Google / Gemini Key](https://console.cloud.google.com/apis/credentials) or [AI Studio](https://aistudio.google.com/api-keys) - Your key to access Gemini models
 
 ## Set up Python Environment
-Execute this in the project root (not this folder -- up two levels)
 
 ```bash
+cd src/python/google_adk
 uv sync
 ```
 
 ## Set up your Gemini API Key
-Execute this in the project root (not this folder -- up two levels)
+From the repository root:
 
 ```bash
-cp setgeminikey.example setgeminikey.sh
-chmod +x setgeminikey.sh
+cp scripts/setgeminikey.example scripts/setgeminikey.sh
+chmod +x scripts/setgeminikey.sh
 ```
 
-Now edit the setgeminikey.sh file and paste in your Gemini API Key.
+Now edit `scripts/setgeminikey.sh` and paste in your Gemini API Key.
 It should look something like this:
 ```text
 export GEMINI_API_KEY="Your API Key Goes Here"
 ```
 
 ## Running the agent
-Execute this in the project root (not this folder -- up two levels)
+From `src/python/google_adk`:
 
 ```bash
-source ./setgeminikey.sh
-uv run python src/adk_supervisor/main.py
+source ../../../scripts/setgeminikey.sh
+uv run python standalone/main.py
 ```
 
 `uv sync` also installs an `adk-supervisor` console script, so `uv run adk-supervisor` does the same.
@@ -93,4 +93,4 @@ Goodbye!
 You can also add and delete beneficiaries and close investment accounts.
 
 These changes are saved in the JSON files in `data/`. To reset the demo data, run `git checkout data/`
-in the project root. 
+in the repository root. 

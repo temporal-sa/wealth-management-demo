@@ -7,7 +7,13 @@ once, outside the sandbox.
 
 from common.client_helper import ClientHelper
 
-_client_helper = ClientHelper()
+# This port's default chat task queue, used when TEMPORAL_TASK_QUEUE isn't set. Each port
+# has its own default so that their workers can run against the same Temporal service at
+# once. Start the shared API with ./startlocalapi.sh google_adk and the Java worker with
+# TEMPORAL_TASK_QUEUE=ADK-Supervisor to use this port.
+DEFAULT_TASK_QUEUE = "ADK-Supervisor"
+
+_client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
 
 # The Open Account workflow can run on its own task queue, e.g. in the Java worker
 # (see setsplitworkflows.sh).

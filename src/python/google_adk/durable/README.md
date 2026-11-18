@@ -18,10 +18,10 @@ Scenarios currently implemented include
 
 The overall application architecture looks like this:
 
-![](../../images/application-architecture.png)
+![](../../../../docs/images/google_adk/application-architecture.png)
 
-There is a React UX which is where the customer interacts with the application. 
-The React UX leverages an API which exposes endpoints to start a workflow, send a prompt,
+There is a React UX (the shared [`frontend/`](../../../../frontend/README.md)) which is where the customer interacts with the application. 
+The React UX leverages an API (the shared [`src/python/api`](../../api/README.md)) which exposes endpoints to start a workflow, send a prompt,
 retrieving the chat history, and ending the chat. The React frontend uses adaptive polling
 to retrieve new events from Redis, providing real-time status updates as the Open Account 
 child workflow progresses through the different steps. 
@@ -46,8 +46,8 @@ The Open Account workflow can optionally run in a Java worker instead
   (the Gradle wrapper is included, no separate Gradle install)
 
 ## Set up Python Environment
-Execute this in the project root (not this folder -- up two levels)
 ```bash
+cd src/python/google_adk
 uv sync
 ```
 
@@ -62,14 +62,14 @@ Here are the steps to create a new Gemini key.
 5. Create the API key
 
 
-Execute this in the project root (not this folder -- up two levels)
+From the repository root:
 
 ```bash
-cp setgeminikey.example setgeminikey.sh
-chmod +x setgeminikey.sh
+cp scripts/setgeminikey.example scripts/setgeminikey.sh
+chmod +x scripts/setgeminikey.sh
 ```
 
-Now edit the setgeminikey.sh file and paste in your Gemini API Key.
+Now edit `scripts/setgeminikey.sh` and paste in your Gemini API Key.
 It should look something like this:
 ```text
 export GEMINI_API_KEY="Your API Key Goes Here"
@@ -102,12 +102,14 @@ The original data is stored in Redis. This uses a
 that intercepts data going to Temporal Cloud, replaces it with a GUID. When the data is retrieved, it looks up the GUID 
 replaces it with the data stored in Redis.
 
+From the repository root:
+
 ```bash
-cp setclaimcheck.example setclaimcheck.sh
-chmod +x setclaimcheck.sh
+cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
+chmod +x scripts/setclaimcheck.sh
 ```
 
-Now edit the setclaimcheck.sh file and fill in the location of Redis
+Now edit `scripts/setclaimcheck.sh` and fill in the location of Redis
 It should look something like this:
 ```bash
 export USE_CLAIM_CHECK=true
@@ -115,7 +117,7 @@ export REDIS_HOST=localhost
 export REDIS_PORT=6379
 ```
 
-The start scripts load `setclaimcheck.sh` if it exists. To run without the claim check, don't
+The start scripts load `scripts/setclaimcheck.sh` if it exists. To run without the claim check, don't
 create the file, or set `USE_CLAIM_CHECK=false` in it.
 
 Save the file and be sure that you have Redis running. For example:
@@ -135,15 +137,14 @@ If you have decided to set up the Claim Check above, you will
 most likely want to also run a Codec Server to be able to see the actual data sent to 
 the workflow and activities. 
 
-Be sure you have updated the setclaimcheck.sh as mentioned above.
+Be sure you have updated `scripts/setclaimcheck.sh` as mentioned above.
 
 To run the Codec Server:
 ```bash
-cd src/temporal_supervisor
-./startcodecserver.sh
+src/python/google_adk/durable/startcodecserver.sh
 ```
 
-The script exits with a message if `setclaimcheck.sh` doesn't exist in the project root.
+The script exits with a message if `scripts/setclaimcheck.sh` doesn't exist.
 
 And of course, make sure that your Redis Server is up and running. 
 
@@ -163,15 +164,15 @@ extra spaces at the end of the URL or it will not work. You can turn off the two
 user access token and Include cross-origin credentials. Click on apply and you have configured 
 the codec server. 
 
-![](../../images/config-codec-server.png)
+![](../../../../docs/images/google_adk/config-codec-server.png)
 
 As you run through different scenarios, you'll be able to see the decoded values in the browser.
 
-![](../../images/decoded-input.png)
+![](../../../../docs/images/google_adk/decoded-input.png)
 
 If you remove the codec server settings, you won't be able to see anything other than a BASE64 Encoded ID.
 
-![](../../images/encoded-input.png)
+![](../../../../docs/images/google_adk/encoded-input.png)
 
 ## Running the Demo 
 
@@ -193,33 +194,33 @@ redis-server
 #### Start the Worker
 
 ```bash
-cd src/temporal_supervisor
-./startlocalworker.sh
+src/python/google_adk/durable/startlocalworker.sh
 ```
 
 #### Start the API
 
+The shared API, started for this port (its task queue and its `adk-temporal-agent-` chat workflow IDs):
+
 ```bash
-cd src/api
-./startlocalapi.sh
+cd src/python/api
+./startlocalapi.sh google_adk
 ```
 #### Start the UX
 
 ```bash
-cd src/frontend
+cd frontend
 npm install     # first time only
 npm start
 ```
 
 A new browser window opens where you can interact with the application. The UI expects the API
-at `http://127.0.0.1:8000` (set in `src/frontend/src/config.js`). See [the API README](../api/README.md)
-and [the frontend README](../frontend/README.md) for details.
+at `http://127.0.0.1:8000` (set in `frontend/src/config.js`). See [the API README](../../api/README.md)
+and [the frontend README](../../../../frontend/README.md) for details.
 
 If you are opening a new investment account, in another terminal
 #### Send the Compliance Reviewed Signal 
 ```bash
-cd src/temporal_supervisor
-./localsendcomplianceapproval.sh <Child Workflow ID>
+src/python/google_adk/durable/localsendcomplianceapproval.sh <Child Workflow ID>
 ```
 
 The child workflow ID has the form `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, where `<n>`
@@ -240,13 +241,13 @@ holds it until KYC completes.
 
 ### Temporal Cloud
 
-Copy the setcloudenv.example, located in the src/temporal_supervisor folder to the project root and name it setcloudenv.sh .
+From the repository root, copy `scripts/setcloudenv.example` to `scripts/setcloudenv.sh`:
 
 ```bash
-cp  src/temporal_supervisor/setcloudenv.example setcloudenv.sh
+cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
-Edit setcloudenv.sh to match your Temporal Cloud account:
+Edit `scripts/setcloudenv.sh` to match your Temporal Cloud account:
 ```bash
 export TEMPORAL_ADDRESS=<namespace>.<accountID>.tmprl.cloud:7233
 export TEMPORAL_NAMESPACE=<namespace>.<accountID>
@@ -259,20 +260,19 @@ API key endpoint (`<region>.<cloud>.api.temporal.io:7233`) as `TEMPORAL_ADDRESS`
 
 #### Start the Worker
 ```bash
-cd src/temporal_supervisor
-./startcloudworker.sh
+src/python/google_adk/durable/startcloudworker.sh
 ```
 
 #### Start the API
 
 ```bash
-cd src/api
-./startcloudapi.sh
+cd src/python/api
+./startcloudapi.sh google_adk
 ```
 #### Start the UX
 
 ```bash
-cd src/frontend
+cd frontend
 npm install     # first time only
 npm start
 ```
@@ -280,8 +280,7 @@ npm start
 If you are opening a new investment account, in another terminal
 #### Send the Compliance Reviewed Signal 
 ```bash
-cd src/temporal_supervisor
-./cloudsendcomplianceapproval.sh <Child Workflow ID>
+src/python/google_adk/durable/cloudsendcomplianceapproval.sh <Child Workflow ID>
 ```
 
 Find the child workflow ID in the Temporal Cloud UI, as described for [running locally](#locally).
@@ -289,7 +288,7 @@ Find the child workflow ID in the Temporal Cloud UI, as described for [running l
 ### Configuration
 
 The worker and the API read these environment variables. The start scripts set the Gemini key,
-claim check and cloud settings from the files in the project root.
+claim check and cloud settings from the files in `scripts/`.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -298,7 +297,7 @@ claim check and cloud settings from the files in the project root.
 | `TEMPORAL_NAMESPACE` | `default` | Namespace |
 | `TEMPORAL_API_KEY` | empty | API key auth |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | empty | mTLS auth |
-| `TEMPORAL_TASK_QUEUE` | `Supervisor` | Task queue for the workflows and tools |
+| `TEMPORAL_TASK_QUEUE` | `ADK-Supervisor` (`DEFAULT_TASK_QUEUE` in `task_queues.py`) | Task queue for the workflows and tools. The worker, API and Java worker must agree: start the shared API with `./startlocalapi.sh google_adk` and the Java worker with `TEMPORAL_TASK_QUEUE=ADK-Supervisor` |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue for the Gemini model calls |
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `TEMPORAL_TASK_QUEUE` | Task queue for the Open Account workflow (set by `startlocalworker.sh <queue>`) |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Rate limit for model calls across all workers |
@@ -312,7 +311,7 @@ so a `TEMPORAL_PROFILE` from a config file works too.
 
 The demo keeps its data in JSON files in `data/`, and changes them as you go: opening and closing
 accounts, moving money from the linked bank account, and adding or deleting beneficiaries. To put
-everything back, for example before a demo, run this in the project root:
+everything back, for example before a demo, run this in the repository root:
 
 ```bash
 git checkout data/
@@ -357,8 +356,8 @@ The chat itself runs as a single workflow run. A long conversation in production
 ### Testing the open-account workflow on its own
 
 `startlocalopenaccount.sh` exercises `OpenInvestmentAccountWorkflow` without the chat, the API, the UI or
-the LLM (no Gemini key needed). It starts a Python worker in the background with `SKIP_ADK_PLUGIN=True`
-(no Google ADK plugin), runs `run_open_account_workflow.py`, and stops the worker when it finishes. The
+the LLM (no Gemini key needed). It starts a Python worker in the background with `SKIP_AGENTS=True`
+(no Google ADK plugin; `SKIP_ADK_PLUGIN=True`, this port's older name, still works), runs `run_open_account_workflow.py`, and stops the worker when it finishes. The
 script runs three scenarios for client `123`, each starting the workflow directly and printing its state
 changes (the `get_current_state` query) and the result:
 
@@ -367,27 +366,28 @@ changes (the `get_current_state` query) and the result:
    KYC: client 123's last name becomes "Doenut"), then compliance approved.
 3. KYC approved, then the workflow waits in *Waiting Compliance Review* until you send the approval
    yourself. The script prints the command, for example
-   `cd src/temporal_supervisor && ./localsendcomplianceapproval.sh testing-open-account-<run>-3`.
+   `src/python/google_adk/durable/localsendcomplianceapproval.sh testing-open-account-<run>-3`.
 
 Temporal must be running (Redis too, for the chaos flags the activities read; without it chaos is
 simply off). From any directory:
 
 ```bash
-src/temporal_supervisor/startlocalopenaccount.sh
+src/python/google_adk/durable/startlocalopenaccount.sh
 ```
 
 With a task queue name, the workflow runs on that queue, so you can run the same scenarios against
-the Java workflow (start `java/startlocalworker.sh <queue>` first):
+the Java workflow (start it first, from `interop/open_account/java`, with
+`TEMPORAL_TASK_QUEUE=ADK-Supervisor ./startlocalworker.sh <queue>`):
 
 ```bash
-src/temporal_supervisor/startlocalopenaccount.sh OpenAccount
+src/python/google_adk/durable/startlocalopenaccount.sh Open-Account-Java
 ```
 
 Further arguments go to `run_open_account_workflow.py`: `--scenario N` (repeatable) runs only some
 scenarios, and `--amount X` sets the initial deposit, e.g. `--scenario 1 --amount 300000` to see the
 saga roll back (client 123's linked bank account has less than that). Each run uses new workflow IDs
 (`testing-open-account-<run>-<scenario>`). It uses the same connection settings (`TEMPORAL_ADDRESS`, ...)
-and claim check setting (`setclaimcheck.sh`) as the worker. Like the demo, the scenarios change
+and claim check setting (`scripts/setclaimcheck.sh`) as the worker. Like the demo, the scenarios change
 `data/*.json` (a new account, the linked bank account balance, client 123's last name); reset them with
 `git checkout data/`.
 
@@ -399,17 +399,18 @@ supervisor then starts the Open Account child workflow on that task queue, and t
 picks it up.
 
 ```bash
-cd src/temporal_supervisor
-./startlocalworker.sh OpenAccount     # or ./startcloudworker.sh OpenAccount
+src/python/google_adk/durable/startlocalworker.sh Open-Account-Java     # or startcloudworker.sh Open-Account-Java
 ```
 
+The shared Java worker calls the activities on its `TEMPORAL_TASK_QUEUE`, so start it with this port's queue:
+
 ```bash
-cd java
-./startlocalworker.sh OpenAccount     # or ./startcloudworker.sh OpenAccount
+cd interop/open_account/java
+TEMPORAL_TASK_QUEUE=ADK-Supervisor ./startlocalworker.sh Open-Account-Java     # or ./startcloudworker.sh Open-Account-Java
 ```
 
 Without the argument, the Python worker runs the Open Account workflow itself. See
-[java/README.md](../../java/README.md) for details.
+[interop/open_account/java/README.md](../../../../interop/open_account/java/README.md) for details.
 
 ## Failure Scenarios (Chaos Panel)
 
@@ -421,16 +422,15 @@ attempt number). Open the [Temporal UI](http://localhost:8233) alongside it to s
 the pending activity, its attempt count, and the last failure. **Reset all** turns
 every flag off.
 
-The flags are stored in Redis (`chaos:flags`, with the failure log in `chaos:events`). Other
-wealth-management demos that use the same Redis server and keys share them, so a flag or
-**Reset all** affects those demos too.
+The flags are stored in Redis (`chaos:flags`, with the failure log in `chaos:events`). The other
+ports use the same Redis keys, so a flag or **Reset all** affects them too when they share the Redis server.
 
 | Scenario | How to show it | What Temporal does |
 |---|---|---|
 | **Tool / API down** | Turn on *Core banking API down*, then ask to list your investments (or open an account, so it fails after compliance approval). Turn it off. | The activity retries (1s backoff, capped at 5s) for as long as the outage lasts. The agent waits mid-turn and answers once the API is back. Nothing is lost or re-asked. |
-| **LLM down** | Turn on *Gemini API down* and send a message. Turn it off. | The model call is an activity, so it retries the same way (capped at 10s). The conversation picks up exactly where it was. |
-| **LLM rate limited (reactive)** | Turn on *Gemini rate limited (429)* and send a message. | The model raises an `ApplicationError` with `next_retry_delay` (15s, like a `Retry-After` header), which overrides the retry policy's backoff. Real Gemini 429s (`RESOURCE_EXHAUSTED`) are turned into the same error by `ChaosAwareGemini` in `model_config.py`, which the worker registers in ADK's model registry. |
-| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh` (in `src/temporal_supervisor`), then chat in several browser tabs at once. | Model calls run on their own task queue (`<TEMPORAL_TASK_QUEUE>-llm`, or `TEMPORAL_TASK_QUEUE_LLM`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
+| **LLM down** | Turn on *LLM API down* and send a message. Turn it off. | The model call is an activity, so it retries the same way (capped at 10s). The conversation picks up exactly where it was. |
+| **LLM rate limited (reactive)** | Turn on *LLM rate limited (429)* and send a message. | The model raises an `ApplicationError` with `next_retry_delay` (15s, like a `Retry-After` header), which overrides the retry policy's backoff. Real Gemini 429s (`RESOURCE_EXHAUSTED`) are turned into the same error by `ChaosAwareGemini` in `model_config.py`, which the worker registers in ADK's model registry. |
+| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND=0.2 src/python/google_adk/durable/startlocalworker.sh`, then chat in several browser tabs at once. | Model calls run on their own task queue (`<TEMPORAL_TASK_QUEUE>-llm`, or `TEMPORAL_TASK_QUEUE_LLM`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
 | **Business rule (non-retryable)** | Ask to open an account with $2,000,000 (or less than $100). | `validate_new_account` raises a non-retryable `ApplicationError`: one attempt, no retries. The reason goes back to the agent, which explains it to the customer. Compare it with *Tool / API down* in the Temporal UI. |
 | **Saga** | Turn on *Custodian rejects new accounts* (and *Slow account-opening steps* so you can watch), then open an account through compliance approval. Without flags: as client `123`, open an account with $300,000 (the linked bank account has $250,000). | The completed steps are undone in reverse order (refund, then remove the account). Compensations are activities too, so they are retried until they succeed. Kill the worker mid-rollback and the rollback still finishes. Transfers are idempotent (keyed by the workflow and run ID), so a retried debit or refund never moves money twice. |
 | **Bug in workflow code** | Turn on *Bug in workflow code*, then open an account through compliance approval. See below. | The workflow pauses at the failing line, keeping all its state, until a worker with fixed code picks it up. |
@@ -461,7 +461,7 @@ fix is deployed within a couple of minutes, the workflow resumes within about a 
 After the demo, re-arm the bug:
 
 ```bash
-git checkout src/temporal_supervisor/workflows/open_account_workflow.py
+git checkout src/python/google_adk/durable/workflows/open_account_workflow.py
 ```
 
 ### With the Java Open Account workflow
@@ -473,23 +473,23 @@ read inside those activities and the model activity, apply unchanged. The saga u
 Temporal Java SDK's `Saga` class.
 
 The bug in the workflow code is different in Java. `BONUS_RATES` in
-`java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java`
+`interop/open_account/java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java`
 is keyed by `"WELCOME_BONUS"` (underscore), but the promo code is `"WELCOME-BONUS"` (hyphen),
 so `welcomeBonus` throws a `NullPointerException`. As in Python, an unchecked exception fails
 the workflow task, not the workflow, so it stays **Running**. The fix is the commented-out line
 above it. Restart the Java worker after fixing it, and re-arm the bug afterwards with:
 
 ```bash
-git checkout java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java
+git checkout interop/open_account/java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java
 ```
 
 ### Tests
 
-The failure scenarios have tests that run against the Temporal dev server (downloaded
+The failure scenarios have tests (and `tests/test_api_client.py` checks the shared API's calls against the real chat workflow) that run against the Temporal dev server (downloaded
 on first run) with stub activities and a scripted model. No Gemini key or Redis is needed.
 
 ```bash
-uv run pytest      # in the project root
+uv run pytest      # in src/python/google_adk
 ```
 
 The agent handoffs have a live test, `tests/live_agent_handoffs.py`, that runs the real
@@ -508,20 +508,20 @@ and it is skipped when `GEMINI_API_KEY` is not set. Model output varies, so `LIV
 repeats the conversation n times (default 1):
 
 ```bash
-source ./setgeminikey.sh && LIVE_TEST_RUNS=10 uv run pytest tests/live_agent_handoffs.py -s   # in the project root
+source ../../../scripts/setgeminikey.sh && LIVE_TEST_RUNS=10 uv run pytest tests/live_agent_handoffs.py -s   # in src/python/google_adk
 ```
 
 The Java workflow has the same tests, using the Temporal Java SDK's test environment:
 
 ```bash
-cd java
+cd interop/open_account/java
 ./gradlew test
 ```
 
 The web frontend has tests for the chat and the chaos panel toggle:
 
 ```bash
-cd src/frontend
+cd frontend
 npm install     # first time only
 CI=true npm test
 ```

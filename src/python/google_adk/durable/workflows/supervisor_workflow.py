@@ -7,7 +7,7 @@ from temporalio.workflow import ActivityConfig
 
 from common.user_message import ProcessUserMessageInput, ChatInteraction
 from common.status_update import StatusUpdate
-from common.agent_constants import (
+from prompts.agent_constants import (
     HANDOFF_PROMPT_PREFIX,
     BENE_AGENT_NAME, BENE_HANDOFF, BENE_INSTRUCTIONS,
     INVEST_AGENT_NAME, INVEST_HANDOFF, INVEST_INSTRUCTIONS,
@@ -15,21 +15,21 @@ from common.agent_constants import (
     OPEN_ACCOUNT_AGENT_NAME, OPEN_ACCOUNT_HANDOFF, OPEN_ACCOUNT_INSTRUCTIONS,
 )
 from common.account_context import UpdateAccountOpeningStateInput
-from common.client_id_memory import remember_client_id
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities
+from prompts.client_id_memory import remember_client_id
+from durable.activities.event_stream_activities import EventStreamActivities
 
 with workflow.unsafe.imports_passed_through():
-    from temporal_supervisor.activities.beneficiaries import Beneficiaries, Beneficiary
-    from temporal_supervisor.activities.investments import Investments
-    from temporal_supervisor.activities.open_account import OpenAccount, open_new_investment_account
+    from durable.activities.beneficiaries import Beneficiaries, Beneficiary
+    from durable.activities.investments import Investments
+    from durable.activities.open_account import OpenAccount, open_new_investment_account
     from google.adk.agents import LlmAgent
     from google.adk.runners import Runner
     from google.adk.sessions import InMemorySessionService
     from google.genai import types
     from temporalio.google_adk import TemporalModel
-    from temporal_supervisor.activities.activity_tool import _activity_tool
-    from temporal_supervisor.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
-    from temporal_supervisor.task_queues import LLM_TASK_QUEUE
+    from durable.activities.activity_tool import _activity_tool
+    from durable.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
+    from durable.task_queues import LLM_TASK_QUEUE
     from temporalio.exceptions import is_cancelled_exception
 
 
@@ -43,7 +43,7 @@ EMPTY_RESPONSE_FALLBACK = "Sorry, I didn't catch that. Could you please say it a
 # ---------------------------------------------------------------------------
 # ADK tool wrappers
 #
-# activity_tool() (from temporal_supervisor.activity_tool) handles most
+# activity_tool() (from durable.activity_tool) handles most
 # activities automatically. Manual wrappers are only needed when:
 #   - The activity takes a dataclass arg (ADK can't generate a schema for it)
 #   - The tool needs custom pre-processing before calling the activity
