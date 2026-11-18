@@ -217,7 +217,7 @@ async def test_settings_override_the_ports_values(temporal_env, tmp_path_factory
 def test_an_unknown_chat_port_is_rejected(monkeypatch):
     from api.ports import selected_port
     monkeypatch.setenv("CHAT_PORT", "nope")
-    with pytest.raises(ValueError, match="openai_agents, pyai, strands_agents"):
+    with pytest.raises(ValueError, match="openai_agents, pyai, strands_agents, google_adk"):
         selected_port()
 
 

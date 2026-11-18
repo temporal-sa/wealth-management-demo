@@ -1,7 +1,7 @@
 """Which port the API serves: its task queue and the prefix of its chat workflow IDs.
 
 CHAT_PORT picks the port (default "openai_agents"); the start scripts set it from their
-optional argument, e.g. ./startlocalapi.sh pyai or ./startlocalapi.sh strands_agents.
+optional argument, e.g. ./startlocalapi.sh pyai or ./startlocalapi.sh google_adk.
 TEMPORAL_TASK_QUEUE and CHAT_WORKFLOW_ID_PREFIX override that port's values. The web application reads the
 prefix from GET /config, so each chat's workflow ID names the SDK that runs it.
 """
@@ -24,6 +24,7 @@ PORTS = {
         Port("openai_agents", "OpenAI Agents SDK", "Supervisor", "oai-temporal-agent-"),
         Port("pyai", "Pydantic AI", "PY-AI-Supervisor", "pyai-temporal-agent-"),
         Port("strands_agents", "Strands Agents", "wealth-management-strands", "strands-temporal-agent-"),
+        Port("google_adk", "Google ADK", "ADK-Supervisor", "adk-temporal-agent-"),
     ]
 }
 DEFAULT_PORT = "openai_agents"
