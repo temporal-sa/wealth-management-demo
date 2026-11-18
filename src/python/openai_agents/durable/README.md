@@ -216,7 +216,7 @@ See [interop/open_account/java/README.md](../../../../interop/open_account/java/
 
 ### Start the API
 
-Pass this port's name, so the API starts chats on its task queue:
+Pass this AI framework's name, so the API starts chats on its task queue:
 
 ```bash
 cd src/python/api

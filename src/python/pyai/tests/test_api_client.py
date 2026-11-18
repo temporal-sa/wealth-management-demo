@@ -113,7 +113,7 @@ async def test_the_api_client_starts_messages_and_ends_the_real_chat_workflow(mo
 
 def test_the_api_knows_this_ports_task_queue():
     """./startlocalapi.sh pyai starts chats where this port's worker listens by default."""
-    from api.ports import PORTS
+    from api.frameworks import FRAMEWORKS
     from durable.task_queues import DEFAULT_TASK_QUEUE
 
-    assert PORTS["pyai"].task_queue == DEFAULT_TASK_QUEUE
+    assert FRAMEWORKS["pyai"].task_queue == DEFAULT_TASK_QUEUE

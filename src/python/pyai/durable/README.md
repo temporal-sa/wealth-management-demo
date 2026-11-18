@@ -196,8 +196,8 @@ TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startlocalworker.sh Open-Account-Java
 
 ### Start the API
 
-In another terminal, start the shared REST API for this port. The `pyai` argument makes it start chats on
-this port's task queue (`PY-AI-Supervisor`) with workflow IDs starting `pyai-temporal-agent-`:
+In another terminal, start the shared REST API for this AI framework. The `pyai` argument makes it start chats on
+its task queue (`PY-AI-Supervisor`) with workflow IDs starting `pyai-temporal-agent-`:
 
 ```bash
 cd src/python/api
@@ -226,7 +226,7 @@ cd src/python/pyai/durable
 
 The child workflow ID has the format `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, for example
 `OpenAccount-pyai-temporal-agent-abc123-123-Vacation-1` (the web app gives each chat a random workflow ID
-starting with `pyai-temporal-agent-` when the API serves this port). `<n>` counts the account openings started in the chat (1, 2, 3, ...):
+starting with `pyai-temporal-agent-` when the API serves Pydantic AI). `<n>` counts the account openings started in the chat (1, 2, 3, ...):
 every request to open an account starts a new account opening, with its own KYC confirmation, even if an
 account with the same name was opened, or is still being opened, earlier in the chat. Quote the ID if the
 account name contains a space.

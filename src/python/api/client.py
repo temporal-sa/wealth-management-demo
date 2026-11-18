@@ -4,7 +4,7 @@ The API reaches a port's chat workflow only through the names and payloads in th
 Temporal contracts, which every port shares. So it needs no workflow class or
 framework plugin: it uses the contract names as strings, the Pydantic data converter
 (the payloads are plain JSON, so every port's worker can read them), and the
-claim-check codec when USE_CLAIM_CHECK is on. TEMPORAL_TASK_QUEUE picks the port.
+claim-check codec when USE_CLAIM_CHECK is on. TEMPORAL_TASK_QUEUE picks the AI framework's workers.
 
 Kept apart from main.py, with no FastAPI dependency, so a port's tests can check
 these exact calls against its real workflow.

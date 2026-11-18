@@ -33,8 +33,8 @@ test('renders the chat with a Start Chat button', () => {
   expect(screen.getByPlaceholderText('Type a message...')).toBeDisabled();
 });
 
-test("names the chat workflow after the API's port", async () => {
-  const urls = mockApi({ port: 'pyai', workflow_id_prefix: 'pyai-temporal-agent-' });
+test("names the chat workflow after the API's AI framework", async () => {
+  const urls = mockApi({ framework: 'pyai', workflow_id_prefix: 'pyai-temporal-agent-' });
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Start Chat' }));

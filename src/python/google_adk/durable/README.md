@@ -199,7 +199,7 @@ src/python/google_adk/durable/startlocalworker.sh
 
 #### Start the API
 
-The shared API, started for this port (its task queue and its `adk-temporal-agent-` chat workflow IDs):
+The shared API, started for this AI framework (its task queue and its `adk-temporal-agent-` chat workflow IDs):
 
 ```bash
 cd src/python/api

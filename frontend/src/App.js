@@ -3,10 +3,10 @@ import './App.css';
 import { API_BASE_URL } from './config';
 import ChaosPanel from './ChaosPanel';
 
-// Used if the API doesn't report its port's prefix (an API without GET /config).
+// Used if the API doesn't report its AI framework's prefix (an API without GET /config).
 const DEFAULT_WORKFLOW_ID_PREFIX = 'oai-temporal-agent-';
 
-// The chat workflow ID prefix of the port the API serves (e.g. pyai-temporal-agent-),
+// The chat workflow ID prefix of the AI framework the API serves (e.g. pyai-temporal-agent-),
 // so each workflow ID names the SDK that runs it.
 async function fetchWorkflowIdPrefix() {
   try {

@@ -8,14 +8,14 @@ from temporalio.exceptions import TemporalError
 from temporalio.service import RPCError
 
 from api import client as chat
-from api.ports import Port, selected_port
+from api.frameworks import Framework, selected_framework
 from common.chaos_manager import CHAOS_FLAGS, ChaosFlag, ChaosManager
 from common.event_stream_manager import EventStreamManager
 from common.client_helper import ClientHelper
 
 temporal_client: Optional[Client] = None
 task_queue: Optional[str] = None
-port: Optional[Port] = None
+framework: Optional[Framework] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -23,12 +23,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     print("API is starting up...")
     global temporal_client
     global task_queue
-    global port
-    port = selected_port()
-    client_helper = ClientHelper(default_task_queue=port.task_queue)
+    global framework
+    framework = selected_framework()
+    client_helper = ClientHelper(default_task_queue=framework.task_queue)
     task_queue = client_helper.taskQueue
-    print(f"Serving the {port.label} port (CHAT_PORT={port.name}): chat workflows start on task queue "
-          f"{task_queue} with IDs starting {port.workflow_id_prefix}")
+    print(f"Serving the {framework.label} AI framework (AI_FRAMEWORK={framework.name}): chat workflows start "
+          f"on task queue {task_queue} with IDs starting {framework.workflow_id_prefix}")
     temporal_client = await chat.connect(**client_helper.client_config)
     yield
     print("API is shutting down...")
@@ -49,12 +49,12 @@ def root():
 
 @app.get("/config")
 def get_config():
-    """The port this API serves, so the web application can name its chat workflows after it."""
+    """The AI framework this API serves, so the web application can name its chat workflows after it."""
     return {
-        "port": port.name,
-        "label": port.label,
+        "framework": framework.name,
+        "label": framework.label,
         "task_queue": task_queue,
-        "workflow_id_prefix": port.workflow_id_prefix,
+        "workflow_id_prefix": framework.workflow_id_prefix,
     }
 
 @app.get("/get-chat-history")
