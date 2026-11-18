@@ -3,7 +3,7 @@
 Exposes the Temporal chat workflow (`WealthManagementWorkflow`) with an easy to use API. The
 [web application](../../../frontend/README.md) uses it; you can also call it with curl.
 
-The API works with every Python AI framework in this repository. It uses only the Temporal contracts (the workflow and signal
+It is the one API in this repository: it serves every AI framework, Python or TypeScript (the Vercel AI SDK port), because their chat workflows keep the same contract. It uses only the Temporal contracts (the workflow and signal
 names as strings, plain JSON payloads through the Pydantic data converter, and the claim-check codec
 when enabled), never a port's workflow class or framework plugin. The start scripts' required argument
 (`AI_FRAMEWORK`) picks the AI framework: it sets the task queue that framework's worker listens on and the
@@ -41,6 +41,7 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 | [Strands Agents](../strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents` | `wealth-management-strands` | `strands-temporal-agent-<random>` |
 | [Google ADK](../google_adk/durable/README.md) | `./startlocalapi.sh google_adk` | `ADK-Supervisor` | `adk-temporal-agent-<random>` |
 | [Pure Python (LiteLLM)](../pure/durable/README.md) | `./startlocalapi.sh pure` | `Pure-Supervisor` | `pure-temporal-agent-<random>` |
+| [Vercel AI SDK (TypeScript)](../../typescript/vercel_ai/durable/README.md) | `./startlocalapi.sh vercel_ai` | `VAI-Supervisor` | `vai-temporal-agent-<random>` |
 
 There is no default framework: without a valid one, the scripts stop and list every framework.
 `TEMPORAL_TASK_QUEUE` and `CHAT_WORKFLOW_ID_PREFIX` override the framework's values. The API prints the
@@ -73,7 +74,7 @@ cd src/python/api
 Be sure to have created scripts/setcloudenv.sh. See the [Temporal README](../openai_agents/durable/README.md#running-the-demo-in-temporal-cloud) for more details.
 ```bash
 cd src/python/api
-./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk, pure
+./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk, pure, vercel_ai
 ```
 
 Test that the API is running:

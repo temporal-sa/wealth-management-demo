@@ -1,0 +1,202 @@
+import {
+  defineSignal,
+  defineQuery,
+  defineUpdate,
+  setHandler,
+  condition,
+  proxyActivities,
+  workflowInfo,
+  getExternalWorkflowHandle,
+  log,
+  ActivityFailure,
+  ApplicationFailure,
+} from '@temporalio/workflow';
+import type {
+  OpenInvestmentAccountInput,
+  OpenInvestmentAccountOutput,
+  WealthManagementClient,
+  UpdateAccountOpeningStateInput,
+} from '../../../common/shared';
+import { UPDATE_ACCOUNT_OPENING_STATE_SIGNAL } from '../../../common/shared';
+import { TOOL_RETRY_POLICY } from '../retry-policies';
+import type * as clientActivities from '../activities/clients';
+import type * as investmentActivities from '../activities/investments';
+import type * as fundingActivities from '../activities/funding';
+import type * as custodianActivities from '../activities/custodian';
+
+// One attempt may take 30 seconds; an outage is retried for as long as it lasts
+const activityOptions = { startToCloseTimeout: '30s', retry: TOOL_RETRY_POLICY } as const;
+const { get_client, update_client } = proxyActivities<typeof clientActivities>(activityOptions);
+const { open_investment, remove_investment } = proxyActivities<typeof investmentActivities>(activityOptions);
+const { debit_linked_account, credit_linked_account } = proxyActivities<typeof fundingActivities>(activityOptions);
+const { register_account } = proxyActivities<typeof custodianActivities>(activityOptions);
+
+
+interface Promotion {
+  rate: number;
+  maxBonus: number;
+}
+
+// ---------------------------------------------------------------------------
+// Welcome-bonus promotion: a percentage of the initial deposit, up to a maximum.
+// *** Bug-In-Workflow-Code ***
+// Intentional bug for the "Bug in workflow code" demo: the promo code is "WELCOME-BONUS" (hyphen),
+// but PROMOTIONS is keyed by "WELCOME_BONUS" (underscore), so the lookup in welcomeBonus returns
+// undefined and reading its rate throws a TypeError.
+// To fix it, uncomment the first line below and comment out the second. See README "Failure scenarios".
+// ---------------------------------------------------------------------------
+
+// const PROMOTIONS: Record<string, Promotion> = { 'WELCOME-BONUS': { rate: 0.01, maxBonus: 500 } };
+const PROMOTIONS: Record<string, Promotion> = { WELCOME_BONUS: { rate: 0.01, maxBonus: 500 } };
+
+function welcomeBonus(promoCode: string, initialAmount: number): number {
+  const promotion = PROMOTIONS[promoCode];
+  return Math.min(initialAmount * promotion.rate, promotion.maxBonus);
+}
+
+// ---------------------------------------------------------------------------
+// Signals / Queries / Updates
+// ---------------------------------------------------------------------------
+
+const verifyKycSignal = defineSignal('verify_kyc');
+const complianceApprovedSignal = defineSignal('compliance_approved');
+const getCurrentStateQuery = defineQuery<string>('get_current_state');
+// An update rather than a query, so a caller that asks right after starting the workflow waits
+// until the client details have been loaded instead of getting null
+const getClientDetailsUpdate = defineUpdate<WealthManagementClient | null>('get_client_details');
+const updateClientDetailsUpdate = defineUpdate<string, [Partial<WealthManagementClient>]>(
+  'update_client_details',
+);
+
+// ---------------------------------------------------------------------------
+// Workflow
+// ---------------------------------------------------------------------------
+
+export async function OpenInvestmentAccountWorkflow(
+  input: OpenInvestmentAccountInput,
+): Promise<OpenInvestmentAccountOutput> {
+  let state = 'Initializing';
+  let initialized = false;
+  let kycApproved = false;
+  let complianceApproved = false;
+  let clientDetails: WealthManagementClient | null = null;
+
+  const { client_id, account_name, initial_amount, promo_code } = input;
+
+  // Every state change is visible to the get_current_state query and reported to the parent, which
+  // keeps it for the agent's get_account_opening_status tool and shows it in the UI's status area. Signals are routed by workflow ID, so this reaches the parent
+  // whichever task queue it runs on. Without a parent (the workflow was started on its own, e.g. by
+  // run_open_account_workflow.ts) there is no one to report to.
+  async function setState(newState: string) {
+    state = newState;
+    log.info(`State: ${newState}`, { account_name });
+    const parent = workflowInfo().parent;
+    if (!parent) return;
+    const update: UpdateAccountOpeningStateInput = {
+      account_name,
+      state: newState,
+      workflow_id: workflowInfo().workflowId,
+    };
+    await getExternalWorkflowHandle(parent.workflowId).signal(UPDATE_ACCOUNT_OPENING_STATE_SIGNAL, update);
+  }
+
+  // Query handlers
+  setHandler(getCurrentStateQuery, () => state);
+
+  // Signal handlers. Each waits for the steps before it, so an early signal takes effect only once
+  // the workflow gets there: KYC once the client details are loaded, compliance once KYC is approved.
+  setHandler(verifyKycSignal, async () => {
+    await condition(() => initialized);
+    log.info('KYC has been verified', { account_name });
+    kycApproved = true;
+  });
+  setHandler(complianceApprovedSignal, async () => {
+    await condition(() => initialized && kycApproved);
+    log.info('Compliance has been approved', { account_name });
+    complianceApproved = true;
+  });
+
+  // Update handlers
+  setHandler(getClientDetailsUpdate, async () => {
+    await condition(() => initialized);
+    return clientDetails;
+  });
+  // The customer corrected their details during KYC: save them, which also approves KYC
+  setHandler(updateClientDetailsUpdate, async (fields: Partial<WealthManagementClient>) => {
+    const result = await update_client(client_id, fields);
+    if (clientDetails) clientDetails = { ...clientDetails, ...fields };
+    kycApproved = true;
+    return result;
+  });
+
+  // Step 1: Load client details
+  log.info('OpenInvestmentAccountWorkflow started', { client_id, account_name, initial_amount, promo_code });
+  clientDetails = await get_client(client_id);
+  initialized = true;
+  await setState('Waiting KYC');
+
+  // Step 2: Wait for KYC approval
+  await condition(() => kycApproved);
+  await setState('Waiting Compliance Review');
+
+  // Step 3: Wait for compliance approval
+  await condition(() => complianceApproved);
+  await setState('Compliance review has been approved. Creating Investment Account');
+
+  // Step 4: Create, fund and register the investment account
+  const bonus = promo_code ? welcomeBonus(promo_code, initial_amount) : 0;
+  // Idempotency key: stable across activity retries and worker restarts. The chat gives every
+  // account opening its own workflow ID; the run ID keeps the key unique even if a workflow ID is
+  // ever used again (e.g. a workflow started on its own with an earlier ID), since a reused key
+  // would return the earlier transfer without moving any money.
+  const transferId = `${workflowInfo().workflowId}-${workflowInfo().runId}-initial-deposit`;
+
+  // Saga: each completed step registers how to undo it. If a later step fails with a
+  // non-retryable error, the compensations run in reverse order. Transient failures never
+  // get here: activities retry until they succeed.
+  const compensations: Array<{ description: string; undo: () => Promise<unknown> }> = [];
+  try {
+    await setState('Creating the account record.');
+    const account = await open_investment({ client_id, name: account_name, balance: initial_amount + bonus });
+    compensations.unshift({
+      description: 'removing the account record',
+      undo: () => remove_investment(client_id, account.investment_id),
+    });
+
+    await setState(`Transferring ${formatUsd(initial_amount)} from the linked bank account.`);
+    await debit_linked_account(client_id, initial_amount, transferId);
+    compensations.unshift({
+      description: `refunding ${formatUsd(initial_amount)} to the linked bank account`,
+      undo: () => credit_linked_account(client_id, initial_amount, `${transferId}-refund`),
+    });
+
+    await setState('Registering the account with the custodian.');
+    await register_account(client_id, account.investment_id, initial_amount);
+  } catch (err) {
+    if (!(err instanceof ActivityFailure)) throw err;
+    const reason = failureReason(err);
+    await setState(`Failed: ${reason}. Rolling back.`);
+    for (const { description, undo } of compensations) {
+      await setState(`Rolling back: ${description}.`);
+      // Compensations are activities too, so they are retried until they succeed
+      await undo();
+    }
+    await setState(`Rolled back. The account was not opened: ${reason}.`);
+    return { account_created: false, message: `The account was not opened: ${reason}` };
+  }
+
+  log.info('Investment account opened successfully', { account_name });
+  await setState('Complete');
+  return { account_created: true, message: 'investment account created' };
+}
+
+// The business reason for a non-retryable activity failure, such as the custodian rejecting the account
+function failureReason(err: ActivityFailure): string {
+  return err.cause instanceof ApplicationFailure ? err.cause.message : (err.cause?.message ?? err.message);
+}
+
+// Locale-independent, so a replay formats amounts exactly as the original run did
+function formatUsd(amount: number): string {
+  const [whole, cents] = amount.toFixed(2).split('.');
+  return `$${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${cents}`;
+}

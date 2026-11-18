@@ -1,7 +1,7 @@
 #!/bin/bash
 # Usage: startcloudapi.sh <ai-framework>
 # ai-framework (required) picks which AI framework's chat workflows the API starts: openai_agents,
-# pyai, strands_agents, google_adk or pure. Without a valid one, the script stops and lists them all.
+# pyai, strands_agents, google_adk, pure or vercel_ai. Without a valid one, the script stops and lists them all.
 # It sets that framework's task queue and workflow ID prefix (see frameworks.py); TEMPORAL_TASK_QUEUE
 # and CHAT_WORKFLOW_ID_PREFIX still override them. Other settings use their defaults if not set.
 cd "$(dirname "$0")" || exit 1

@@ -1,0 +1,42 @@
+{
+  "name": "@wealth-management/vercel-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Vercel AI SDK port of the wealth management agent",
+  "scripts": {
+    "vai": "ts-node standalone/main.ts",
+    "temporal:worker": "ts-node durable/worker.ts",
+    "temporal:worker.watch": "nodemon durable/worker.ts",
+    "start": "ts-node durable/worker.ts",
+    "codec-server": "ts-node durable/codec_server.ts",
+    "test": "mocha --exit --require ts-node/register --require source-map-support/register 'tests/*.test.ts'",
+    "test:live": "mocha --exit --require ts-node/register --require source-map-support/register 'tests/*.live.ts'",
+    "compliance.approval": "ts-node durable/run_send_compliance_approval.ts",
+    "open-account.scenarios": "ts-node durable/run_open_account_workflow.ts"
+  },
+  "nodemonConfig": {
+    "execMap": {
+      "ts": "ts-node"
+    },
+    "ext": "ts",
+    "watch": [
+      ".",
+      "../common"
+    ]
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.63",
+    "@temporalio/activity": "^1.16.0",
+    "@temporalio/ai-sdk": "^1.18.0",
+    "@temporalio/client": "^1.16.0",
+    "@temporalio/common": "^1.16.0",
+    "@temporalio/worker": "^1.16.0",
+    "@temporalio/workflow": "^1.16.0",
+    "ai": "^6.0.159",
+    "nanoid": "3.x",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@temporalio/testing": "^1.16.0"
+  }
+}
