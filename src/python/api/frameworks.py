@@ -1,6 +1,7 @@
 """Which AI framework the API serves: its task queue and the prefix of its chat workflow IDs.
 
-Each framework is one version of the demo (src/python/<framework>). AI_FRAMEWORK picks it.
+Each framework is one version of the demo (src/python/<framework>, or src/typescript/<framework>
+for a TypeScript one, whose chat workflows follow the same Temporal contract). AI_FRAMEWORK picks it.
 It has no default: the start scripts require the framework as their argument (e.g.
 ./startlocalapi.sh google_adk) and, without a valid one, stop and list every framework.
 TEMPORAL_TASK_QUEUE and CHAT_WORKFLOW_ID_PREFIX override that framework's values. The web
@@ -28,6 +29,7 @@ FRAMEWORKS = {
         Framework("strands_agents", "Strands Agents", "wealth-management-strands", "strands-temporal-agent-"),
         Framework("google_adk", "Google ADK", "ADK-Supervisor", "adk-temporal-agent-"),
         Framework("pure", "Pure Python (LiteLLM)", "Pure-Supervisor", "pure-temporal-agent-"),
+        Framework("vercel_ai", "Vercel AI SDK (TypeScript)", "VAI-Supervisor", "vai-temporal-agent-"),
     ]
 }
 

@@ -8,7 +8,8 @@ It uses the [API](../src/python/api/README.md) to interact with Temporal.
 [Node.js](https://nodejs.org/en/download): Version 18 or higher, with npm.
 
 The web application relies on the API to communicate with Temporal. 
-Be sure to follow the instructions to run the API, which can be found [here](../src/python/api/README.md).
+Be sure to follow the instructions to run the API, which can be found [here](../src/python/api/README.md)
+(the [TypeScript API](../src/typescript/api/README.md) has the same endpoints, for the TypeScript ports).
 Start it for the port whose worker you're running, because that decides which task queue chats start on
 and how their workflow IDs are named:
 
@@ -19,7 +20,10 @@ cd src/python/api
 ./startlocalapi.sh strands_agents  # Strands Agents: strands-temporal-agent-<random> on wealth-management-strands
 ./startlocalapi.sh google_adk      # Google ADK: adk-temporal-agent-<random> on ADK-Supervisor
 ./startlocalapi.sh pure            # Pure Python (LiteLLM): pure-temporal-agent-<random> on Pure-Supervisor
+./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-<random> on VAI-Supervisor
 ```
+
+`src/typescript/api/startlocalapi.sh vercel_ai` starts the TypeScript API for the Vercel AI SDK port instead.
 
 Note that the web application communicates directly with the API and the API is what 
 communicates with Temporal running locally or in the cloud.

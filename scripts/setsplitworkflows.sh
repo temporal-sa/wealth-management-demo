@@ -1,9 +1,8 @@
 #!/bin/bash
 #
-# If you pass an optional argument to this script,
-# there will be a Python workflow for the AI
-# functionality and a Java Workflow for the
-# Open Account Workflow
+# If you pass an optional argument to this script, the port's own
+# worker runs the AI (chat) workflow and the Java worker runs the
+# Open Account workflow on that task queue.
 #
 if [ ! -z "$1" ]
   then
