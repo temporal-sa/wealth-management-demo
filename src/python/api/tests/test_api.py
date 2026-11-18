@@ -12,9 +12,12 @@ the real chat workflow (src/python/openai_agents/tests/test_api_client.py).
 
 import asyncio
 import os
+import subprocess
+import sys
 import uuid
 from contextlib import contextmanager
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -85,8 +88,8 @@ def api(temporal_env, tmp_path_factory, **settings):
 
 @pytest.fixture(scope="module")
 def http(temporal_env, tmp_path_factory):
-    """The API, starting chats on TASK_QUEUE."""
-    with api(temporal_env, tmp_path_factory, TEMPORAL_TASK_QUEUE=TASK_QUEUE) as client:
+    """The API serving the OpenAI Agents port, starting chats on TASK_QUEUE."""
+    with api(temporal_env, tmp_path_factory, CHAT_PORT="openai_agents", TEMPORAL_TASK_QUEUE=TASK_QUEUE) as client:
         yield client
 
 
@@ -179,7 +182,7 @@ async def test_set_chaos_rejects_an_unknown_flag(http):
     assert response.status_code == 400
 
 
-async def test_config_reports_the_default_port(http):
+async def test_config_reports_the_port(http):
     response = await asyncio.to_thread(http.get, "/config")
     assert response.json() == {
         "port": "openai_agents",
@@ -214,11 +217,36 @@ async def test_settings_override_the_ports_values(temporal_env, tmp_path_factory
     assert (config["task_queue"], config["workflow_id_prefix"]) == ("my-queue", "demo-")
 
 
-def test_an_unknown_chat_port_is_rejected(monkeypatch):
+EVERY_PORT = ("openai_agents", "pyai", "strands_agents", "google_adk")
+
+
+@pytest.mark.parametrize("chat_port", [None, "", "nope"])
+def test_the_api_needs_a_known_chat_port_and_lists_every_port(monkeypatch, chat_port):
     from api.ports import selected_port
-    monkeypatch.setenv("CHAT_PORT", "nope")
-    with pytest.raises(ValueError, match="openai_agents, pyai, strands_agents, google_adk"):
+    if chat_port is None:
+        monkeypatch.delenv("CHAT_PORT", raising=False)
+    else:
+        monkeypatch.setenv("CHAT_PORT", chat_port)
+    with pytest.raises(ValueError) as error:
         selected_port()
+    assert all(f"  {name} " in str(error.value) for name in EVERY_PORT)
+
+
+@pytest.mark.parametrize("args", [[], [""], ["nope"]])
+def test_the_start_scripts_check_stops_without_a_known_port_and_lists_every_port(args):
+    """startlocalapi.sh and startcloudapi.sh run this check before starting uvicorn."""
+    result = subprocess.run([sys.executable, "-m", "api.ports", "startlocalapi.sh", *args],
+                            capture_output=True, text=True, cwd=Path(__file__).parents[2])
+    assert result.returncode == 2
+    assert "Usage: startlocalapi.sh <port>" in result.stderr
+    assert all(f"  {name} " in result.stderr for name in EVERY_PORT)
+
+
+@pytest.mark.parametrize("name", EVERY_PORT)
+def test_the_start_scripts_check_accepts_every_port(name):
+    result = subprocess.run([sys.executable, "-m", "api.ports", "startlocalapi.sh", name],
+                            capture_output=True, text=True, cwd=Path(__file__).parents[2])
+    assert (result.returncode, result.stderr) == (0, "")
 
 
 async def test_the_strands_port_needs_nothing_extra(temporal_env, tmp_path_factory):

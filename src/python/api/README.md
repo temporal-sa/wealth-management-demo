@@ -5,7 +5,7 @@ Exposes the Temporal chat workflow (`WealthManagementWorkflow`) with an easy to 
 
 The API works with every Python port. It uses only the Temporal contracts (the workflow and signal
 names as strings, plain JSON payloads through the Pydantic data converter, and the claim-check codec
-when enabled), never a port's workflow class or framework plugin. The start scripts' optional argument
+when enabled), never a port's workflow class or framework plugin. The start scripts' required argument
 (`CHAT_PORT`) picks the port: it sets the task queue that port's worker listens on and the prefix of its
 chat workflow IDs (see [`ports.py`](ports.py)). The Temporal calls are in
 [`client.py`](client.py); [`main.py`](main.py) is the HTTP layer.
@@ -36,11 +36,12 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 
 | Port | Start the API with | Task queue | Chat workflow IDs |
 |---|---|---|---|
-| [OpenAI Agents SDK](../openai_agents/durable/README.md) | `./startlocalapi.sh` (or `openai_agents`) | `Supervisor` | `oai-temporal-agent-<random>` |
+| [OpenAI Agents SDK](../openai_agents/durable/README.md) | `./startlocalapi.sh openai_agents` | `Supervisor` | `oai-temporal-agent-<random>` |
 | [Pydantic AI](../pyai/durable/README.md) | `./startlocalapi.sh pyai` | `PY-AI-Supervisor` | `pyai-temporal-agent-<random>` |
 | [Strands Agents](../strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents` | `wealth-management-strands` | `strands-temporal-agent-<random>` |
 | [Google ADK](../google_adk/durable/README.md) | `./startlocalapi.sh google_adk` | `ADK-Supervisor` | `adk-temporal-agent-<random>` |
 
+There is no default port: without a valid one, the scripts stop and list every port.
 `TEMPORAL_TASK_QUEUE` and `CHAT_WORKFLOW_ID_PREFIX` override the port's values. The API prints the port,
 queue and prefix it uses when it starts.
 
@@ -63,7 +64,7 @@ without it.
 From the repository root:
 ```bash
 cd src/python/api
-./startlocalapi.sh          # OpenAI Agents SDK port
+./startlocalapi.sh openai_agents   # OpenAI Agents SDK port
 ./startlocalapi.sh pyai     # Pydantic AI port
 ```
 
@@ -71,7 +72,7 @@ cd src/python/api
 Be sure to have created scripts/setcloudenv.sh. See the [Temporal README](../openai_agents/durable/README.md#running-the-demo-in-temporal-cloud) for more details.
 ```bash
 cd src/python/api
-./startcloudapi.sh          # or: ./startcloudapi.sh pyai
+./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk
 ```
 
 Test that the API is running:

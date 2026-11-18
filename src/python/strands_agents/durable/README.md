@@ -554,7 +554,7 @@ cp src/python/strands_agents/durable/setcloudenv.example setcloudenv.sh   # edit
 # terminal 1 (worker; the script sources setcloudenv.sh, setgeminikey.sh and setclaimcheck.sh itself):
 src/python/strands_agents/durable/startcloudworker.sh
 # terminal 2 (API; the script sources setcloudenv.sh itself):
-src/api/startcloudapi.sh
+src/python/api/startcloudapi.sh strands_agents
 # terminal 3 (frontend):
 cd src/frontend && npm install && npm start
 ```

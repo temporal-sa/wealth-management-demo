@@ -474,7 +474,7 @@ continue-as-new in production (see the TODO in `workflows/supervisor_workflow.py
 | Variable | Default | Used for |
 |---|---|---|
 | `OPENAI_API_KEY` | | The agents' model calls (set in `scripts/setoaikey.sh`). |
-| `TEMPORAL_TASK_QUEUE` | `PY-AI-Supervisor` (`durable/task_queues.py`) | Task queue of the chat workflow and the tools. The worker, API and Java worker must agree. Start the shared API with `./startlocalapi.sh pyai` and the Java worker with `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor` (both default to `Supervisor`). |
+| `TEMPORAL_TASK_QUEUE` | `PY-AI-Supervisor` (`durable/task_queues.py`) | Task queue of the chat workflow and the tools. The worker, API and Java worker must agree. Start the shared API with `./startlocalapi.sh pyai` and the Java worker with `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor` (the Java worker defaults to `Supervisor`). |
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | value of `TEMPORAL_TASK_QUEUE` | Task queue of `OpenInvestmentAccountWorkflow`. The worker scripts set it from their optional argument (`./startlocalworker.sh Open-Account-Java`, via `setsplitworkflows.sh`); when it differs from `TEMPORAL_TASK_QUEUE`, the Python worker doesn't run the account opening workflow and the Java worker must. |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` (`PY-AI-Supervisor-llm`) | Task queue for the model calls. The old name `TEMPORAL_LLM_TASK_QUEUE` is still accepted. |
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Most model calls per second the Temporal service dispatches from the LLM task queue, e.g. `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh`. |
