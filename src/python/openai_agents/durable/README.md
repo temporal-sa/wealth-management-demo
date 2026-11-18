@@ -216,11 +216,11 @@ See [interop/open_account/java/README.md](../../../../interop/open_account/java/
 
 ### Start the API
 
-This port is the API's default, so it needs no argument (other ports pass theirs, e.g. `./startlocalapi.sh pyai`):
+Pass this AI framework's name, so the API starts chats on its task queue:
 
 ```bash
 cd src/python/api
-./startlocalapi.sh
+./startlocalapi.sh openai_agents
 ```
 ### Start the UX
 
@@ -311,7 +311,7 @@ command to convert it if needed. See [interop/open_account/java/README.md](../..
 
 ```bash
 cd src/python/api
-./startcloudapi.sh
+./startcloudapi.sh openai_agents
 ```
 ### Start the UX
 

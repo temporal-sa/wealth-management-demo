@@ -196,8 +196,8 @@ TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startlocalworker.sh Open-Account-Java
 
 ### Start the API
 
-In another terminal, start the shared REST API for this port. The `pyai` argument makes it start chats on
-this port's task queue (`PY-AI-Supervisor`) with workflow IDs starting `pyai-temporal-agent-`:
+In another terminal, start the shared REST API for this AI framework. The `pyai` argument makes it start chats on
+its task queue (`PY-AI-Supervisor`) with workflow IDs starting `pyai-temporal-agent-`:
 
 ```bash
 cd src/python/api
@@ -226,7 +226,7 @@ cd src/python/pyai/durable
 
 The child workflow ID has the format `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, for example
 `OpenAccount-pyai-temporal-agent-abc123-123-Vacation-1` (the web app gives each chat a random workflow ID
-starting with `pyai-temporal-agent-` when the API serves this port). `<n>` counts the account openings started in the chat (1, 2, 3, ...):
+starting with `pyai-temporal-agent-` when the API serves Pydantic AI). `<n>` counts the account openings started in the chat (1, 2, 3, ...):
 every request to open an account starts a new account opening, with its own KYC confirmation, even if an
 account with the same name was opened, or is still being opened, earlier in the chat. Quote the ID if the
 account name contains a space.
@@ -474,7 +474,7 @@ continue-as-new in production (see the TODO in `workflows/supervisor_workflow.py
 | Variable | Default | Used for |
 |---|---|---|
 | `OPENAI_API_KEY` | | The agents' model calls (set in `scripts/setoaikey.sh`). |
-| `TEMPORAL_TASK_QUEUE` | `PY-AI-Supervisor` (`durable/task_queues.py`) | Task queue of the chat workflow and the tools. The worker, API and Java worker must agree. Start the shared API with `./startlocalapi.sh pyai` and the Java worker with `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor` (both default to `Supervisor`). |
+| `TEMPORAL_TASK_QUEUE` | `PY-AI-Supervisor` (`durable/task_queues.py`) | Task queue of the chat workflow and the tools. The worker, API and Java worker must agree. Start the shared API with `./startlocalapi.sh pyai` and the Java worker with `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor` (the Java worker defaults to `Supervisor`). |
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | value of `TEMPORAL_TASK_QUEUE` | Task queue of `OpenInvestmentAccountWorkflow`. The worker scripts set it from their optional argument (`./startlocalworker.sh Open-Account-Java`, via `setsplitworkflows.sh`); when it differs from `TEMPORAL_TASK_QUEUE`, the Python worker doesn't run the account opening workflow and the Java worker must. |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` (`PY-AI-Supervisor-llm`) | Task queue for the model calls. The old name `TEMPORAL_LLM_TASK_QUEUE` is still accepted. |
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Most model calls per second the Temporal service dispatches from the LLM task queue, e.g. `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh`. |

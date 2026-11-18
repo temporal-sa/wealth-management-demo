@@ -3,24 +3,22 @@ import './App.css';
 import { API_BASE_URL } from './config';
 import ChaosPanel from './ChaosPanel';
 
-// Used if the API doesn't report its port's prefix (an API without GET /config).
+// Used if the API doesn't report its AI framework's prefix (an API without GET /config).
 const DEFAULT_WORKFLOW_ID_PREFIX = 'oai-temporal-agent-';
 
-// The chat workflow ID prefix of the port the API serves (e.g. pyai-temporal-agent-),
-// so each workflow ID names the SDK that runs it.
-async function fetchWorkflowIdPrefix() {
+// The API's GET /config: the AI framework it serves (label, e.g. "Pydantic AI") and that
+// framework's chat workflow ID prefix (e.g. pyai-temporal-agent-), so each workflow ID names
+// the SDK that runs it. Empty if the API can't be reached or has no /config.
+async function fetchConfig() {
   try {
     const response = await fetch(`${API_BASE_URL}/config`);
     if (response.ok) {
-      const config = await response.json();
-      if (config.workflow_id_prefix) {
-        return config.workflow_id_prefix;
-      }
+      return await response.json();
     }
   } catch (error) {
-    console.log(`Couldn't read the API's config, using the default workflow ID prefix: ${error}`);
+    console.log(`Couldn't read the API's config: ${error}`);
   }
-  return DEFAULT_WORKFLOW_ID_PREFIX;
+  return {};
 }
 
 const SHOW_CHAOS_KEY = 'showChaosPanel';
@@ -49,6 +47,17 @@ function App() {
   const defaultHeaderText = 'Chat session started.';
   const [workflow_id, setWorkflowId] = useState('');
   const [showChaos, setShowChaos] = useState(loadShowChaos);
+  // The AI framework the API serves, shown in the header. Read when the page loads and again
+  // at each Start Chat, in case the API was restarted for another framework.
+  const [frameworkLabel, setFrameworkLabel] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchConfig().then((config) => {
+      if (!cancelled) setFrameworkLabel(config.label || '');
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleToggleChaos = () => {
     const next = !showChaos;
@@ -102,7 +111,9 @@ function App() {
     try {
       let response;
       const newSessionId = Math.random().toString(36).substring(2, 15);
-      const newWorkflowId = (await fetchWorkflowIdPrefix()) + newSessionId;
+      const config = await fetchConfig();
+      setFrameworkLabel(config.label || '');
+      const newWorkflowId = (config.workflow_id_prefix || DEFAULT_WORKFLOW_ID_PREFIX) + newSessionId;
       console.log(`Getting ready to start workflow with id ${newWorkflowId}`);
       response = await fetch(`${API_BASE_URL}/start-workflow?workflow_id=${newWorkflowId}`, { method: 'POST' });
       if (response.ok) {
@@ -263,6 +274,7 @@ function App() {
       <div className="App">
         <div className="header">
           Wealth Management Chatbot
+          {frameworkLabel && <div className="framework">AI framework: {frameworkLabel}</div>}
           <button className="chaos-toggle" onClick={handleToggleChaos}>
             {showChaos ? 'Hide chaos' : 'Chaos'}
           </button>

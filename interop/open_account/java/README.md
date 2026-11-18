@@ -50,6 +50,7 @@ The Java workflow calls the Python activities on the port's main task queue, `TE
 | OpenAI Agents SDK | `./startlocalworker.sh Open-Account-Java` |
 | Pydantic AI | `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startlocalworker.sh Open-Account-Java` |
 | Strands Agents | `TEMPORAL_TASK_QUEUE=wealth-management-strands ./startlocalworker.sh Open-Account-Java` |
+| Google ADK (Python) | `TEMPORAL_TASK_QUEUE=ADK-Supervisor ./startlocalworker.sh Open-Account-Java` |
 
 The script sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` from the argument, sources `scripts/setclaimcheck.sh`
 if it exists (claim check is optional) and runs `./gradlew runWorker`. It connects to `127.0.0.1:7233`, namespace `default`, as set

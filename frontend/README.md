@@ -14,9 +14,10 @@ and how their workflow IDs are named:
 
 ```bash
 cd src/python/api
-./startlocalapi.sh          # OpenAI Agents SDK port: oai-temporal-agent-<random> on Supervisor
-./startlocalapi.sh pyai     # Pydantic AI port: pyai-temporal-agent-<random> on PY-AI-Supervisor
-./startlocalapi.sh strands_agents   # Strands Agents port: strands-temporal-agent-<random> on wealth-management-strands
+./startlocalapi.sh openai_agents   # OpenAI Agents SDK: oai-temporal-agent-<random> on Supervisor
+./startlocalapi.sh pyai            # Pydantic AI: pyai-temporal-agent-<random> on PY-AI-Supervisor
+./startlocalapi.sh strands_agents  # Strands Agents: strands-temporal-agent-<random> on wealth-management-strands
+./startlocalapi.sh google_adk      # Google ADK: adk-temporal-agent-<random> on ADK-Supervisor
 ```
 
 Note that the web application communicates directly with the API and the API is what 
@@ -39,8 +40,9 @@ cd frontend
 npm start
 ```
 
-A browser window opens at http://localhost:3000. Click **Start Chat** to start a conversation. Each
-chat starts a new chat workflow with a random ID named after the port the API serves, for example
+A browser window opens at http://localhost:3000. The header shows the AI framework the API serves
+(for example "AI framework: Google ADK"). Click **Start Chat** to start a conversation. Each
+chat starts a new chat workflow with a random ID named after the AI framework the API serves, for example
 `oai-temporal-agent-<random>` or `pyai-temporal-agent-<random>` (the prefix comes from the API's
 `GET /config`); **End Chat** ends it.
 

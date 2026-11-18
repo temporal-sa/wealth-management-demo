@@ -2,19 +2,22 @@
 
 Calls the real FastAPI app over HTTP. The chat workflow is a stub registered under the
 contract names, run by a worker with Temporal's default data converter rather than the
-Pydantic one, so the tests also show the API's payloads are plain JSON that any port's
+Pydantic one, so the tests also show the API's payloads are plain JSON that any framework's
 worker can read. Redis is not used: the chat history test replaces the event stream.
 
 Requires the Temporal test server (downloaded automatically on first run). No model key,
-Redis or running Temporal service needed. The port tests check the same calls against
+Redis or running Temporal service needed. The frameworks' tests check the same calls against
 the real chat workflow (src/python/openai_agents/tests/test_api_client.py).
 """
 
 import asyncio
 import os
+import subprocess
+import sys
 import uuid
 from contextlib import contextmanager
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -73,7 +76,7 @@ def api(temporal_env, tmp_path_factory, **settings):
         env.setenv("TEMPORAL_CONFIG_FILE", str(empty_config))
         env.setenv("TEMPORAL_ADDRESS", temporal_env.client.service_client.config.target_host)
         env.setenv("TEMPORAL_NAMESPACE", temporal_env.client.namespace)
-        for name in ("USE_CLAIM_CHECK", "CHAT_PORT", "CHAT_WORKFLOW_ID_PREFIX", "TEMPORAL_TASK_QUEUE"):
+        for name in ("USE_CLAIM_CHECK", "AI_FRAMEWORK", "CHAT_WORKFLOW_ID_PREFIX", "TEMPORAL_TASK_QUEUE"):
             env.delenv(name, raising=False)
         for name, value in settings.items():
             env.setenv(name, value)
@@ -85,8 +88,8 @@ def api(temporal_env, tmp_path_factory, **settings):
 
 @pytest.fixture(scope="module")
 def http(temporal_env, tmp_path_factory):
-    """The API, starting chats on TASK_QUEUE."""
-    with api(temporal_env, tmp_path_factory, TEMPORAL_TASK_QUEUE=TASK_QUEUE) as client:
+    """The API serving the OpenAI Agents framework, starting chats on TASK_QUEUE."""
+    with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="openai_agents", TEMPORAL_TASK_QUEUE=TASK_QUEUE) as client:
         yield client
 
 
@@ -179,21 +182,21 @@ async def test_set_chaos_rejects_an_unknown_flag(http):
     assert response.status_code == 400
 
 
-async def test_config_reports_the_default_port(http):
+async def test_config_reports_the_framework(http):
     response = await asyncio.to_thread(http.get, "/config")
     assert response.json() == {
-        "port": "openai_agents",
+        "framework": "openai_agents",
         "label": "OpenAI Agents SDK",
         "task_queue": TASK_QUEUE,
         "workflow_id_prefix": "oai-temporal-agent-",
     }
 
 
-async def test_chat_port_picks_the_ports_task_queue_and_workflow_id_prefix(temporal_env, tmp_path_factory):
-    with api(temporal_env, tmp_path_factory, CHAT_PORT="pyai") as client:
+async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal_env, tmp_path_factory):
+    with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="pyai") as client:
         config = (await asyncio.to_thread(client.get, "/config")).json()
         assert config == {
-            "port": "pyai",
+            "framework": "pyai",
             "label": "Pydantic AI",
             "task_queue": "PY-AI-Supervisor",
             "workflow_id_prefix": "pyai-temporal-agent-",
@@ -207,26 +210,51 @@ async def test_chat_port_picks_the_ports_task_queue_and_workflow_id_prefix(tempo
     await handle.terminate()
 
 
-async def test_settings_override_the_ports_values(temporal_env, tmp_path_factory):
-    with api(temporal_env, tmp_path_factory, CHAT_PORT="pyai", TEMPORAL_TASK_QUEUE="my-queue",
+async def test_settings_override_the_frameworks_values(temporal_env, tmp_path_factory):
+    with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="pyai", TEMPORAL_TASK_QUEUE="my-queue",
              CHAT_WORKFLOW_ID_PREFIX="demo-") as client:
         config = (await asyncio.to_thread(client.get, "/config")).json()
     assert (config["task_queue"], config["workflow_id_prefix"]) == ("my-queue", "demo-")
 
 
-def test_an_unknown_chat_port_is_rejected(monkeypatch):
-    from api.ports import selected_port
-    monkeypatch.setenv("CHAT_PORT", "nope")
-    with pytest.raises(ValueError, match="openai_agents, pyai, strands_agents"):
-        selected_port()
+EVERY_FRAMEWORK = ("openai_agents", "pyai", "strands_agents", "google_adk")
 
 
-async def test_the_strands_port_needs_nothing_extra(temporal_env, tmp_path_factory):
-    """Like the other ports, the Strands Agents port confirms deletes in the chat, so the
+@pytest.mark.parametrize("ai_framework", [None, "", "nope"])
+def test_the_api_needs_a_known_ai_framework_and_lists_every_framework(monkeypatch, ai_framework):
+    from api.frameworks import selected_framework
+    if ai_framework is None:
+        monkeypatch.delenv("AI_FRAMEWORK", raising=False)
+    else:
+        monkeypatch.setenv("AI_FRAMEWORK", ai_framework)
+    with pytest.raises(ValueError) as error:
+        selected_framework()
+    assert all(f"  {name} " in str(error.value) for name in EVERY_FRAMEWORK)
+
+
+@pytest.mark.parametrize("args", [[], [""], ["nope"]])
+def test_the_start_scripts_check_stops_without_a_known_framework_and_lists_every_framework(args):
+    """startlocalapi.sh and startcloudapi.sh run this check before starting uvicorn."""
+    result = subprocess.run([sys.executable, "-m", "api.frameworks", "startlocalapi.sh", *args],
+                            capture_output=True, text=True, cwd=Path(__file__).parents[2])
+    assert result.returncode == 2
+    assert "Usage: startlocalapi.sh <ai-framework>" in result.stderr
+    assert all(f"  {name} " in result.stderr for name in EVERY_FRAMEWORK)
+
+
+@pytest.mark.parametrize("name", EVERY_FRAMEWORK)
+def test_the_start_scripts_check_accepts_every_framework(name):
+    result = subprocess.run([sys.executable, "-m", "api.frameworks", "startlocalapi.sh", name],
+                            capture_output=True, text=True, cwd=Path(__file__).parents[2])
+    assert (result.returncode, result.stderr) == (0, "")
+
+
+async def test_the_strands_framework_needs_nothing_extra(temporal_env, tmp_path_factory):
+    """Like the other frameworks, the Strands Agents version confirms deletes in the chat, so the
     API serves it with the same endpoints: only its task queue and prefix differ."""
-    with api(temporal_env, tmp_path_factory, CHAT_PORT="strands_agents") as client:
+    with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="strands_agents") as client:
         assert (await asyncio.to_thread(client.get, "/config")).json() == {
-            "port": "strands_agents",
+            "framework": "strands_agents",
             "label": "Strands Agents",
             "task_queue": "wealth-management-strands",
             "workflow_id_prefix": "strands-temporal-agent-",

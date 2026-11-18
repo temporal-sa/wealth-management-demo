@@ -33,14 +33,21 @@ test('renders the chat with a Start Chat button', () => {
   expect(screen.getByPlaceholderText('Type a message...')).toBeDisabled();
 });
 
-test("names the chat workflow after the API's port", async () => {
-  const urls = mockApi({ port: 'pyai', workflow_id_prefix: 'pyai-temporal-agent-' });
+test("names the chat workflow after the API's AI framework", async () => {
+  const urls = mockApi({ framework: 'pyai', workflow_id_prefix: 'pyai-temporal-agent-' });
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Start Chat' }));
 
   await waitFor(() => expect(urls.some((u) => u.includes('/start-workflow'))).toBe(true));
   expect(startedWorkflowId(urls)).toMatch(/^pyai-temporal-agent-[a-z0-9]+$/);
+});
+
+test('shows the AI framework the API serves in the header', async () => {
+  mockApi({ framework: 'google_adk', label: 'Google ADK', workflow_id_prefix: 'adk-temporal-agent-' });
+  render(<App />);
+
+  expect(await screen.findByText('AI framework: Google ADK')).toBeInTheDocument();
 });
 
 test('falls back to the default prefix when the API has no /config', async () => {
@@ -51,4 +58,5 @@ test('falls back to the default prefix when the API has no /config', async () =>
 
   await waitFor(() => expect(urls.some((u) => u.includes('/start-workflow'))).toBe(true));
   expect(startedWorkflowId(urls)).toMatch(/^oai-temporal-agent-[a-z0-9]+$/);
+  expect(screen.queryByText(/AI framework:/)).toBeNull();
 });

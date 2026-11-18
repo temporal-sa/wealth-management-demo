@@ -77,9 +77,9 @@ async def test_the_api_client_starts_messages_and_ends_the_real_chat_workflow(te
 
 
 def test_the_api_knows_this_ports_task_queue(monkeypatch):
-    """./startlocalapi.sh (or openai_agents) starts chats where this port's worker listens by default."""
-    from api.ports import PORTS
+    """./startlocalapi.sh openai_agents starts chats where this port's worker listens by default."""
+    from api.frameworks import FRAMEWORKS
     from common.client_helper import ClientHelper
 
     monkeypatch.delenv("TEMPORAL_TASK_QUEUE", raising=False)
-    assert PORTS["openai_agents"].task_queue == ClientHelper().taskQueue
+    assert FRAMEWORKS["openai_agents"].task_queue == ClientHelper().taskQueue
