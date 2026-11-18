@@ -46,12 +46,12 @@ def _activity_tool(activity_fn):
 CONFIRMATION_REQUIRED_TOOLS = {"delete_beneficiary", "close_investment"}
 
 NOT_CONFIRMED = (
-    "Not done: the customer has not confirmed this yet. Ask the customer to confirm that they want to "
-    "{action}, naming it, and stop. Call {tool} again only after the customer says yes in their next message."
+    "Not done: the customer has not confirmed this yet. Ask the customer \"{question}\" and stop. "
+    "Call {tool} again only after the customer says yes in their next message."
 )
-CONFIRMATION_ACTIONS = {
-    "delete_beneficiary": "delete this beneficiary",
-    "close_investment": "close this investment account",
+CONFIRMATION_QUESTIONS = {
+    "delete_beneficiary": "Are you sure you want to delete beneficiary <first and last name>?",
+    "close_investment": "Are you sure you want to close your <account name> account?",
 }
 
 
@@ -90,7 +90,7 @@ class ConfirmationGuard(HookProvider):
             del asked[key]
             return
         asked[key] = self._owner._turn
-        event.cancel_tool = NOT_CONFIRMED.format(action=CONFIRMATION_ACTIONS[name], tool=name)
+        event.cancel_tool = NOT_CONFIRMED.format(question=CONFIRMATION_QUESTIONS[name], tool=name)
 
 
 # ---------------------------------------------------------------------------
@@ -208,8 +208,9 @@ class WealthManagementWorkflow:
 
         When ``persistent_key`` is given, the sub-agent is long-lived: it is built
         once and reused across supervisor turns (from ``self._persistent_subagents``)
-        so it can own multi-turn state such as the open-account child-workflow ID.
-        Ordinary sub-agents are rebuilt per call.
+        so it can own multi-turn state: the question it asked the customer (to
+        confirm a delete or close, or their KYC details) and the open-account
+        child-workflow ID. Ordinary sub-agents are rebuilt per call.
         """
         if persistent_key is not None and persistent_key in self._persistent_subagents:
             # A later turn of a multi-turn flow: reuse the same agent so its message
@@ -250,6 +251,7 @@ class WealthManagementWorkflow:
                     _activity_tool(Beneficiaries.add_beneficiary),
                     _activity_tool(Beneficiaries.delete_beneficiary),
                 ],
+                persistent_key="beneficiary",
             )
 
         return beneficiary_assistant
@@ -281,6 +283,7 @@ class WealthManagementWorkflow:
                     # hands it to the dedicated open-account agent.
                     self._make_open_account_assistant(),
                 ],
+                persistent_key="investment",
             )
 
         return investment_assistant

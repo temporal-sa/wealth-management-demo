@@ -129,6 +129,8 @@ of that run: `source ../../../scripts/setgeminikey.sh && uv run pytest tests/liv
 Live tests of opening an account (reopening it after a rollback, and opening the same
 account name twice, each with its own KYC) also call the paid API: `source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_account_opening.py -s`
 (see [durable/README.md](durable/README.md#live-account-opening-tests-call-the-paid-gemini-api)).
+A live test of confirming a delete or close in the chat does too: `source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_confirmations.py -s`
+(see [durable/README.md](durable/README.md#live-confirmation-test-calls-the-paid-gemini-api)).
 
 ## Resetting the demo data
 

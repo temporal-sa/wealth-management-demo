@@ -53,9 +53,10 @@ invocation and tool call through Activities, so each sub-agent's work is durably
 recorded in the workflow history. Delegation is one-directional (caller → specialist);
 a specialist never calls back up.
 
-The beneficiary and investment agents are rebuilt per request, but the
-**open-account agent is persistent**: it is built once and reused across customer
-turns so it can hold
+The specialist agents are **persistent**: each is built once and reused across
+customer turns, so it remembers the question it asked (like a handoff in the other
+ports). The beneficiary and investment agents remember a delete or close they asked
+the customer to confirm; the open-account agent holds
 the open-account child-workflow ID while it walks the customer through KYC and waits
 for compliance review — regardless of which agent invokes it, since it is keyed on
 the workflow, not the caller. Opening an account is therefore owned by this dedicated
@@ -142,8 +143,9 @@ the question, so nothing waits in the workflow.
 first `delete_beneficiary` or `close_investment` call is refused with an
 instruction to ask the customer, and the turn is recorded in workflow state. The
 same call runs only in the customer's next message. A call in the same turn, or
-for a question asked earlier in the conversation, is refused and asked again. If
-you answer no, the agent tells you it wasn't done.
+for a question asked earlier in the conversation, is refused and asked again. The
+supervisor passes your answer word for word to the agent that asked, which
+remembers the question. If you answer no, the agent tells you it wasn't done.
 
 ### How the Open Account functionality works
 
@@ -525,6 +527,22 @@ costs correspondingly more; `LIVE_TEST_RUNS=<n>` multiplies that. Run it from
 source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_account_opening.py -s
 # only one of them:
 source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_account_opening.py -k same_account_twice -s
+```
+
+### Live confirmation test (calls the paid Gemini API)
+
+`tests/live_confirmations.py` runs the real `WealthManagementWorkflow` against the real
+Gemini model. As client 123, the customer asks to delete beneficiary Jane Doe, or to
+close their Savings account, then answers "Yes" or "No" (four conversations). The test
+checks that nothing changes before the answer, that the agent asks "Are you sure…?"
+naming the beneficiary or account, that "Yes" deletes or closes exactly that one, once,
+without asking again, that "No" changes nothing, and that no ID is shown. The list
+activities read the real `data/*.json`; the delete and close activities only record
+the call, so the data files never change, and no Redis is needed. Like the other live
+tests, it is not part of `uv run pytest` and is skipped when `GEMINI_API_KEY` is not set:
+
+```bash
+source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_confirmations.py -s
 ```
 
 ## Run on Temporal Cloud
