@@ -23,6 +23,9 @@ from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from tests.scripted_model import send
 
 RUNS = max(1, int(os.getenv("LIVE_TEST_RUNS", "1")))
+# Seconds to wait for each reply. A turn can make several model calls, and slower models
+# such as gpt-5 sometimes take over a minute for one.
+TURN_TIMEOUT = float(os.getenv("LIVE_TURN_TIMEOUT", "300"))
 
 _missing = litellm.validate_environment(model=llm_model()).get("missing_keys") or []
 requires_model_key = pytest.mark.skipif(
@@ -78,7 +81,7 @@ class Conversation:
 
     async def say(self, text: str):
         AGENT_MESSAGES.clear()
-        reply = await send(self.handle, text)
+        reply = await send(self.handle, text, timeout=TURN_TIMEOUT)
         self.transcript.extend([f"Customer: {text}", f"Agent: {reply.text_response}",
                                 *[f"  trace: {line}" for line in (reply.agent_trace or "").splitlines()],
                                 *[f"  [{name}]: {said}" for name, said in AGENT_MESSAGES]])

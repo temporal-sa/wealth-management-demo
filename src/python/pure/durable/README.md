@@ -300,7 +300,9 @@ The chat workflow tests replace the model with a scripted one. It is just an act
 under the name `invoke_model` ([tests/scripted_model.py](../tests/scripted_model.py)).
 
 The live tests call the real model (`LLM_MODEL`), so they are kept out of the default run. They
-repeat the conversation `LIVE_TEST_RUNS` times (default 1) and print each transcript:
+repeat the conversation `LIVE_TEST_RUNS` times (default 1) and print each transcript. Each reply
+has `LIVE_TURN_TIMEOUT` seconds (default 300) to arrive, since a turn with a slow model such as
+gpt-5 can take over a minute:
 
 ```bash
 source ../../../scripts/setllmkey.sh && LIVE_TEST_RUNS=3 uv run pytest tests/live_*.py -s

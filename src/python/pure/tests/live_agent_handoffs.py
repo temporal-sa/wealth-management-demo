@@ -17,6 +17,7 @@ because it calls the paid model API. Run it from the repository root with:
     source ../../../scripts/setllmkey.sh && uv run pytest tests/live_agent_handoffs.py -s
 
 LIVE_TEST_RUNS=<n> repeats the conversation n times (default 1), since model output varies.
+LIVE_TURN_TIMEOUT=<seconds> is how long to wait for each reply (default 300).
 Skipped when the key for LLM_MODEL is not set. Requires the Temporal test server
 (downloaded automatically on first run). No Redis needed.
 """

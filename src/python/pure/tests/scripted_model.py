@@ -60,11 +60,13 @@ def model_worker(client: Client) -> Worker:
     return Worker(client, task_queue=TASK_QUEUE_LLM, activities=[scripted_invoke_model])
 
 
-async def send(handle, prompt: str):
-    """Send a customer message and return the agent's reply once it has been processed."""
+async def send(handle, prompt: str, timeout: float = 60):
+    """Send a customer message and return the agent's reply once it has been processed.
+
+    Fails if no reply arrives within ``timeout`` seconds."""
     count = len(await handle.query(WealthManagementWorkflow.get_chat_history))
     await handle.signal(WealthManagementWorkflow.process_user_message, ProcessUserMessageInput(user_input=prompt))
-    for _ in range(240):
+    for _ in range(int(timeout / 0.25)):
         history = await handle.query(WealthManagementWorkflow.get_chat_history)
         if len(history) > count:
             return history[-1]
