@@ -40,7 +40,8 @@ cd frontend
 npm start
 ```
 
-A browser window opens at http://localhost:3000. Click **Start Chat** to start a conversation. Each
+A browser window opens at http://localhost:3000. The header shows the AI framework the API serves
+(for example "AI framework: Google ADK"). Click **Start Chat** to start a conversation. Each
 chat starts a new chat workflow with a random ID named after the AI framework the API serves, for example
 `oai-temporal-agent-<random>` or `pyai-temporal-agent-<random>` (the prefix comes from the API's
 `GET /config`); **End Chat** ends it.

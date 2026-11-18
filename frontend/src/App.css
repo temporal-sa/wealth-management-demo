@@ -139,6 +139,13 @@ body {
     position: relative;
 }
 
+.framework {
+    margin-top: 2px;
+    font-size: 0.65em;
+    font-weight: 400;
+    opacity: 0.85;
+}
+
 .chaos-toggle {
     position: absolute;
     right: 12px;

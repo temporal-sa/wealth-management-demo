@@ -43,6 +43,13 @@ test("names the chat workflow after the API's AI framework", async () => {
   expect(startedWorkflowId(urls)).toMatch(/^pyai-temporal-agent-[a-z0-9]+$/);
 });
 
+test('shows the AI framework the API serves in the header', async () => {
+  mockApi({ framework: 'google_adk', label: 'Google ADK', workflow_id_prefix: 'adk-temporal-agent-' });
+  render(<App />);
+
+  expect(await screen.findByText('AI framework: Google ADK')).toBeInTheDocument();
+});
+
 test('falls back to the default prefix when the API has no /config', async () => {
   const urls = mockApi(null);
   render(<App />);
@@ -51,4 +58,5 @@ test('falls back to the default prefix when the API has no /config', async () =>
 
   await waitFor(() => expect(urls.some((u) => u.includes('/start-workflow'))).toBe(true));
   expect(startedWorkflowId(urls)).toMatch(/^oai-temporal-agent-[a-z0-9]+$/);
+  expect(screen.queryByText(/AI framework:/)).toBeNull();
 });
