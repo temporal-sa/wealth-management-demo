@@ -1,5 +1,0 @@
-# we don't want to auto-discover any workers if they are disabled
-spring:
-  temporal:
-    workersAutoDiscovery:
-      packages:
