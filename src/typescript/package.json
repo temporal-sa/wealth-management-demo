@@ -2,10 +2,9 @@
   "name": "wealth-management-typescript",
   "version": "0.1.0",
   "private": true,
-  "description": "The TypeScript ports, their shared code and API, as npm workspaces sharing one node_modules",
+  "description": "The TypeScript ports and their shared code, as npm workspaces sharing one node_modules",
   "workspaces": [
     "common",
-    "api",
     "vercel_ai"
   ],
   "scripts": {

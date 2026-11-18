@@ -29,9 +29,9 @@ The overall application architecture looks like this:
 
 There is a React UX ([frontend/](../../../../frontend/README.md), shared by every port) which is where the customer
 interacts with the application. The React UX leverages an API which exposes endpoints to start a workflow, send a
-prompt, retrieve the chat history, end the chat, and set the chaos flags. Either the TypeScript
-[API](../../api/README.md) or the Python [API](../../../python/api/README.md) works: both start this port's chat
-workflows with `vercel_ai` as their AI framework.
+prompt, retrieve the chat history, end the chat, and set the chaos flags. It is the
+[API](../../../python/api/README.md) every port shares, written in Python: it starts this port's chat workflows
+with `vercel_ai` as its AI framework.
 The React frontend uses adaptive polling
 to retrieve new events from Redis, providing real-time status updates as the Open Account
 child workflow progresses through the different steps.
@@ -51,7 +51,7 @@ agents and business logic that drive the agentic application.
 
 ## Install dependencies
 
-The TypeScript code (this port, `src/typescript/common` and the TypeScript API) is one set of npm workspaces
+The TypeScript code (this port and `src/typescript/common`) is one set of npm workspaces
 with one `node_modules`. From `src/typescript`:
 
 ```shell
@@ -209,11 +209,11 @@ TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh Open-Account-Java
 ### Start the API
 
 ```shell
-./src/typescript/api/startlocalapi.sh vercel_ai
+./src/python/api/startlocalapi.sh vercel_ai
 ```
 
-The argument is the AI framework the API serves; without a valid one, the script lists them. The Python API
-works the same way: `./src/python/api/startlocalapi.sh vercel_ai`. The web app then names its chats
+The argument is the AI framework the API serves; without a valid one, the script lists them. The web app then
+names its chats
 `vai-temporal-agent-<random>`.
 
 ### Start the UX
@@ -409,12 +409,11 @@ The worker, API and scripts read these (see `src/typescript/common/client-helper
 | `USE_CLAIM_CHECK` | `false` | `true`, `1` or `yes` (any case) turns on the claim-check codec (set in `scripts/setclaimcheck.sh`) |
 | `CODEC_SERVER_HOST`, `CODEC_SERVER_PORT` | `127.0.0.1`, `8081` | Codec server bind address |
 
-The API has its own settings (`AI_FRAMEWORK`, `API_HOST`, `API_PORT`); see the [API README](../../api/README.md).
+The API has its own settings; see the [API README](../../../python/api/README.md).
 
 ### Running the tests
 
-From `src/typescript/vercel_ai` (or from `src/typescript`, which runs every TypeScript workspace's tests,
-the API's included):
+From `src/typescript/vercel_ai` (or from `src/typescript`, which runs every TypeScript workspace's tests):
 
 ```shell
 npm test
@@ -498,7 +497,7 @@ To run the Open Account workflow in Java, use `startcloudworker.sh Open-Account-
 ### Start the API
 
 ```shell
-./src/typescript/api/startcloudapi.sh vercel_ai
+./src/python/api/startcloudapi.sh vercel_ai
 ```
 
 ### Start the UX

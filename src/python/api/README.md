@@ -3,7 +3,7 @@
 Exposes the Temporal chat workflow (`WealthManagementWorkflow`) with an easy to use API. The
 [web application](../../../frontend/README.md) uses it; you can also call it with curl.
 
-The API works with every Python AI framework in this repository, and with the TypeScript Vercel AI SDK port, whose chat workflows keep the same contract. It uses only the Temporal contracts (the workflow and signal
+It is the one API in this repository: it serves every AI framework, Python or TypeScript (the Vercel AI SDK port), because their chat workflows keep the same contract. It uses only the Temporal contracts (the workflow and signal
 names as strings, plain JSON payloads through the Pydantic data converter, and the claim-check codec
 when enabled), never a port's workflow class or framework plugin. The start scripts' required argument
 (`AI_FRAMEWORK`) picks the AI framework: it sets the task queue that framework's worker listens on and the

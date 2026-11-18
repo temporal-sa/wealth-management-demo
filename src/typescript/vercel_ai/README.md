@@ -9,14 +9,13 @@ off to each other with tools. The model is Gemini (`gemini-2.5-pro`). In the Tem
 runs as an activity through Temporal's AI SDK plugin (`@temporalio/ai-sdk`).
 
 This port was imported from [temporal-sa/vai-wealth-management](https://github.com/temporal-sa/vai-wealth-management).
-It is the first TypeScript port: it shares [`src/typescript/common`](../common) and the TypeScript
-[API](../api/README.md) with the TypeScript ports to come, and the [web application](../../../frontend/README.md),
+It is the first TypeScript port: it shares [`src/typescript/common`](../common) with the TypeScript ports to
+come, and the [API](../../python/api/README.md) (written in Python), the [web application](../../../frontend/README.md),
 the [Java worker](../../../interop/open_account/java/README.md), `scripts/` and `data/` with every port. Its chat
-workflows keep the same Temporal contract as the Python ports, so the [Python API](../../python/api/README.md)
-serves it too.
+workflows keep the same Temporal contract as the Python ports, which is what lets the Python API serve it.
 
 Its chat workflows run on the `VAI-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in
-[durable/task-queues.ts](durable/task-queues.ts)), so its worker can run next to another port's. Start either API
+[durable/task-queues.ts](durable/task-queues.ts)), so its worker can run next to another port's. Start the API
 for it with the `vercel_ai` AI framework (`./startlocalapi.sh vercel_ai`); the web app then names its chats
 `vai-temporal-agent-<random>`.
 
@@ -40,7 +39,7 @@ The demo is implemented twice:
 | [Java JDK](https://adoptium.net/) 25 | Optional Java open-account worker only |
 | A [Gemini API key](https://aistudio.google.com/app/apikey) | Both versions, and the live tests |
 
-Install the dependencies. The TypeScript code (this port, `common` and the API) is one set of npm workspaces
+Install the dependencies. The TypeScript code (this port and `common`) is one set of npm workspaces
 with one `node_modules`, so from the repository root:
 
 ```bash
@@ -78,7 +77,7 @@ redis-server
 ```
 
 ```bash
-./src/typescript/api/startlocalapi.sh vercel_ai
+./src/python/api/startlocalapi.sh vercel_ai
 ```
 
 ```bash
@@ -113,7 +112,7 @@ server (downloaded on first run), stub activities and a scripted model. From `sr
 npm test
 ```
 
-`npm test` in `src/typescript` runs every TypeScript workspace's tests (this port's and the API's). The live
+`npm test` in `src/typescript` runs every TypeScript workspace's tests. The live
 tests call Gemini and are not part of the default run; see
 [Running the tests](durable/README.md#running-the-tests).
 

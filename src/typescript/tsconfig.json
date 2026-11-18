@@ -13,7 +13,6 @@
   },
   "include": [
     "common/**/*.ts",
-    "api/**/*.ts",
     "vercel_ai/**/*.ts"
   ]
 }
