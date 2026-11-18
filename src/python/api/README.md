@@ -40,6 +40,7 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 | [Pydantic AI](../pyai/durable/README.md) | `./startlocalapi.sh pyai` | `PY-AI-Supervisor` | `pyai-temporal-agent-<random>` |
 | [Strands Agents](../strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents` | `wealth-management-strands` | `strands-temporal-agent-<random>` |
 | [Google ADK](../google_adk/durable/README.md) | `./startlocalapi.sh google_adk` | `ADK-Supervisor` | `adk-temporal-agent-<random>` |
+| [Pure Python (LiteLLM)](../pure/durable/README.md) | `./startlocalapi.sh pure` | `Pure-Supervisor` | `pure-temporal-agent-<random>` |
 
 There is no default framework: without a valid one, the scripts stop and list every framework.
 `TEMPORAL_TASK_QUEUE` and `CHAT_WORKFLOW_ID_PREFIX` override the framework's values. The API prints the
@@ -72,7 +73,7 @@ cd src/python/api
 Be sure to have created scripts/setcloudenv.sh. See the [Temporal README](../openai_agents/durable/README.md#running-the-demo-in-temporal-cloud) for more details.
 ```bash
 cd src/python/api
-./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk
+./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk, pure
 ```
 
 Test that the API is running:

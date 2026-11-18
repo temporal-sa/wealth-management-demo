@@ -1,5 +1,7 @@
-# Copy this file to setllmkey.sh (which git ignores) and fill in your key:
-#   cp setllmkey.example setllmkey.sh
+# Model settings for the pure Python port (src/python/pure), which calls the model through
+# LiteLLM. From the repository root, copy this file to scripts/setllmkey.sh (which git
+# ignores) and fill in your key:
+#   cp scripts/setllmkey.example scripts/setllmkey.sh
 #
 # LLM_MODEL is a LiteLLM model name: <provider>/<model>. The default is Anthropic.
 export LLM_MODEL=anthropic/claude-opus-5-5

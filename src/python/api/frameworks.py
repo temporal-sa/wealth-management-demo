@@ -27,6 +27,7 @@ FRAMEWORKS = {
         Framework("pyai", "Pydantic AI", "PY-AI-Supervisor", "pyai-temporal-agent-"),
         Framework("strands_agents", "Strands Agents", "wealth-management-strands", "strands-temporal-agent-"),
         Framework("google_adk", "Google ADK", "ADK-Supervisor", "adk-temporal-agent-"),
+        Framework("pure", "Pure Python (LiteLLM)", "Pure-Supervisor", "pure-temporal-agent-"),
     ]
 }
 
