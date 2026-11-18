@@ -1,0 +1,43 @@
+[project]
+name = "pure-wealth-management"
+version = "0.1.0"
+description = "Wealth management demo: the pure Python port (a hand-written agent loop on LiteLLM), with a Temporal durable-execution version"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "pydantic>=2.11.7,<3.0.0",
+    "redis>=6.2.0,<9.0.0",
+    # The only model dependency: one API for Anthropic, OpenAI and Gemini.
+    # Pinned to an exact, weeks-old release (see README, "Choosing the model").
+    "litellm==1.106.2",
+    # LiteLLM 1.106.2 imports mcp whenever a call passes tools, but doesn't declare it.
+    "mcp==2.3.0",
+    "temporalio==1.34.0",
+    # The claim check codec server.
+    "aiohttp>=3.11,<4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+# The port's own packages, plus src/python for the shared common/ package (and api/, whose
+# Temporal calls tests/test_api_client.py checks against this port's chat workflow).
+dev-mode-dirs = [".", ".."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["standalone", "durable", "prompts", "pure_agents"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "module"
+asyncio_default_test_loop_scope = "module"
+testpaths = ["tests"]
+pythonpath = [".", ".."]

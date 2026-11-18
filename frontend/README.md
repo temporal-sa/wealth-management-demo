@@ -18,6 +18,7 @@ cd src/python/api
 ./startlocalapi.sh pyai            # Pydantic AI: pyai-temporal-agent-<random> on PY-AI-Supervisor
 ./startlocalapi.sh strands_agents  # Strands Agents: strands-temporal-agent-<random> on wealth-management-strands
 ./startlocalapi.sh google_adk      # Google ADK: adk-temporal-agent-<random> on ADK-Supervisor
+./startlocalapi.sh pure            # Pure Python (LiteLLM): pure-temporal-agent-<random> on Pure-Supervisor
 ```
 
 Note that the web application communicates directly with the API and the API is what 
