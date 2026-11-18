@@ -38,6 +38,7 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 |---|---|---|---|
 | [OpenAI Agents SDK](../openai_agents/durable/README.md) | `./startlocalapi.sh` (or `openai_agents`) | `Supervisor` | `oai-temporal-agent-<random>` |
 | [Pydantic AI](../pyai/durable/README.md) | `./startlocalapi.sh pyai` | `PY-AI-Supervisor` | `pyai-temporal-agent-<random>` |
+| [Strands Agents](../strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents` | `wealth-management-strands` | `strands-temporal-agent-<random>` |
 
 `TEMPORAL_TASK_QUEUE` and `CHAT_WORKFLOW_ID_PREFIX` override the port's values. The API prints the port,
 queue and prefix it uses when it starts.

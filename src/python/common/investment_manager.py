@@ -51,6 +51,13 @@ class InvestmentManager:
 
         return self.data.get(client_id, [])
 
+    def account_name(self, client_id, investment_id):
+        """The investment account's name, or None if not found."""
+        for a in self.list_investment_accounts(client_id):
+            if a.get("investment_id") == investment_id:
+                return a.get("name")
+        return None
+
     def add_investment_account(self, new_account: InvestmentAccount):
         """
         Adds a new investment account to a client's portfolio.

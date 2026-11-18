@@ -217,5 +217,18 @@ async def test_settings_override_the_ports_values(temporal_env, tmp_path_factory
 def test_an_unknown_chat_port_is_rejected(monkeypatch):
     from api.ports import selected_port
     monkeypatch.setenv("CHAT_PORT", "nope")
-    with pytest.raises(ValueError, match="openai_agents, pyai"):
+    with pytest.raises(ValueError, match="openai_agents, pyai, strands_agents"):
         selected_port()
+
+
+async def test_the_strands_port_needs_nothing_extra(temporal_env, tmp_path_factory):
+    """Like the other ports, the Strands Agents port confirms deletes in the chat, so the
+    API serves it with the same endpoints: only its task queue and prefix differ."""
+    with api(temporal_env, tmp_path_factory, CHAT_PORT="strands_agents") as client:
+        assert (await asyncio.to_thread(client.get, "/config")).json() == {
+            "port": "strands_agents",
+            "label": "Strands Agents",
+            "task_queue": "wealth-management-strands",
+            "workflow_id_prefix": "strands-temporal-agent-",
+        }
+        assert (await asyncio.to_thread(client.get, "/pending-approval", params={"workflow_id": "x"})).status_code == 404

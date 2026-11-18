@@ -16,6 +16,7 @@ and how their workflow IDs are named:
 cd src/python/api
 ./startlocalapi.sh          # OpenAI Agents SDK port: oai-temporal-agent-<random> on Supervisor
 ./startlocalapi.sh pyai     # Pydantic AI port: pyai-temporal-agent-<random> on PY-AI-Supervisor
+./startlocalapi.sh strands_agents   # Strands Agents port: strands-temporal-agent-<random> on wealth-management-strands
 ```
 
 Note that the web application communicates directly with the API and the API is what 

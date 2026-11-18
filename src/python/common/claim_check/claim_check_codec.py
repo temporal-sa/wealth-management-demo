@@ -1,56 +1,60 @@
-import uuid
-import redis.asyncio as redis
-from typing import Iterable, List, Optional
+"""Claim-check payload codec.
 
+Replaces every payload sent to Temporal with a random ID and stores the original
+payload (the serialized ``Payload`` protobuf) in Redis under that ID. Decoding
+looks the ID up again. Payloads that were not claim-checked pass through
+unchanged, so histories written without the codec stay readable.
+
+The metadata and storage format match the Java worker's ``ClaimCheckCodec``
+(interop/open_account/java/src/main/java/io/temporal/demo/wealthmanagement/claimcheck), so either
+side can decode the other's payloads.
+"""
+
+import uuid
+from typing import Any, Iterable, List, Optional
+
+import redis.asyncio as redis
 from temporalio.api.common.v1 import Payload
 from temporalio.converter import PayloadCodec
 
 from common.redis_config import RedisConfig
 
-#
-# Substitutes the payload for a GUID
-# and stores the original payload in Redis
-#
+ENCODING = b"claim-checked"
+CODEC_KEY = "temporal.io/claim-check-codec"
+CODEC_VERSION = b"v1"
+
+
 class ClaimCheckCodec(PayloadCodec):
+    def __init__(self, config: Optional[RedisConfig] = None, redis_client: Any = None):
+        """Store payloads in the Redis at ``config`` (REDIS_HOST / REDIS_PORT by default).
 
-    def __init__(self, config: Optional[RedisConfig] = None):
-        config = config or RedisConfig()
-        self.redis_client = redis.Redis(host=config.hostname, port=config.port)
+        ``redis_client`` replaces the Redis connection with any object that has
+        async ``get(key)`` and ``set(key, value)`` methods (used by the tests).
+        """
+        if redis_client is None:
+            config = config or RedisConfig()
+            redis_client = redis.Redis(host=config.hostname, port=config.port)
+        self.redis_client = redis_client
 
-    #
-    # TODO: Figure out when/how to close the redis_client
-    #       Can't be done in a __del__ as it aClose() needs to be awaited
-    #
     async def encode(self, payloads: Iterable[Payload]) -> List[Payload]:
-        out: list[Payload] = []
-        for p in payloads:
-            encoded = await self.encode_payload(p)
-            out.append(encoded)
-
-        return out
+        return [await self._encode_payload(p) for p in payloads]
 
     async def decode(self, payloads: Iterable[Payload]) -> List[Payload]:
-        out: List[Payload] = []
-        for p in payloads:
-            if p.metadata.get("temporal.io/claim-check-codec", b"").decode() != "v1":
-                out.append(p)
-                continue
+        return [await self._decode_payload(p) for p in payloads]
 
-            redis_id = p.data.decode("utf-8")
-            value = await self.redis_client.get(redis_id)
-            new_payload = Payload.FromString(value)
-            out.append(new_payload)
-        return out
-
-    async def encode_payload(self, payload: Payload) -> Payload:
-        id = str(uuid.uuid4())
-        value = payload.SerializeToString()
-        await self.redis_client.set(id, value)
-        out = Payload(
-            metadata= {
-                "encoding": b"claim-checked",
-                "temporal.io/claim-check-codec": b"v1",
-            },
-            data=id.encode("utf-8"),
+    async def _encode_payload(self, payload: Payload) -> Payload:
+        claim_id = str(uuid.uuid4())
+        await self.redis_client.set(claim_id, payload.SerializeToString())
+        return Payload(
+            metadata={"encoding": ENCODING, CODEC_KEY: CODEC_VERSION},
+            data=claim_id.encode("utf-8"),
         )
-        return out
+
+    async def _decode_payload(self, payload: Payload) -> Payload:
+        if payload.metadata.get(CODEC_KEY) != CODEC_VERSION:
+            return payload
+        claim_id = payload.data.decode("utf-8")
+        value = await self.redis_client.get(claim_id)
+        if value is None:
+            raise ValueError(f"Claim-checked payload {claim_id} not found in Redis")
+        return Payload.FromString(value)

@@ -71,6 +71,13 @@ class BeneficiariesManager:
         beneficiaries = data.get(client_id, [])
         return beneficiaries
 
+    def display_name(self, client_id: str, beneficiary_id: str):
+        """The beneficiary's "First Last" name, or None if not found."""
+        for b in self.list_beneficiaries(client_id):
+            if b.get("beneficiary_id") == beneficiary_id:
+                return f"{b.get('first_name', '')} {b.get('last_name', '')}".strip() or None
+        return None
+
     def add_beneficiary(self, client_id: str, first_name: str, last_name: str, relationship: str) -> None:
         """
         Adds a new beneficiary to the specified client.

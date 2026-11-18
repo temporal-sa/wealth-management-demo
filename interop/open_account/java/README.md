@@ -42,9 +42,19 @@ cd interop/open_account/java
 ./startlocalworker.sh Open-Account-Java
 ```
 
+The Java workflow calls the Python activities on the port's main task queue, `TEMPORAL_TASK_QUEUE`
+(default `Supervisor`, the OpenAI Agents port's). For another port, set it to that port's queue:
+
+| Port | Start the Java worker with |
+|---|---|
+| OpenAI Agents SDK | `./startlocalworker.sh Open-Account-Java` |
+| Pydantic AI | `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startlocalworker.sh Open-Account-Java` |
+| Strands Agents | `TEMPORAL_TASK_QUEUE=wealth-management-strands ./startlocalworker.sh Open-Account-Java` |
+
 The script sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` from the argument, sources `scripts/setclaimcheck.sh`
 if it exists (claim check is optional) and runs `./gradlew runWorker`. It connects to `127.0.0.1:7233`, namespace `default`, as set
-in `src/main/resources/application.yaml`. When claim check is enabled, the Java worker uses the Redis at
+in `src/main/resources/application.yaml` (it doesn't read `TEMPORAL_ADDRESS`; to use another local
+server, set `SPRING_TEMPORAL_CONNECTION_TARGET`, e.g. `127.0.0.1:17233`). When claim check is enabled, the Java worker uses the Redis at
 `spring.data.redis` in `application.yaml` (`localhost:6379`), not `REDIS_HOST` / `REDIS_PORT`.
 
 Start the API and the UX as described in the [Temporal README](../../../src/python/openai_agents/durable/README.md),
