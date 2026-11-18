@@ -22,7 +22,6 @@ from durable.activities.custodian import Custodian
 from durable.activities.funding import Funding
 from durable.activities.open_account import OpenAccount
 from durable.activities.event_stream_activities import EventStreamActivities
-from durable.activities.approval import ApprovalActivities
 from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
 
@@ -76,7 +75,6 @@ async def main():
             EventStreamActivities.append_chat_interaction,
             EventStreamActivities.append_status_update,
             EventStreamActivities.delete_conversation,
-            ApprovalActivities.describe_approval,
         ],
     )
     # Model calls run on their own task queue so they can be rate limited without

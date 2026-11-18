@@ -75,18 +75,11 @@ async def main():
             ProcessUserMessageInput(user_input=user_input),
         )
 
-        # Wait for the assistant's reply, handling approval prompts and status
-        # updates that arrive while the turn is being processed.
+        # Wait for the assistant's reply, showing status updates that arrive while
+        # the turn is being processed.
         while True:
             await asyncio.sleep(0.5)
             await drain_status()
-
-            pending = await handle.query(WealthManagementWorkflow.get_pending_approval)
-            if pending is not None:
-                ans = await ainput(f"\n[approval needed] {pending}\nApprove? (yes/no): ")
-                response = "approve" if ans.lower() in ("y", "yes", "approve") else "deny"
-                await handle.signal(WealthManagementWorkflow.approve, response)
-                continue
 
             history = await handle.query(WealthManagementWorkflow.get_chat_history)
             if len(history) > history_len:

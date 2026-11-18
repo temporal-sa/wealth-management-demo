@@ -26,7 +26,7 @@ updates as the open-account child workflow progresses.
 | **Agents as tools (nested)** | The supervisor delegates to `beneficiary_assistant` / `investment_assistant`; the investment agent delegates opening onward to `open_account_assistant` (`_make_*_assistant`) |
 | **Tools as Activities** | `activities/` wrapped with `activity_as_tool` |
 | **Child workflow** | The open-account agent starts `OpenInvestmentAccountWorkflow` |
-| **Human approval gate** | `ApprovalHook` interrupts before `delete_beneficiary` / `close_investment`; the workflow waits for an `approve` Signal |
+| **Confirmation in the chat** | `ConfirmationGuard` refuses `delete_beneficiary` / `close_investment` until the customer confirms in their next message (workflow state, like the KYC guard) |
 | **Human compliance gate** | The open-account child blocks on a `compliance_approved` Signal, sent with `localsendcomplianceapproval.sh` (local server) or `sendcomplianceapproval.sh` (Temporal Cloud) |
 | **Updates** | KYC reads and updates client details through the child workflow's `get_client_details` / `update_client_details` Updates |
 | **Conversation history in Redis** | `EventStreamActivities` persist chat + status events the UI polls |
@@ -131,18 +131,19 @@ Click **Start Chat**, then try client ID `123` or `234`. Questions that aren't
 about beneficiaries or investment accounts are politely declined by the supervisor
 agent (handled in its prompt).
 
-### Human approval (delete / close)
+### Confirming a delete or close
 
-When you ask to delete a beneficiary or close an investment account, the
-sub-agent's `ApprovalHook` interrupts before the tool runs and the workflow
-pauses. The bot asks for confirmation inline in the chat (for example "Are you
-sure you want to delete beneficiary John Doe?"). Answer by typing: a reply that
-starts with *yes*, *y*, *ok*, *sure*, *approve*, *confirm*, *proceed* (and a few
-similar words) approves; anything else denies. The UI sends your answer to
-`POST /approve` (`response=approve` or `deny`), which signals the workflow, and
-the agent either runs the tool or tells you it wasn't done. The shared API and web app do this only for
-this port, so start the API with `./startlocalapi.sh strands_agents` (its `GET /config` reports
-`"approvals": true`).
+As in the other ports, deleting a beneficiary or closing an investment account is
+confirmed in the chat. The agent asks (for example "Are you sure you want to
+delete beneficiary John Doe?") and your next message answers. The turn ends with
+the question, so nothing waits in the workflow.
+
+`ConfirmationGuard` (on the sub-agents) makes sure the agent really asked. The
+first `delete_beneficiary` or `close_investment` call is refused with an
+instruction to ask the customer, and the turn is recorded in workflow state. The
+same call runs only in the customer's next message. A call in the same turn, or
+for a question asked earlier in the conversation, is refused and asked again. If
+you answer no, the agent tells you it wasn't done.
 
 ### How the Open Account functionality works
 
@@ -399,10 +400,8 @@ src/python/strands_agents/durable/startchat.sh
 ```
 
 It starts a new chat workflow (ID `wealth-management-<uuid>`, printed at start)
-and prints status updates as `[status] ...`. When a delete or close needs
-approval it prints `[approval needed] <question>` and asks `Approve? (yes/no)`;
-`y`, `yes`, or `approve` approves and anything else denies. Type `exit`, `quit`,
-or `end` to stop.
+and prints status updates as `[status] ...`. Confirm a delete or close by
+answering the agent's question. Type `exit`, `quit`, or `end` to stop.
 
 ## API endpoints
 
@@ -418,8 +417,6 @@ All parameters are query parameters.
 | POST | `/start-workflow` | `workflow_id` | Starts a `WealthManagementWorkflow` |
 | POST | `/send-prompt` | `workflow_id`, `prompt` | Signals a customer message |
 | GET | `/get-chat-history` | `workflow_id`, `from_index` (default 0) | Chat and status events from Redis |
-| GET | `/pending-approval` | `workflow_id` | The pending delete/close confirmation question, or `null` |
-| POST | `/approve` | `workflow_id`, `response` (`approve` or `deny`) | Answers the pending confirmation |
 | POST | `/end-chat` | `workflow_id` | Signals the workflow to end |
 | GET | `/chaos` | | Chaos flags and recent injected failures |
 | POST | `/chaos` | `flag`, `enabled` | Turns one chaos flag on or off |
@@ -450,12 +447,12 @@ cd src/python/strands_agents
 uv run pytest
 ```
 
-The tests cover the durable approval gate across sub-agents, the KYC guard (including
+The tests cover confirming a delete in the chat (`tests/test_chat_confirmation.py`), the KYC guard (including
 opening the same account name twice: two child workflows, each with its own KYC), the
 failure scenarios (saga rollback, a new transfer ID per run, retries, tool and LLM outages retried until
 recovery, the workflow bug), the off-topic
 prompt, and the claim check codec, plugin and codec server and the open-account
-task-queue split (`tests/test_claim_check.py`), and the shared API's calls (start, message, approve, end)
+task-queue split (`tests/test_claim_check.py`), and the shared API's calls (start, message, confirm, end)
 against the real chat workflow (`tests/test_api_client.py`). They use a scripted model, stub
 activities and an in-memory stand-in for Redis, so no Gemini key or Redis is
 needed; the Temporal test server is downloaded automatically on first run.

@@ -16,10 +16,6 @@ class Port:
     label: str
     task_queue: str  # the port's default chat task queue (its worker's default)
     workflow_id_prefix: str
-    # The chat workflow pauses for the customer's approval of destructive actions (the
-    # get_pending_approval query and approve signal), so the web app routes the next
-    # reply to POST /approve. Only the Strands Agents port does this.
-    approvals: bool = False
 
 
 PORTS = {
@@ -27,8 +23,7 @@ PORTS = {
     for port in [
         Port("openai_agents", "OpenAI Agents SDK", "Supervisor", "oai-temporal-agent-"),
         Port("pyai", "Pydantic AI", "PY-AI-Supervisor", "pyai-temporal-agent-"),
-        Port("strands_agents", "Strands Agents", "wealth-management-strands", "strands-temporal-agent-",
-             approvals=True),
+        Port("strands_agents", "Strands Agents", "wealth-management-strands", "strands-temporal-agent-"),
     ]
 }
 DEFAULT_PORT = "openai_agents"

@@ -1,11 +1,9 @@
 """Friendly, per-tool confirmation prompts for destructive actions.
 
-Shared by both versions so the wording matches:
-  - the Strands CLI uses this directly inside its intervention (see
-    ``standalone.approval``), and
-  - the Temporal version calls it from an activity (the approval hook runs in
-    workflow context and must stay deterministic, so the name lookup — which
-    reads the data files — happens off the workflow).
+Used by the Strands CLI (standalone) inside its intervention (see
+``standalone.approval``). The Temporal version confirms in the chat instead: the
+agent asks the customer, and their next message answers (see ConfirmationGuard in
+durable/workflows/supervisor_workflow.py).
 
 Resolves the target's name from the file-backed managers so the customer sees
 who/what they are about to affect. Returns ``None`` for any non-destructive tool

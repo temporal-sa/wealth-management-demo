@@ -22,14 +22,12 @@ from durable.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
 with workflow.unsafe.imports_passed_through():
     from strands import tool
     from strands.hooks import HookProvider, HookRegistry, BeforeToolCallEvent
-    from strands.types.tools import ToolContext
     from temporalio.contrib.strands import TemporalAgent
     from temporalio.contrib.strands.workflow import activity_as_tool
     from durable.model_config import LLM_TASK_QUEUE, MODEL_NAME, OPEN_ACCOUNT_TASK_QUEUE
     from durable.activities.beneficiaries import Beneficiaries
     from durable.activities.investments import Investments
     from durable.activities.open_account import OpenAccount
-    from durable.activities.approval import ApprovalActivities
     from durable.workflows.open_account_workflow import (
         OpenInvestmentAccountWorkflow,
         OpenInvestmentAccountInput,
@@ -44,34 +42,55 @@ def _activity_tool(activity_fn):
     return activity_as_tool(activity_fn, start_to_close_timeout=ACTIVITY_TIMEOUT, retry_policy=TOOL_RETRY_POLICY)
 
 
-# Tools that mutate state and therefore require human approval before running.
-APPROVAL_REQUIRED_TOOLS = {"delete_beneficiary", "close_investment"}
+# Tools that delete or close something, so the customer must confirm them in the chat first.
+CONFIRMATION_REQUIRED_TOOLS = {"delete_beneficiary", "close_investment"}
+
+NOT_CONFIRMED = (
+    "Not done: the customer has not confirmed this yet. Ask the customer to confirm that they want to "
+    "{action}, naming it, and stop. Call {tool} again only after the customer says yes in their next message."
+)
+CONFIRMATION_ACTIONS = {
+    "delete_beneficiary": "delete this beneficiary",
+    "close_investment": "close this investment account",
+}
 
 
-# ---------------------------------------------------------------------------
-# Human-approval gate: pause the agent before a destructive tool call. Registered
-# on the specialized sub-agents (which own delete_beneficiary / close_investment),
-# so the interrupt is raised inside a sub-agent and re-propagated to the
-# supervisor by _run_subagent below. The hook runs in workflow context, so it must
-# be deterministic (no I/O).
-# ---------------------------------------------------------------------------
-class ApprovalHook(HookProvider):
+def confirmed(asked_turn: Optional[int], turn: int) -> bool:
+    """Whether the customer was asked to confirm this exact call in their previous message.
+
+    Like the other ports, deleting a beneficiary or closing an account is confirmed in
+    the chat: the agent asks, and the customer's next message answers. The first call
+    is refused with a request to ask (NOT_CONFIRMED); the same call in the customer's
+    next turn runs. A call in the same turn as the question, or for a question asked
+    earlier in the conversation, is refused and asked again.
+    """
+    return asked_turn is not None and asked_turn == turn - 1
+
+
+class ConfirmationGuard(HookProvider):
+    """Refuses a delete or close until the customer has confirmed it in the chat.
+
+    Registered on the sub-agents that own delete_beneficiary and close_investment.
+    The hook runs in workflow context, so it only reads and writes workflow state.
+    """
+
+    def __init__(self, owner: "WealthManagementWorkflow"):
+        self._owner = owner
+
     def register_hooks(self, registry: HookRegistry, **kwargs: object) -> None:
         registry.add_callback(BeforeToolCallEvent, self._gate)
 
     def _gate(self, event: BeforeToolCallEvent) -> None:
         name = event.tool_use["name"]
-        if name not in APPROVAL_REQUIRED_TOOLS:
+        if name not in CONFIRMATION_REQUIRED_TOOLS:
             return
-        # Structured reason (no I/O here — this runs in workflow context). The
-        # friendly, name-resolved prompt is produced later by an activity; see
-        # WealthManagementWorkflow._describe_approval.
-        approval = event.interrupt(
-            "approval",
-            reason={"tool": name, "input": dict(event.tool_use["input"])},
-        )
-        if approval != "approve":
-            event.cancel_tool = "The customer denied the request, so it was not performed."
+        key = (name, tuple(sorted((k, str(v)) for k, v in dict(event.tool_use["input"]).items())))
+        asked = self._owner._confirmations_asked
+        if confirmed(asked.get(key), self._owner._turn):
+            del asked[key]
+            return
+        asked[key] = self._owner._turn
+        event.cancel_tool = NOT_CONFIRMED.format(action=CONFIRMATION_ACTIONS[name], tool=name)
 
 
 # ---------------------------------------------------------------------------
@@ -145,13 +164,10 @@ class WealthManagementWorkflow:
         self.chat_history: List[ChatInteraction] = []
         self.status_updates: List[str] = []
         self.end_workflow_flag = False
-        self._pending_approval: Optional[str] = None
-        self._approval_response: Optional[str] = None
         self._agent: Optional[TemporalAgent] = None
-        # Sub-agents persisted across an interrupt/resume, keyed by the supervisor
-        # tool_use id that spawned them. See _run_subagent. Only ever holds an
-        # entry mid-turn (while an approval is pending); empty between turns.
-        self._subagents: dict = {}
+        # The customer turn in which each delete or close was refused so the agent
+        # could ask the customer to confirm it (see ConfirmationGuard).
+        self._confirmations_asked: dict = {}
         # Long-lived sub-agents that must own multi-turn state (the open-account
         # agent owns its child-workflow ID), keyed by a stable name rather than by
         # tool_use id so the same agent is reused across supervisor turns.
@@ -182,73 +198,40 @@ class WealthManagementWorkflow:
     async def _run_subagent(
         self,
         *,
-        tool_context: "ToolContext",
         client_id: str,
         request: str,
         system_prompt: str,
         tools: list,
         persistent_key: Optional[str] = None,
     ) -> str:
-        """Build/reuse a specialized sub-agent and run it, propagating approvals.
+        """Build (or reuse) a specialized sub-agent and run it.
 
-        A sub-agent gates its destructive tool with ApprovalHook, which raises an
-        interrupt from *inside* the sub-agent. That interrupt does not cross the
-        tool boundary on its own — the sub-agent's invoke returns normally with
-        stop_reason == "interrupt". So we re-raise it on the supervisor via
-        ``tool_context.interrupt`` (which surfaces to the workflow's approval loop)
-        and, on resume, feed the human's decision back down to the *same*
-        sub-agent. The in-flight sub-agent is persisted in ``self._subagents``
-        across the raise/resume; the supervisor's tool_use id is a stable,
-        deterministic key.
-
-        When ``persistent_key`` is given, the sub-agent is also long-lived: it is
-        built once and reused across supervisor turns (from
-        ``self._persistent_subagents``) so it can own multi-turn state such as the
-        open-account child-workflow ID. Ordinary sub-agents are rebuilt per call.
+        When ``persistent_key`` is given, the sub-agent is long-lived: it is built
+        once and reused across supervisor turns (from ``self._persistent_subagents``)
+        so it can own multi-turn state such as the open-account child-workflow ID.
+        Ordinary sub-agents are rebuilt per call.
         """
-        key = tool_context.tool_use["toolUseId"]
-        if key not in self._subagents:
-            if persistent_key is not None and persistent_key in self._persistent_subagents:
-                # A later turn of a multi-turn flow: reuse the same agent so its
-                # message history (and the child-workflow ID it holds) carries over.
-                sub = self._persistent_subagents[persistent_key]
-            else:
-                sub = TemporalAgent(
-                    model=MODEL_NAME,
-                    task_queue=LLM_TASK_QUEUE,
-                    start_to_close_timeout=MODEL_TIMEOUT,
-                    retry_policy=LLM_RETRY_POLICY,
-                    system_prompt=system_prompt,
-                    tools=tools,
-                    hooks=[ApprovalHook()],
-                )
-                if persistent_key is not None:
-                    self._persistent_subagents[persistent_key] = sub
-            sub_result = await sub.invoke_async(f"The client ID is {client_id}. {request}")
-            self._subagents[key] = [sub, sub_result]
+        if persistent_key is not None and persistent_key in self._persistent_subagents:
+            # A later turn of a multi-turn flow: reuse the same agent so its message
+            # history (and the child-workflow ID it holds) carries over.
+            sub = self._persistent_subagents[persistent_key]
         else:
-            sub, sub_result = self._subagents[key]
-
-        while sub_result.stop_reason == "interrupt":
-            responses = []
-            for interrupt in sub_result.interrupts or []:
-                # Raises on the first pass (propagates to the supervisor -> workflow
-                # approval loop); returns the human's response on resume. A distinct
-                # name per sub-interrupt keeps multiple gated calls in one turn from
-                # colliding on the supervisor's interrupt state.
-                answer = tool_context.interrupt(f"subagent:{interrupt.id}", reason=interrupt.reason)
-                responses.append(
-                    {"interruptResponse": {"interruptId": interrupt.id, "response": answer}}
-                )
-            sub_result = await sub.invoke_async(responses)
-            self._subagents[key][1] = sub_result
-
-        self._subagents.pop(key, None)
-        return str(sub_result)
+            sub = TemporalAgent(
+                model=MODEL_NAME,
+                task_queue=LLM_TASK_QUEUE,
+                start_to_close_timeout=MODEL_TIMEOUT,
+                retry_policy=LLM_RETRY_POLICY,
+                system_prompt=system_prompt,
+                tools=tools,
+                hooks=[ConfirmationGuard(self)],
+            )
+            if persistent_key is not None:
+                self._persistent_subagents[persistent_key] = sub
+        return str(await sub.invoke_async(f"The client ID is {client_id}. {request}"))
 
     def _make_beneficiary_assistant(self):
-        @tool(context=True)
-        async def beneficiary_assistant(client_id: str, request: str, tool_context: ToolContext) -> str:
+        @tool
+        async def beneficiary_assistant(client_id: str, request: str) -> str:
             """Handle a beneficiary-related request (list, add, or delete beneficiaries).
 
             Args:
@@ -259,7 +242,6 @@ class WealthManagementWorkflow:
                 The beneficiary agent's response.
             """
             return await self._run_subagent(
-                tool_context=tool_context,
                 client_id=client_id,
                 request=request,
                 system_prompt=BENE_INSTRUCTIONS,
@@ -273,8 +255,8 @@ class WealthManagementWorkflow:
         return beneficiary_assistant
 
     def _make_investment_assistant(self):
-        @tool(context=True)
-        async def investment_assistant(client_id: str, request: str, tool_context: ToolContext) -> str:
+        @tool
+        async def investment_assistant(client_id: str, request: str) -> str:
             """Handle any investment-account request: list, close, or open an account.
 
             Listing and closing are handled directly; opening a new account is delegated
@@ -289,7 +271,6 @@ class WealthManagementWorkflow:
                 The investment agent's response.
             """
             return await self._run_subagent(
-                tool_context=tool_context,
                 client_id=client_id,
                 request=request,
                 system_prompt=TEMPORAL_INVEST_SUBAGENT_INSTRUCTIONS,
@@ -429,8 +410,8 @@ class WealthManagementWorkflow:
             )
             return "KYC approved. The account is now waiting for compliance review."
 
-        @tool(context=True)
-        async def open_account_assistant(client_id: str, request: str, tool_context: ToolContext) -> str:
+        @tool
+        async def open_account_assistant(client_id: str, request: str) -> str:
             """Open a new investment account (a multi-step, durable KYC + compliance flow).
 
             This delegates to a persistent open-account agent that drives the durable
@@ -450,7 +431,6 @@ class WealthManagementWorkflow:
             # saw. Give it the current status on every turn so a finished opening
             # (for example, one that was rolled back) is never reported as pending.
             return await self._run_subagent(
-                tool_context=tool_context,
                 client_id=client_id,
                 request=f"{self._account_openings_summary()}{request}",
                 system_prompt=OPEN_ACCOUNT_INSTRUCTIONS,
@@ -492,7 +472,7 @@ class WealthManagementWorkflow:
         # investment requests to specialized sub-agents (see _make_*_assistant).
         # Opening an account is nested one level deeper — the investment agent
         # owns it and delegates onward to the persistent open-account agent, which
-        # drives the durable child workflow. The approval gate lives on the sub-agents.
+        # drives the durable child workflow. The confirmation guard lives on the sub-agents.
         self._agent = TemporalAgent(
             model=MODEL_NAME,
             task_queue=LLM_TASK_QUEUE,
@@ -546,22 +526,6 @@ class WealthManagementWorkflow:
         chat = ChatInteraction(user_prompt=message, text_response="")
 
         result = await self._agent.invoke_async(message)
-        while result.stop_reason == "interrupt":
-            interrupts = list(result.interrupts or [])
-            raw_reason = interrupts[0].reason if interrupts else None
-            # The confirmation is surfaced inline in the chat via the
-            # get_pending_approval query; it is intentionally not pushed to the
-            # status stream so it does not also appear in the top status bar.
-            self._pending_approval = await self._describe_approval(raw_reason)
-            await workflow.wait_condition(lambda: self._approval_response is not None)
-            response = self._approval_response
-            self._approval_response = None
-            self._pending_approval = None
-            responses = [
-                {"interruptResponse": {"interruptId": i.id, "response": response}} for i in interrupts
-            ]
-            result = await self._agent.invoke_async(responses)
-
         chat.text_response = str(result).strip()
         self.chat_history.append(chat)
 
@@ -571,21 +535,6 @@ class WealthManagementWorkflow:
             start_to_close_timeout=self.local_to_close_timeout,
             retry_policy=self.retry_policy,
         )
-
-    async def _describe_approval(self, reason) -> str:
-        """Turn an approval interrupt's structured reason into a friendly prompt.
-
-        The reason is ``{"tool": ..., "input": ...}`` set by ApprovalHook. The
-        name lookup reads the data files, so it runs as an activity rather than in
-        workflow context.
-        """
-        if isinstance(reason, dict) and "tool" in reason:
-            return await workflow.execute_activity(
-                ApprovalActivities.describe_approval,
-                args=[reason["tool"], reason.get("input", {})],
-                start_to_close_timeout=ACTIVITY_TIMEOUT,
-            )
-        return str(reason) if reason is not None else "Approve this action?"
 
     async def _process_status_update(self, status_message: str) -> None:
         await self._append_status(status_message)
@@ -608,18 +557,10 @@ class WealthManagementWorkflow:
     def get_status_updates(self) -> List[str]:
         return self.status_updates
 
-    @workflow.query
-    def get_pending_approval(self) -> Optional[str]:
-        return self._pending_approval
-
     # ----- Signals -----
     @workflow.signal
     async def process_user_message(self, message_input: ProcessUserMessageInput) -> None:
         await self.pending_chat_messages.put(message_input.user_input)
-
-    @workflow.signal
-    def approve(self, response: str) -> None:
-        self._approval_response = response
 
     @workflow.signal
     def end_workflow(self) -> None:

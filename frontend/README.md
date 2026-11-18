@@ -44,12 +44,6 @@ chat starts a new chat workflow with a random ID named after the port the API se
 `oai-temporal-agent-<random>` or `pyai-temporal-agent-<random>` (the prefix comes from the API's
 `GET /config`); **End Chat** ends it.
 
-When the API serves a port that pauses for approvals (the Strands Agents port; `GET /config` reports
-`"approvals": true`), the app also asks the API for a pending approval while the chat is open. Before a
-beneficiary is deleted or an account closed, the question appears in the chat; your next message
-answers it: one starting with *yes*, *ok*, *sure*, *approve*, *confirm* or *proceed* (and a few similar
-words) approves, anything else denies.
-
 Click **Chaos** in the chat header to open the chaos panel, which turns failure scenarios on and off
 at runtime and lists the failures as they happen. See
 [Failure scenarios](../src/python/openai_agents/durable/README.md#failure-scenarios-chaos-panel).

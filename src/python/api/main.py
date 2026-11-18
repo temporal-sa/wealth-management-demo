@@ -55,7 +55,6 @@ def get_config():
         "label": port.label,
         "task_queue": task_queue,
         "workflow_id_prefix": port.workflow_id_prefix,
-        "approvals": port.approvals,
     }
 
 @app.get("/get-chat-history")
@@ -105,33 +104,6 @@ async def end_chat(workflow_id: str):
         print(e)
         # Workflow not found; return an empty response
         return {}
-
-@app.get("/pending-approval")
-async def pending_approval(workflow_id: str):
-    """The approval question the chat is waiting on (e.g. before deleting a beneficiary), or null.
-
-    Only ports whose chat workflow pauses for approvals answer it (GET /config "approvals").
-    """
-    if not port.approvals:
-        return {"pending": None}
-    try:
-        return {"pending": await chat.pending_approval(temporal_client, workflow_id)}
-    except TemporalError:
-        return {"pending": None}
-
-
-@app.post("/approve")
-async def approve(workflow_id: str, response: str):
-    """Answers the pending approval. response is "approve" or "deny"."""
-    if not port.approvals:
-        raise HTTPException(status_code=400, detail=f"The {port.label} port doesn't pause for approvals")
-    if response not in chat.APPROVAL_RESPONSES:
-        raise HTTPException(status_code=400, detail=f"response must be one of {', '.join(chat.APPROVAL_RESPONSES)}")
-    try:
-        await chat.answer_approval(temporal_client, workflow_id, response)
-        return {"message": f"Approval response '{response}' sent."}
-    except TemporalError as e:
-        return {"message": f"Error: {e}"}
 
 UPDATE_STATUS_NAME = "update_status"
 
