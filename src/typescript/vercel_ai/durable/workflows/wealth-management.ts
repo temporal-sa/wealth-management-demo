@@ -41,7 +41,7 @@ const updateAccountOpeningStateSignal = defineSignal<[UpdateAccountOpeningStateI
 );
 
 // ---------------------------------------------------------------------------
-// Workflow — agent loop now runs in workflow context via @temporalio/ai-sdk
+// Workflow — agent loop now runs in workflow context via @temporalio/vercel-ai-sdk
 // ---------------------------------------------------------------------------
 
 export async function WealthManagementWorkflow(): Promise<void> {

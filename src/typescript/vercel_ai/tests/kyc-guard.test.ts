@@ -10,12 +10,12 @@
 import assert from 'assert';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
-import { AiSdkPlugin } from '@temporalio/ai-sdk';
+import { AiSdkPlugin } from '@temporalio/vercel-ai-sdk';
 import type {
-  LanguageModelV3,
-  LanguageModelV3CallOptions,
-  LanguageModelV3GenerateResult,
-  ProviderV3,
+  LanguageModelV4,
+  LanguageModelV4CallOptions,
+  LanguageModelV4GenerateResult,
+  ProviderV4,
 } from '@ai-sdk/provider';
 import { KYC_NOT_APPROVED, kycApprovalRefusal } from '../durable/workflows/agent-loop';
 import { validate_new_account } from '../durable/activities/investments';
@@ -56,14 +56,19 @@ const USAGE = {
   outputTokens: { total: 0, text: 0, reasoning: 0 },
 };
 
-function scriptedProvider(script: Step[], toolResults: Array<{ toolName: string; output: string }>): ProviderV3 {
+function scriptedProvider(
+  script: Step[],
+  toolResults: Array<{ toolName: string; output: string }>,
+  prompts: LanguageModelV4CallOptions['prompt'][] = [],
+): ProviderV4 {
   let callNumber = 0;
-  const model: LanguageModelV3 = {
-    specificationVersion: 'v3',
+  const model: LanguageModelV4 = {
+    specificationVersion: 'v4',
     provider: 'scripted',
     modelId: 'scripted',
     supportedUrls: {},
-    async doGenerate(options: LanguageModelV3CallOptions): Promise<LanguageModelV3GenerateResult> {
+    async doGenerate(options: LanguageModelV4CallOptions): Promise<LanguageModelV4GenerateResult> {
+      prompts.push(options.prompt);
       // Record the tool results the model is shown, i.e. what the previous step's tools returned
       const last = options.prompt.at(-1);
       if (last?.role === 'tool') {
@@ -96,7 +101,7 @@ function scriptedProvider(script: Step[], toolResults: Array<{ toolName: string;
     },
   };
   return {
-    specificationVersion: 'v3',
+    specificationVersion: 'v4',
     languageModel: () => model,
     embeddingModel: () => {
       throw new Error('not scripted');
@@ -104,7 +109,7 @@ function scriptedProvider(script: Step[], toolResults: Array<{ toolName: string;
     imageModel: () => {
       throw new Error('not scripted');
     },
-  } as ProviderV3;
+  } as ProviderV4;
 }
 
 describe('KYC guard in the supervisor workflow', function () {
@@ -145,6 +150,7 @@ describe('KYC guard in the supervisor workflow', function () {
       message('KYC approved.'),
     ];
     const toolResults: Array<{ toolName: string; output: string }> = [];
+    const prompts: LanguageModelV4CallOptions['prompt'][] = [];
     const interactions: ChatInteraction[] = [];
     const client: WealthManagementClient = {
       client_id: '123', first_name: 'Sam', last_name: 'Doe', address: '1 Main St',
@@ -155,7 +161,7 @@ describe('KYC guard in the supervisor workflow', function () {
       connection: env.nativeConnection,
       taskQueue: TASK_QUEUE,
       workflowsPath: require.resolve('./kyc-guard-workflows'),
-      plugins: [new AiSdkPlugin({ modelProvider: scriptedProvider(script, toolResults) })],
+      plugins: [new AiSdkPlugin({ modelProvider: scriptedProvider(script, toolResults, prompts) })],
       bundlerOptions: { ignoreModules: ['@temporalio/activity', '@temporalio/client', 'crypto'] },
       activities: {
         async get_llm_task_queue() {
@@ -214,9 +220,18 @@ describe('KYC guard in the supervisor workflow', function () {
       assert.match(results[0], /KYC was not approved/);
       assert.deepStrictEqual(await approved(), []);
 
+      const promptsBefore = prompts.length;
       results = await send("Yes, that's correct.");
       assert.match(results[0], /KYC approved/);
       assert.deepStrictEqual(await approved(), [car]);
+      // The next turn's model call sees every tool call and result of the earlier turn, not just its
+      // last step's, so the agent knows which opening the customer is confirming
+      const toolsSeen = prompts[promptsBefore]
+        .filter((m) => m.role === 'tool')
+        .flatMap((m) => m.content.map((part) => ('toolName' in part ? part.toolName : '')));
+      for (const name of ['handoff_to_investment_agent', 'get_current_client_info', 'approve_kyc']) {
+        assert.ok(toolsSeen.includes(name), `the second turn's prompt has no ${name} result: ${toolsSeen}`);
+      }
 
       results = await send('Now open one called Vacation.');
       assert.match(results[0], /KYC was not approved/);

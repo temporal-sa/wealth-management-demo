@@ -4,11 +4,11 @@
   "private": true,
   "description": "Code shared by the TypeScript ports: data managers, Redis event stream, chaos flags, claim check, client config",
   "dependencies": {
-    "@temporalio/client": "^1.16.0",
-    "@temporalio/common": "^1.16.0",
-    "@temporalio/envconfig": "^1.16.0",
-    "@temporalio/proto": "^1.16.0",
-    "@temporalio/worker": "^1.16.0",
+    "@temporalio/client": "^1.26.0",
+    "@temporalio/common": "^1.26.0",
+    "@temporalio/envconfig": "^1.26.0",
+    "@temporalio/proto": "^1.26.0",
+    "@temporalio/worker": "^1.26.0",
     "ioredis": "^5.10.1"
   }
 }

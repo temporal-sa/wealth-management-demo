@@ -1,7 +1,7 @@
-// @temporalio/ai-sdk must load first — its side-effect import installs
+// @temporalio/vercel-ai-sdk must load first — its side-effect import installs
 // `TransformStream`, `Headers`, and `structuredClone` polyfills that
 // `ai`'s transitive `eventsource-parser` references at evaluation time.
-import { TemporalProvider } from '@temporalio/ai-sdk';
+import { TemporalProvider } from '@temporalio/vercel-ai-sdk';
 import {
   proxyActivities,
   log,
@@ -381,7 +381,7 @@ const HANDOFF_TOOL_TO_AGENT: Record<string, AgentName> = {
   handoff_to_open_account_agent: 'open_account',
 };
 
-const HANDOFF_STOP_CONDITIONS = Object.keys(HANDOFF_TOOL_TO_AGENT).map(hasToolCall);
+const HANDOFF_STOP_CONDITIONS = Object.keys(HANDOFF_TOOL_TO_AGENT).map((name) => hasToolCall(name));
 
 // ---------------------------------------------------------------------------
 // Agent loop — runs in workflow context. The AiSdkPlugin transparently wraps
@@ -420,7 +420,8 @@ async function runAgentLoop(
       stopWhen: HANDOFF_STOP_CONDITIONS,
     });
 
-    const newMessages = result.response.messages as Array<AssistantModelMessage | ToolModelMessage>;
+    // Every step's messages (tool calls, tool results and text); result.response.messages has only the last step's
+    const newMessages = result.responseMessages as Array<AssistantModelMessage | ToolModelMessage>;
     currentMessages = [...currentMessages, ...newMessages];
 
     const traceLine = `[${def.name}]: ${result.text || '(tool calls)'}`;

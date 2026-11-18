@@ -17,7 +17,7 @@
 import assert from 'assert';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
-import { AiSdkPlugin } from '@temporalio/ai-sdk';
+import { AiSdkPlugin } from '@temporalio/vercel-ai-sdk';
 import { gemini, geminiApiKey } from '../gemini';
 import * as activities from '../durable/activities/activities';
 import type { ChatInteraction } from '../../common/shared';

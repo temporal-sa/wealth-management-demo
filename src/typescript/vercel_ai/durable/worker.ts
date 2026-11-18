@@ -1,6 +1,6 @@
 import { NativeConnection, Worker, Runtime, DefaultLogger } from '@temporalio/worker';
 import type { LogEntry } from '@temporalio/worker';
-import { AiSdkPlugin } from '@temporalio/ai-sdk';
+import { AiSdkPlugin } from '@temporalio/vercel-ai-sdk';
 import { gemini } from '../gemini';
 import * as activities from './activities/activities';
 import { clientHelper } from './task-queues';
@@ -67,7 +67,7 @@ async function run() {
       activities,
       dataConverter: buildDataConverter(),
       plugins: [plugin],
-      // @temporalio/ai-sdk's barrel re-exports activity-side code alongside
+      // @temporalio/vercel-ai-sdk's barrel re-exports activity-side code alongside
       // the workflow-safe temporalProvider; the bundler stubs them. Crypto is
       // pulled in transitively by the same path. None are reachable from
       // workflow code paths at runtime.
