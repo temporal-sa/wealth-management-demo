@@ -1,0 +1,14 @@
+# Copy this file to setllmkey.sh (which git ignores) and fill in your key:
+#   cp setllmkey.example setllmkey.sh
+#
+# LLM_MODEL is a LiteLLM model name: <provider>/<model>. The default is Anthropic.
+export LLM_MODEL=anthropic/claude-opus-5-5
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# To use OpenAI instead:
+# export LLM_MODEL=openai/gpt-5
+# export OPENAI_API_KEY=sk-proj-...
+
+# To use Gemini instead:
+# export LLM_MODEL=gemini/gemini-2.5-pro
+# export GEMINI_API_KEY=...
