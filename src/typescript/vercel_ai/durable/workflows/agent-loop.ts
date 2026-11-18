@@ -1,0 +1,522 @@
+// @temporalio/ai-sdk must load first — its side-effect import installs
+// `TransformStream`, `Headers`, and `structuredClone` polyfills that
+// `ai`'s transitive `eventsource-parser` references at evaluation time.
+import { TemporalProvider } from '@temporalio/ai-sdk';
+import {
+  proxyActivities,
+  log,
+  ActivityFailure,
+  ApplicationFailure,
+} from '@temporalio/workflow';
+import { generateText, tool, hasToolCall, ModelMessage, AssistantModelMessage, ToolModelMessage, ToolSet } from 'ai';
+import { z } from 'zod';
+
+import {
+  BENE_AGENT_NAME, BENE_HANDOFF, BENE_INSTRUCTIONS,
+  INVEST_AGENT_NAME, INVEST_HANDOFF, INVEST_INSTRUCTIONS,
+  SUPERVISOR_AGENT_NAME, SUPERVISOR_HANDOFF, SUPERVISOR_INSTRUCTIONS,
+  OPEN_ACCOUNT_AGENT_NAME, OPEN_ACCOUNT_HANDOFF, OPEN_ACCOUNT_INSTRUCTIONS,
+  HANDOFF_PROMPT_PREFIX,
+} from '../../common/agent-constants';
+import { ClientContext } from '../../common/account-context';
+import { ChatInteraction, OpenInvestmentAccountInput } from '../shared';
+import { LLM_RETRY_POLICY, TOOL_RETRY_POLICY } from '../retry-policies';
+import type * as beneficiaryActivities from '../activities/beneficiaries';
+import type * as investmentActivities from '../activities/investments';
+import type * as openAccountActivities from '../activities/open-account';
+import { startOpenAccount } from './start-open-account';
+
+// ---------------------------------------------------------------------------
+// Proxied activities (filesystem / cross-workflow query+update I/O)
+// ---------------------------------------------------------------------------
+
+const beneficiariesActs = proxyActivities<typeof beneficiaryActivities>({
+  startToCloseTimeout: '30s',
+  retry: TOOL_RETRY_POLICY,
+});
+const investmentActs = proxyActivities<typeof investmentActivities>({
+  startToCloseTimeout: '30s',
+  retry: TOOL_RETRY_POLICY,
+});
+const openAccountActs = proxyActivities<typeof openAccountActivities>({
+  startToCloseTimeout: '30s',
+  retry: TOOL_RETRY_POLICY,
+});
+
+// The reason for a non-retryable business-rule failure, or undefined for any other error.
+// The model would otherwise only see the generic "Activity task failed".
+function businessRuleReason(err: unknown): string | undefined {
+  if (err instanceof ActivityFailure && err.cause instanceof ApplicationFailure && err.cause.nonRetryable) {
+    return err.cause.message;
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type AgentName = 'supervisor' | 'beneficiary' | 'investment' | 'open_account';
+
+interface AgentDef {
+  name: string;
+  instructions: (ctx: AgentRunContext) => string;
+  tools: ToolSet;
+}
+
+interface AgentRunContext {
+  clientContext: ClientContext;
+  childWorkflowId?: string;
+  parentWorkflowId: string;
+  traceLines: string[];
+  // Number of the customer message being processed, and the message in which each account
+  // opening's client details were shown, keyed by its workflow ID. Used to check that the customer
+  // confirmed their details before KYC is approved.
+  turn: number;
+  kycDetailsShownTurn: Record<string, number>;
+  // Latest state of each account opening in this conversation, keyed by its workflow ID. Shared
+  // with the supervisor workflow, which updates it from the status signals.
+  accountOpeningStates: Record<string, string>;
+  // Number of account openings started so far in this conversation. The next one gets the next
+  // number in its workflow ID (see openAccountWorkflowId).
+  accountOpeningsStarted: number;
+}
+
+export const KYC_NOT_APPROVED =
+  'KYC was not approved. First show the customer their current details for this account ' +
+  'opening (get_current_client_info) and ask whether they are correct. Approve KYC only ' +
+  'after the customer confirms in their next message.';
+
+/**
+ * Why approve_kyc must not approve KYC for this account opening yet, or undefined if it may.
+ * The model sometimes treats a confirmation for an earlier account opening as approval for a new
+ * one, or approves in the same turn it showed the details. Only approve once this opening's details
+ * have been shown and the customer has replied since.
+ */
+export function kycApprovalRefusal(
+  kycDetailsShownTurn: Record<string, number>,
+  childWorkflowId: string,
+  turn: number,
+): string | undefined {
+  const shownTurn = kycDetailsShownTurn[childWorkflowId];
+  if (shownTurn === undefined || shownTurn >= turn) return KYC_NOT_APPROVED;
+  return undefined;
+}
+
+/**
+ * The latest state an account opening in this conversation reported, from the states the supervisor
+ * keeps from the update_account_opening_state signals. No activity or query: an unknown or mistyped
+ * workflow ID gets an answer the model can act on instead of a query that fails and is retried.
+ */
+export function accountOpeningStatus(accountOpeningStates: Record<string, string>, workflowId: string): string {
+  const state = accountOpeningStates[workflowId];
+  if (state === undefined) {
+    return `No account opening with workflow ID ${workflowId} was found in this conversation.`;
+  }
+  return state;
+}
+
+/**
+ * Agent instructions that include the client ID once it is known. The ID is otherwise only in the
+ * conversation history, and an agent that is handed the conversation often asks for it again.
+ */
+function withClientId(instructions: string): (ctx: AgentRunContext) => string {
+  return (ctx) =>
+    ctx.clientContext.clientId
+      ? `${instructions}\nThe customer's client ID is ${ctx.clientContext.clientId}. Use it, and don't ask for it again.`
+      : instructions;
+}
+
+// ---------------------------------------------------------------------------
+// Tool builders — tool execute runs in workflow context; non-deterministic
+// work must go through activities or workflow primitives.
+// ---------------------------------------------------------------------------
+
+function buildBeneficiaryTools(ctx: AgentRunContext): ToolSet {
+  return {
+    list_beneficiaries: tool({
+      description: 'List the beneficiaries for the given client id.',
+      inputSchema: z.object({ client_id: z.string() }),
+      execute: async ({ client_id }) => {
+        ctx.clientContext.clientId = client_id;
+        ctx.traceLines.push(`list_beneficiaries(${client_id})`);
+        return beneficiariesActs.list_beneficiaries(client_id);
+      },
+    }),
+    add_beneficiary: tool({
+      description: 'Add a new beneficiary for a client.',
+      inputSchema: z.object({
+        client_id: z.string(), first_name: z.string(),
+        last_name: z.string(), relationship: z.string(),
+      }),
+      execute: async ({ client_id, first_name, last_name, relationship }) => {
+        ctx.clientContext.clientId = client_id;
+        ctx.traceLines.push(`add_beneficiary(${client_id}, ${first_name} ${last_name})`);
+        return beneficiariesActs.add_beneficiary({ client_id, first_name, last_name, relationship });
+      },
+    }),
+    delete_beneficiary: tool({
+      description: 'Delete a beneficiary from a client account.',
+      inputSchema: z.object({ client_id: z.string(), beneficiary_id: z.string() }),
+      execute: async ({ client_id, beneficiary_id }) => {
+        ctx.clientContext.clientId = client_id;
+        ctx.traceLines.push(`delete_beneficiary(${client_id}, ${beneficiary_id})`);
+        return beneficiariesActs.delete_beneficiary(client_id, beneficiary_id);
+      },
+    }),
+  };
+}
+
+function buildInvestmentTools(ctx: AgentRunContext): ToolSet {
+  return {
+    list_investments: tool({
+      description: "List the investment accounts and balances for the given client id.",
+      inputSchema: z.object({ client_id: z.string() }),
+      execute: async ({ client_id }) => {
+        ctx.clientContext.clientId = client_id;
+        ctx.traceLines.push(`list_investments(${client_id})`);
+        return investmentActs.list_investments(client_id);
+      },
+    }),
+    close_investment: tool({
+      description: 'Close (delete) an investment account for a client.',
+      inputSchema: z.object({ client_id: z.string(), investment_id: z.string() }),
+      execute: async ({ client_id, investment_id }) => {
+        ctx.clientContext.clientId = client_id;
+        ctx.traceLines.push(`close_investment(${client_id}, ${investment_id})`);
+        return investmentActs.close_investment(client_id, investment_id);
+      },
+    }),
+  };
+}
+
+function buildOpenAccountTools(ctx: AgentRunContext): ToolSet {
+  return {
+    open_new_investment_account: tool({
+      description:
+        'Begin opening a new investment account. Each call starts a new account opening, with its own KYC, ' +
+        'even if an account with the same name was opened or is being opened. Returns the child workflow ID ' +
+        'to track progress.',
+      inputSchema: z.object({
+        client_id: z.string(),
+        account_name: z.string().describe('Name of the new investment account'),
+        initial_amount: z.number().describe('Initial deposit amount'),
+      }),
+      execute: async ({ client_id, account_name, initial_amount }) => {
+        ctx.clientContext.clientId = client_id;
+        try {
+          await investmentActs.validate_new_account(client_id, account_name, initial_amount);
+        } catch (err) {
+          const reason = businessRuleReason(err);
+          if (reason === undefined) throw err;
+          ctx.traceLines.push(`open_new_investment_account(${client_id}, ${account_name}, ${initial_amount}) → rejected: ${reason}`);
+          return { message: `The account cannot be opened: ${reason}` };
+        }
+        const promo_code = await investmentActs.find_promotion(client_id);
+        const workflowInput: OpenInvestmentAccountInput = {
+          client_id,
+          account_name,
+          initial_amount,
+          promo_code,
+        };
+        const taskQueue = (await openAccountActs.get_open_account_task_queue()) ?? undefined;
+        // Take the next opening number with no await in between, so two calls in the same model
+        // step can't get the same one. Give it back if the opening couldn't be started.
+        const openingNumber = ++ctx.accountOpeningsStarted;
+        let childWorkflowId: string;
+        try {
+          childWorkflowId = await startOpenAccount(ctx.parentWorkflowId, workflowInput, openingNumber, taskQueue);
+        } catch (err) {
+          if (ctx.accountOpeningsStarted === openingNumber) ctx.accountOpeningsStarted -= 1;
+          throw err;
+        }
+        ctx.childWorkflowId = childWorkflowId;
+        ctx.accountOpeningStates[childWorkflowId] = 'Initializing';
+        ctx.traceLines.push(
+          `open_new_investment_account(${client_id}, ${account_name}, ${initial_amount}) → ${childWorkflowId}`,
+        );
+        return { child_workflow_id: childWorkflowId, message: 'Account opening process started.' };
+      },
+    }),
+    get_current_client_info: tool({
+      description: 'Retrieve the current client information from the account opening workflow.',
+      inputSchema: z.object({ child_workflow_id: z.string() }),
+      execute: async ({ child_workflow_id }) => {
+        ctx.traceLines.push(`get_current_client_info(${child_workflow_id})`);
+        const client = await openAccountActs.get_current_client_info(child_workflow_id);
+        ctx.kycDetailsShownTurn[child_workflow_id] = ctx.turn;
+        return client;
+      },
+    }),
+    update_client_details: tool({
+      description:
+        'Save corrected client details for the account opening. This also approves KYC for that account opening.',
+      inputSchema: z.object({
+        child_workflow_id: z.string(),
+        fields: z.record(z.string(), z.string()).describe('Fields to update on the client record'),
+      }),
+      execute: async ({ child_workflow_id, fields }) => {
+        ctx.traceLines.push(`update_client_details(${child_workflow_id})`);
+        const result = await openAccountActs.update_client_details(child_workflow_id, fields);
+        return { message: `${result}. KYC approved.` };
+      },
+    }),
+    approve_kyc: tool({
+      description:
+        'Approve KYC for an account opening, after the customer confirmed their details are correct.',
+      inputSchema: z.object({ child_workflow_id: z.string() }),
+      execute: async ({ child_workflow_id }) => {
+        const refusal = kycApprovalRefusal(ctx.kycDetailsShownTurn, child_workflow_id, ctx.turn);
+        if (refusal) {
+          ctx.traceLines.push(`approve_kyc(${child_workflow_id}) → refused: details not confirmed yet`);
+          return refusal;
+        }
+        ctx.traceLines.push(`approve_kyc(${child_workflow_id})`);
+        await openAccountActs.approve_kyc(child_workflow_id);
+        return 'KYC approved. The account is now waiting for compliance review.';
+      },
+    }),
+    get_account_opening_status: tool({
+      description:
+        'Get the current status of an account opening: the latest status it reported. "Complete" means the ' +
+        'account was opened; a status starting with "Rolled back" means it was not opened. Either way, that ' +
+        'account opening is finished.',
+      inputSchema: z.object({
+        workflow_id: z.string().describe('The child_workflow_id returned by open_new_investment_account'),
+      }),
+      execute: async ({ workflow_id }) => {
+        ctx.traceLines.push(`get_account_opening_status(${workflow_id})`);
+        return accountOpeningStatus(ctx.accountOpeningStates, workflow_id);
+      },
+    }),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Handoff tools
+// ---------------------------------------------------------------------------
+
+function buildHandoffTools(handoffs: AgentName[]): ToolSet {
+  const defs: ToolSet = {};
+
+  const configs: Record<AgentName, { name: string; description: string; requiresClientId: boolean }> = {
+    supervisor: { name: SUPERVISOR_AGENT_NAME, description: SUPERVISOR_HANDOFF, requiresClientId: false },
+    beneficiary: { name: BENE_AGENT_NAME, description: BENE_HANDOFF, requiresClientId: true },
+    investment: { name: INVEST_AGENT_NAME, description: INVEST_HANDOFF, requiresClientId: true },
+    open_account: { name: OPEN_ACCOUNT_AGENT_NAME, description: OPEN_ACCOUNT_HANDOFF, requiresClientId: false },
+  };
+
+  for (const target of handoffs) {
+    const cfg = configs[target];
+    const toolName = `handoff_to_${target}_agent`;
+
+    if (cfg.requiresClientId) {
+      defs[toolName] = tool({
+        description: `Transfer the customer to the ${cfg.name}. ${cfg.description}`,
+        inputSchema: z.object({
+          client_id: z.string().describe("The customer's client ID, which must be collected before handoff"),
+        }),
+        execute: async ({ client_id: _c }) => {
+          return `Transferring to ${cfg.name}...`;
+        },
+      });
+    } else {
+      defs[toolName] = tool({
+        description: `Transfer the customer to the ${cfg.name}. ${cfg.description}`,
+        inputSchema: z.object({}),
+        execute: async () => `Transferring to ${cfg.name}...`,
+      });
+    }
+  }
+
+  return defs;
+}
+
+// ---------------------------------------------------------------------------
+// Agent definitions factory
+// ---------------------------------------------------------------------------
+
+function buildAgentDefs(ctx: AgentRunContext): Record<AgentName, AgentDef> {
+  return {
+    supervisor: {
+      name: SUPERVISOR_AGENT_NAME,
+      instructions: withClientId(SUPERVISOR_INSTRUCTIONS),
+      tools: buildHandoffTools(['beneficiary', 'investment']),
+    },
+    beneficiary: {
+      name: BENE_AGENT_NAME,
+      instructions: withClientId(BENE_INSTRUCTIONS),
+      tools: {
+        ...buildBeneficiaryTools(ctx),
+        ...buildHandoffTools(['supervisor']),
+      },
+    },
+    investment: {
+      name: INVEST_AGENT_NAME,
+      instructions: withClientId(INVEST_INSTRUCTIONS),
+      tools: {
+        ...buildInvestmentTools(ctx),
+        ...buildHandoffTools(['supervisor', 'open_account']),
+      },
+    },
+    open_account: {
+      name: OPEN_ACCOUNT_AGENT_NAME,
+      instructions: withClientId(OPEN_ACCOUNT_INSTRUCTIONS),
+      tools: {
+        ...buildOpenAccountTools(ctx),
+        ...buildHandoffTools(['investment']),
+      },
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Handoff tool name → agent name mapping
+// ---------------------------------------------------------------------------
+
+const HANDOFF_TOOL_TO_AGENT: Record<string, AgentName> = {
+  handoff_to_supervisor_agent: 'supervisor',
+  handoff_to_beneficiary_agent: 'beneficiary',
+  handoff_to_investment_agent: 'investment',
+  handoff_to_open_account_agent: 'open_account',
+};
+
+const HANDOFF_STOP_CONDITIONS = Object.keys(HANDOFF_TOOL_TO_AGENT).map(hasToolCall);
+
+// ---------------------------------------------------------------------------
+// Agent loop — runs in workflow context. The AiSdkPlugin transparently wraps
+// each generateText call as a Temporal activity, giving per-LLM-call
+// visibility in workflow event history.
+// ---------------------------------------------------------------------------
+
+async function runAgentLoop(
+  startAgent: AgentName,
+  messages: ModelMessage[],
+  ctx: AgentRunContext,
+  llmTaskQueue: string,
+): Promise<{ text: string; messages: ModelMessage[]; activeAgent: AgentName }> {
+  let currentAgent = startAgent;
+  let currentMessages = messages;
+  const agentDefs = buildAgentDefs(ctx);
+  // Model calls run as activities on their own task queue (see worker.ts), retried until the model recovers
+  const provider = new TemporalProvider({
+    languageModel: {
+      taskQueue: llmTaskQueue,
+      startToCloseTimeout: '2 minutes',
+      retry: LLM_RETRY_POLICY,
+    },
+  });
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const def = agentDefs[currentAgent];
+    log.info(`[${def.name}] generating response`);
+
+    const result = await generateText({
+      model: provider.languageModel('gemini-2.5-pro'),
+      system: HANDOFF_PROMPT_PREFIX + def.instructions(ctx),
+      messages: currentMessages,
+      tools: def.tools as any,
+      stopWhen: HANDOFF_STOP_CONDITIONS,
+    });
+
+    const newMessages = result.response.messages as Array<AssistantModelMessage | ToolModelMessage>;
+    currentMessages = [...currentMessages, ...newMessages];
+
+    const traceLine = `[${def.name}]: ${result.text || '(tool calls)'}`;
+    ctx.traceLines.push(traceLine);
+    log.info(traceLine);
+
+    for (const tc of result.toolCalls) {
+      if (tc.toolName in HANDOFF_TOOL_TO_AGENT) {
+        const input = tc.input as any;
+        if (input?.client_id) ctx.clientContext.clientId = input.client_id;
+      }
+    }
+
+    const handoffCall = result.toolCalls.find((tc) => tc.toolName in HANDOFF_TOOL_TO_AGENT);
+    if (handoffCall) {
+      const target = HANDOFF_TOOL_TO_AGENT[handoffCall.toolName];
+      const handoffLine = `Handed off from ${def.name} to ${agentDefs[target].name}`;
+      ctx.traceLines.push(handoffLine);
+      log.info(handoffLine);
+      currentAgent = target;
+      continue;
+    }
+
+    log.info(`[${def.name}] final response`, { text: result.text });
+    return { text: result.text, messages: currentMessages, activeAgent: currentAgent };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public entry — called by WealthManagementWorkflow per user message
+// ---------------------------------------------------------------------------
+
+export interface RunAgentTurnInput {
+  workflowId: string;
+  userInput: string;
+  messages: ModelMessage[];
+  clientId?: string;
+  childWorkflowId?: string;
+  activeAgent?: AgentName;
+  // Number of this customer message in the conversation (1 for the first)
+  turn: number;
+  kycDetailsShownTurn: Record<string, number>;
+  // Task queue for the model calls (see getLlmTaskQueue)
+  llmTaskQueue: string;
+  // The supervisor's account opening states; a newly started opening is added to it
+  accountOpeningStates: Record<string, string>;
+  // Number of account openings started so far in this conversation
+  accountOpeningsStarted: number;
+}
+
+export interface RunAgentTurnOutput {
+  interaction: ChatInteraction;
+  messages: ModelMessage[];
+  clientId?: string;
+  childWorkflowId?: string;
+  activeAgent: AgentName;
+  kycDetailsShownTurn: Record<string, number>;
+  accountOpeningsStarted: number;
+}
+
+export async function runAgentTurn(input: RunAgentTurnInput): Promise<RunAgentTurnOutput> {
+  const { workflowId, userInput, messages, clientId, childWorkflowId, activeAgent, turn, llmTaskQueue } = input;
+
+  const clientContext: ClientContext = { clientId, childWorkflowId };
+  const ctx: AgentRunContext = {
+    clientContext,
+    childWorkflowId,
+    parentWorkflowId: workflowId,
+    traceLines: [],
+    turn,
+    kycDetailsShownTurn: { ...input.kycDetailsShownTurn },
+    accountOpeningStates: input.accountOpeningStates,
+    accountOpeningsStarted: input.accountOpeningsStarted,
+  };
+
+  const updatedMessages: ModelMessage[] = [
+    ...messages,
+    { role: 'user', content: userInput },
+  ];
+
+  const { text, messages: finalMessages, activeAgent: nextAgent } =
+    await runAgentLoop(activeAgent ?? 'supervisor', updatedMessages, ctx, llmTaskQueue);
+
+  const interaction: ChatInteraction = {
+    user_prompt: userInput,
+    text_response: text,
+    agent_trace: ctx.traceLines.join('\n'),
+  };
+
+  return {
+    interaction,
+    messages: finalMessages,
+    clientId: ctx.clientContext.clientId,
+    childWorkflowId: ctx.childWorkflowId,
+    activeAgent: nextAgent,
+    kycDetailsShownTurn: ctx.kycDetailsShownTurn,
+    accountOpeningsStarted: ctx.accountOpeningsStarted,
+  };
+}

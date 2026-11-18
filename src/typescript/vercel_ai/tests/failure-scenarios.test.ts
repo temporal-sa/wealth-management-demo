@@ -1,0 +1,531 @@
+import assert from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { APICallError } from 'ai';
+import { MockActivityEnvironment, TestWorkflowEnvironment } from '@temporalio/testing';
+import { Worker } from '@temporalio/worker';
+import { activityInfo } from '@temporalio/activity';
+import { ApplicationFailure } from '@temporalio/common';
+import type { WorkflowHandle } from '@temporalio/client';
+import { temporal } from '@temporalio/proto';
+import { FundingManager, InsufficientFundsError } from '../../common/funding-manager';
+import { translateModelError } from '../chaos-model';
+import { remove_investment, validate_new_account } from '../activities/investments';
+import { useClaimCheck } from '../../common/data-converter';
+import { workflowsModule } from '../worker-workflows';
+import { openAccountWorkflowId } from '../workflows/start-open-account';
+import type { OpenInvestmentAccountInput, OpenInvestmentAccountOutput, WealthManagementClient } from '../shared';
+import { OpenInvestmentAccountWorkflow, StartOpenAccountRepeatedlyWorkflow, TestParentWorkflow } from './test-workflows';
+
+const TASK_QUEUE = 'failure-scenarios-test';
+const CLIENT_ID = '123';
+const INVESTMENT_ID = 'i-test';
+const CLIENT: WealthManagementClient = {
+  client_id: CLIENT_ID,
+  first_name: 'Jane',
+  last_name: 'Doe',
+  address: '1 Main St',
+  phone: '555-0199',
+  email: 'jane@example.com',
+  marital_status: 'single',
+};
+
+// Stand-ins for the real activities, registered under the same names. They record the order
+// they were called in and fail on demand: "reject" fails non-retryably, a number N fails the
+// first N attempts.
+function fakeActivities(calls: string[], failures: Record<string, 'reject' | number> = {}) {
+  function maybeFail(name: string) {
+    const behavior = failures[name];
+    if (behavior === 'reject') throw ApplicationFailure.nonRetryable(`${name} rejected`, 'Rejected');
+    const { attempt } = activityInfo();
+    if (typeof behavior === 'number' && attempt <= behavior) {
+      calls.push(`${name} attempt ${attempt} failed`);
+      throw new Error(`${name} unavailable`);
+    }
+  }
+  return {
+    async get_client() {
+      maybeFail('get_client');
+      return CLIENT;
+    },
+    async update_client(_clientId: string, fields: Partial<WealthManagementClient>) {
+      calls.push(`update_client:${JSON.stringify(fields)}`);
+      return 'Client information successfully updated';
+    },
+    async open_investment({ name, balance }: { client_id: string; name: string; balance: number }) {
+      maybeFail('open_investment');
+      calls.push(`open_investment:${name}/${balance}`);
+      return { investment_id: INVESTMENT_ID, name, balance };
+    },
+    async remove_investment(_clientId: string, investmentId: string) {
+      calls.push(`remove_investment:${investmentId}`);
+      return true;
+    },
+    async debit_linked_account(_clientId: string, amount: number, transferId: string) {
+      calls.push(`debit:${amount}/${transferId}`);
+      maybeFail('debit_linked_account');
+      return {};
+    },
+    async credit_linked_account(_clientId: string, amount: number, transferId: string) {
+      calls.push(`credit:${amount}/${transferId}`);
+      return {};
+    },
+    async register_account(_clientId: string, investmentId: string) {
+      calls.push(`register:${investmentId}`);
+      maybeFail('register_account');
+      return `CUST-${investmentId}`;
+    },
+  };
+}
+
+// The idempotency key of the initial deposit: unique per run, even if a workflow ID is used again
+async function initialDepositId(child: WorkflowHandle): Promise<string> {
+  const { runId } = await child.describe();
+  return `${child.workflowId}-${runId}-initial-deposit`;
+}
+
+describe('failure scenarios', function () {
+  this.timeout(60_000);
+  let env: TestWorkflowEnvironment;
+
+  before(async () => {
+    env = await TestWorkflowEnvironment.createLocal();
+  });
+
+  after(async () => {
+    await env?.teardown();
+  });
+
+  // Starts the test parent, which starts the Open Account workflow as its child, as the chat does,
+  // and returns both once the child is running.
+  async function startParentAndChild(input: OpenInvestmentAccountInput, suffix: string, childWorkflowId?: string) {
+    const childId = childWorkflowId ?? `open-account-${suffix}`;
+    const parent = await env.client.workflow.start(TestParentWorkflow, {
+      taskQueue: TASK_QUEUE,
+      workflowId: `parent-${suffix}`,
+      args: [input, childId],
+    });
+    const child = env.client.workflow.getHandle(childId);
+    for (const deadline = Date.now() + 10_000; ; ) {
+      const running = await child
+        .describe()
+        .then((d) => d.status.name === 'RUNNING' && d.parentExecution?.workflowId === parent.workflowId)
+        .catch(() => false);
+      if (running) break;
+      if (Date.now() > deadline) throw new Error(`${childId} did not start`);
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return { parent, child };
+  }
+
+  // Starts a parent and an Open Account workflow, approves KYC and compliance, and runs the
+  // worker while `body` waits for the outcome.
+  async function runOpenAccount<T>(
+    activities: object,
+    promoCode: string | null,
+    body: (child: WorkflowHandle, parent: WorkflowHandle) => Promise<T>,
+    childWorkflowId?: string,
+  ): Promise<T> {
+    const worker = await Worker.create({
+      connection: env.nativeConnection,
+      taskQueue: TASK_QUEUE,
+      workflowsPath: require.resolve('./test-workflows'),
+      activities,
+    });
+    return worker.runUntil(async () => {
+      const suffix = Math.random().toString(36).slice(2);
+      const input: OpenInvestmentAccountInput = {
+        client_id: CLIENT_ID,
+        account_name: 'College Fund',
+        initial_amount: 1000,
+        promo_code: promoCode,
+      };
+      const { parent, child } = await startParentAndChild(input, suffix, childWorkflowId);
+      await child.signal('verify_kyc');
+      await child.signal('compliance_approved');
+      return body(child, parent);
+    });
+  }
+
+  it('opens the account when every saga step succeeds', async () => {
+    const calls: string[] = [];
+    await runOpenAccount(fakeActivities(calls), null, async (child, parent) => {
+      const result: OpenInvestmentAccountOutput = await child.result();
+      assert.deepStrictEqual(result, { account_created: true, message: 'investment account created' });
+      const transferId = await initialDepositId(child);
+      assert.deepStrictEqual(calls, [
+        'open_investment:College Fund/1000',
+        `debit:1000/${transferId}`,
+        `register:${INVESTMENT_ID}`,
+      ]);
+      const statuses: string[] = await parent.result();
+      assert.deepStrictEqual(statuses, [
+        'New College Fund account status changed: Waiting KYC',
+        'New College Fund account status changed: Waiting Compliance Review',
+        'New College Fund account status changed: Compliance review has been approved. Creating Investment Account',
+        'New College Fund account status changed: Creating the account record.',
+        'New College Fund account status changed: Transferring $1,000.00 from the linked bank account.',
+        'New College Fund account status changed: Registering the account with the custodian.',
+        'New College Fund account status changed: Complete',
+      ]);
+      assert.strictEqual(await child.query('get_current_state'), 'Complete');
+    });
+  });
+
+  it('opens the account without a parent workflow to report to', async () => {
+    // As run_open_account_workflow.ts starts it: no chat, so no status updates to send
+    const worker = await Worker.create({
+      connection: env.nativeConnection,
+      taskQueue: TASK_QUEUE,
+      workflowsPath: require.resolve('./test-workflows'),
+      activities: fakeActivities([]),
+    });
+    await worker.runUntil(async () => {
+      const input: OpenInvestmentAccountInput = {
+        client_id: CLIENT_ID,
+        account_name: 'College Fund',
+        initial_amount: 1000,
+        promo_code: null,
+      };
+      const child = await env.client.workflow.start(OpenInvestmentAccountWorkflow, {
+        taskQueue: TASK_QUEUE,
+        workflowId: `open-account-no-parent-${Math.random().toString(36).slice(2)}`,
+        args: [input],
+      });
+      await child.signal('verify_kyc');
+      await child.signal('compliance_approved');
+      assert.deepStrictEqual(await child.result(), { account_created: true, message: 'investment account created' });
+      assert.strictEqual(await child.query('get_current_state'), 'Complete');
+    });
+  });
+
+  it('rolls back completed steps in reverse order when the custodian rejects the account', async () => {
+    const calls: string[] = [];
+    await runOpenAccount(fakeActivities(calls, { register_account: 'reject' }), null, async (child, parent) => {
+      const result: OpenInvestmentAccountOutput = await child.result();
+      assert.deepStrictEqual(result, {
+        account_created: false,
+        message: 'The account was not opened: register_account rejected',
+      });
+      const transferId = await initialDepositId(child);
+      assert.deepStrictEqual(calls, [
+        'open_investment:College Fund/1000',
+        `debit:1000/${transferId}`,
+        `register:${INVESTMENT_ID}`,
+        `credit:1000/${transferId}-refund`,
+        `remove_investment:${INVESTMENT_ID}`,
+      ]);
+      assert.strictEqual(
+        await child.query('get_current_state'),
+        'Rolled back. The account was not opened: register_account rejected.',
+      );
+      const statuses: string[] = await parent.result();
+      assert.deepStrictEqual(statuses.slice(-4), [
+        'New College Fund account status changed: Failed: register_account rejected. Rolling back.',
+        'New College Fund account status changed: Rolling back: refunding $1,000.00 to the linked bank account.',
+        'New College Fund account status changed: Rolling back: removing the account record.',
+        'New College Fund account status changed: Rolled back. The account was not opened: register_account rejected.',
+      ]);
+    });
+  });
+
+  it('undoes only the steps that completed', async () => {
+    const calls: string[] = [];
+    await runOpenAccount(fakeActivities(calls, { debit_linked_account: 'reject' }), null, async (child) => {
+      const result: OpenInvestmentAccountOutput = await child.result();
+      assert.strictEqual(result.account_created, false);
+      // The debit never happened, so there is nothing to refund
+      assert.deepStrictEqual(calls, [
+        'open_investment:College Fund/1000',
+        `debit:1000/${await initialDepositId(child)}`,
+        `remove_investment:${INVESTMENT_ID}`,
+      ]);
+    });
+  });
+
+  it('applies approvals sent while the client is still loading once the workflow gets there', async () => {
+    const calls: string[] = [];
+    const worker = await Worker.create({
+      connection: env.nativeConnection,
+      taskQueue: TASK_QUEUE,
+      workflowsPath: require.resolve('./test-workflows'),
+      activities: fakeActivities(calls, { get_client: 2 }),
+    });
+    await worker.runUntil(async () => {
+      const suffix = Math.random().toString(36).slice(2);
+      const { parent, child } = await startParentAndChild(
+        { client_id: CLIENT_ID, account_name: 'College Fund', initial_amount: 1000, promo_code: null },
+        suffix,
+      );
+      // Both arrive while get_client is being retried, compliance first
+      await child.signal('compliance_approved');
+      await child.signal('verify_kyc');
+      assert.strictEqual(await child.query('get_current_state'), 'Initializing');
+      assert.strictEqual((await child.result()).account_created, true);
+      assert.deepStrictEqual(calls.slice(0, 2), ['get_client attempt 1 failed', 'get_client attempt 2 failed']);
+      const statuses: string[] = await parent.result();
+      assert.deepStrictEqual(statuses.slice(0, 3), [
+        'New College Fund account status changed: Waiting KYC',
+        'New College Fund account status changed: Waiting Compliance Review',
+        'New College Fund account status changed: Compliance review has been approved. Creating Investment Account',
+      ]);
+    });
+  });
+
+  it('retries transient failures instead of rolling back', async () => {
+    const calls: string[] = [];
+    await runOpenAccount(fakeActivities(calls, { open_investment: 2 }), null, async (child) => {
+      const result: OpenInvestmentAccountOutput = await child.result();
+      assert.strictEqual(result.account_created, true);
+      assert.deepStrictEqual(calls.slice(0, 3), [
+        'open_investment attempt 1 failed',
+        'open_investment attempt 2 failed',
+        'open_investment:College Fund/1000',
+      ]);
+    });
+  });
+
+  it('moves money again when a workflow ID is used again after a rollback', async () => {
+    const childWorkflowId = `open-account-reopen-${Math.random().toString(36).slice(2)}`;
+    const first: string[] = [];
+    await runOpenAccount(fakeActivities(first, { register_account: 'reject' }), null, (child) => child.result(), childWorkflowId);
+    const second: string[] = [];
+    await runOpenAccount(fakeActivities(second), null, (child) => child.result(), childWorkflowId);
+    const debitOf = (calls: string[]) => calls.find((c) => c.startsWith('debit:'));
+    assert.ok(debitOf(first) && debitOf(second));
+    // Same workflow ID, different runs: a reused transfer ID would return the refunded transfer
+    assert.notStrictEqual(debitOf(first), debitOf(second));
+  });
+
+  it('waits for the client to load before returning client details', async () => {
+    const calls: string[] = [];
+    const worker = await Worker.create({
+      connection: env.nativeConnection,
+      taskQueue: TASK_QUEUE,
+      workflowsPath: require.resolve('./test-workflows'),
+      activities: fakeActivities(calls),
+    });
+    await worker.runUntil(async () => {
+      const suffix = Math.random().toString(36).slice(2);
+      const { parent, child } = await startParentAndChild(
+        { client_id: CLIENT_ID, account_name: 'College Fund', initial_amount: 1000, promo_code: null },
+        suffix,
+      );
+      // Asked right after the start, before the get_client activity has run
+      const details = await child.executeUpdate<WealthManagementClient | null, []>('get_client_details');
+      assert.deepStrictEqual(details, CLIENT);
+      await child.terminate('test finished');
+      await parent.terminate('test finished');
+    });
+  });
+
+  it('saves updated client details and approves KYC', async () => {
+    const calls: string[] = [];
+    const worker = await Worker.create({
+      connection: env.nativeConnection,
+      taskQueue: TASK_QUEUE,
+      workflowsPath: require.resolve('./test-workflows'),
+      activities: fakeActivities(calls),
+    });
+    await worker.runUntil(async () => {
+      const suffix = Math.random().toString(36).slice(2);
+      const { parent, child } = await startParentAndChild(
+        { client_id: CLIENT_ID, account_name: 'College Fund', initial_amount: 1000, promo_code: null },
+        suffix,
+      );
+      // Returns update_client's message, as the reference and Java workflows do
+      const saved = await child.executeUpdate<string, [Partial<WealthManagementClient>]>('update_client_details', {
+        args: [{ phone: '555-0100' }],
+      });
+      assert.strictEqual(saved, 'Client information successfully updated');
+      assert.deepStrictEqual(calls, ['update_client:{"phone":"555-0100"}']);
+      // No verify_kyc signal needed: the workflow moves on to compliance review
+      let state = '';
+      for (let i = 0; i < 40 && state !== 'Waiting Compliance Review'; i++) {
+        state = await child.query<string>('get_current_state');
+        if (state !== 'Waiting Compliance Review') await new Promise((r) => setTimeout(r, 100));
+      }
+      assert.strictEqual(state, 'Waiting Compliance Review');
+      await child.terminate('test finished');
+      await parent.terminate('test finished');
+    });
+  });
+
+  it('pauses on the promo-code bug instead of failing the workflow', async () => {
+    const calls: string[] = [];
+    await runOpenAccount(fakeActivities(calls), 'WELCOME-BONUS', async (child) => {
+      let failure: string | null | undefined;
+      for (let i = 0; i < 40 && !failure; i++) {
+        const history = await child.fetchHistory();
+        failure = history.events?.find((e) => e.workflowTaskFailedEventAttributes)
+          ?.workflowTaskFailedEventAttributes?.failure?.message;
+        if (!failure) await new Promise((r) => setTimeout(r, 250));
+      }
+      assert.ok(failure, 'the demo bug should fail the workflow task');
+      assert.match(failure, /rate/);
+      // Paused, not failed: still running, and the saga never started
+      const { status } = await child.describe();
+      assert.strictEqual(status.code, temporal.api.enums.v1.WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING);
+      assert.deepStrictEqual(calls, []);
+      await child.terminate('test finished');
+    });
+  });
+
+  it('starts a new Open Account workflow each time the same account is opened in a chat', async () => {
+    const worker = await Worker.create({
+      connection: env.nativeConnection,
+      taskQueue: TASK_QUEUE,
+      workflowsPath: require.resolve('./test-workflows'),
+      activities: fakeActivities([]),
+    });
+    await worker.runUntil(async () => {
+      const accountName = `Car ${Math.random().toString(36).slice(2)}`;
+      const parentWorkflowId = `start-repeatedly-${Math.random().toString(36).slice(2)}`;
+      const childWorkflowIds = await env.client.workflow.execute(StartOpenAccountRepeatedlyWorkflow, {
+        taskQueue: TASK_QUEUE,
+        workflowId: parentWorkflowId,
+        args: [
+          { client_id: CLIENT_ID, account_name: accountName, initial_amount: 1000, promo_code: null },
+          2,
+        ],
+      });
+
+      assert.deepStrictEqual(childWorkflowIds, [
+        openAccountWorkflowId(parentWorkflowId, CLIENT_ID, accountName, 1),
+        openAccountWorkflowId(parentWorkflowId, CLIENT_ID, accountName, 2),
+      ]);
+      // Both were started (and terminated with their parent): two openings, not one
+      for (const childWorkflowId of childWorkflowIds) {
+        const { type } = await env.client.workflow.getHandle(childWorkflowId).describe();
+        assert.strictEqual(type, 'OpenInvestmentAccountWorkflow');
+      }
+    });
+  });
+
+  it('derives the workflow ID from the chat, client, account name and opening number', () => {
+    // The account name as given, like the reference implementation
+    assert.strictEqual(
+      openAccountWorkflowId('chat-1', '123', 'Kids College Fund', 1),
+      'OpenAccount-chat-1-123-Kids College Fund-1',
+    );
+    // Opening the same account again in a chat starts a new workflow
+    assert.notStrictEqual(openAccountWorkflowId('chat-1', '123', 'Car', 1), openAccountWorkflowId('chat-1', '123', 'Car', 2));
+    // Two chats for the same client and account name don't collide
+    assert.notStrictEqual(openAccountWorkflowId('chat-1', '123', 'Car', 1), openAccountWorkflowId('chat-2', '123', 'Car', 1));
+  });
+});
+
+describe('business rules', () => {
+  async function failureOf(amount: number, accountName = 'College Fund'): Promise<ApplicationFailure> {
+    try {
+      await validate_new_account(CLIENT_ID, accountName, amount);
+    } catch (err) {
+      assert.ok(err instanceof ApplicationFailure);
+      return err;
+    }
+    assert.fail(`expected $${amount} to be rejected`);
+  }
+
+  it('rejects deposits over $1,000,000 without retrying', async () => {
+    const failure = await failureOf(2_000_000);
+    assert.strictEqual(failure.type, 'DepositLimitExceeded');
+    assert.strictEqual(failure.nonRetryable, true);
+  });
+
+  it('rejects deposits under $100 without retrying', async () => {
+    const failure = await failureOf(50);
+    assert.strictEqual(failure.type, 'DepositBelowMinimum');
+    assert.strictEqual(failure.nonRetryable, true);
+  });
+
+  it('accepts deposits within the limits', async () => {
+    await validate_new_account(CLIENT_ID, 'College Fund', 1000);
+  });
+
+  it('only checks the initial deposit', async () => {
+    // No other rules, e.g. a name the client already has is allowed, as in the reference implementation
+    await validate_new_account(CLIENT_ID, 'Checking', 100);
+    await validate_new_account(CLIENT_ID, 'Checking', 1_000_000);
+  });
+});
+
+describe('remove_investment (saga compensation)', () => {
+  it('counts an account that is already gone as removed, so a retry succeeds', async () => {
+    // No such client or account: nothing is written to data/investments.json
+    const removed = await new MockActivityEnvironment().run(remove_investment, 'no-such-client', 'i-already-removed');
+    assert.strictEqual(removed, true);
+  });
+});
+
+describe('worker workflows', () => {
+  it('runs the Open Account workflow on this worker unless another task queue is set for it', () => {
+    assert.strictEqual(workflowsModule('Supervisor', undefined), './workflows/index');
+    assert.strictEqual(workflowsModule('Supervisor', ''), './workflows/index');
+    assert.strictEqual(workflowsModule('Supervisor', 'Supervisor'), './workflows/index');
+    assert.strictEqual(workflowsModule('Supervisor', 'OpenAccount'), './workflows/supervisor-only');
+  });
+
+  it('leaves the Open Account workflow out of the supervisor-only bundle', () => {
+    const workflowsDir = path.join(__dirname, '../workflows');
+    const exportsOf = (module: string) => Object.keys(require(path.join(workflowsDir, module)) as object).sort();
+    assert.deepStrictEqual(exportsOf('supervisor-only'), ['WealthManagementWorkflow']);
+    assert.deepStrictEqual(exportsOf('index'), ['OpenInvestmentAccountWorkflow', 'WealthManagementWorkflow']);
+  });
+});
+
+describe('USE_CLAIM_CHECK', () => {
+  it('accepts the same values as the Python versions, ignoring case', () => {
+    for (const value of ['true', 'True', 'TRUE', 't', '1', 'yes', 'YES', 'y']) {
+      assert.strictEqual(useClaimCheck(value), true, value);
+    }
+    for (const value of [undefined, '', 'false', 'False', '0', 'no', 'off']) {
+      assert.strictEqual(useClaimCheck(value), false, String(value));
+    }
+  });
+});
+
+describe('funding transfers', () => {
+  let file: string;
+  let funding: FundingManager;
+
+  beforeEach(() => {
+    file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'funding-')), 'funding-accounts.json');
+    fs.writeFileSync(file, JSON.stringify({ accounts: { [CLIENT_ID]: { name: 'Checking', balance: 1000 } }, transfers: {} }));
+    funding = new FundingManager(file);
+  });
+
+  it('applies each transfer ID only once', () => {
+    funding.debit(CLIENT_ID, 300, 't-1');
+    funding.debit(CLIENT_ID, 300, 't-1');
+    funding.credit(CLIENT_ID, 300, 't-1-refund');
+    funding.credit(CLIENT_ID, 300, 't-1-refund');
+    assert.strictEqual(funding.getAccount(CLIENT_ID).balance, 1000);
+  });
+
+  it('refuses to overdraw the linked account', () => {
+    assert.throws(() => funding.debit(CLIENT_ID, 5000, 't-2'), InsufficientFundsError);
+    assert.strictEqual(funding.getAccount(CLIENT_ID).balance, 1000);
+  });
+});
+
+describe('model rate limits', () => {
+  it('turns an HTTP 429 into a retryable failure that waits 15 seconds', () => {
+    const error = new APICallError({
+      message: 'Resource exhausted',
+      url: 'https://generativelanguage.googleapis.com',
+      requestBodyValues: {},
+      statusCode: 429,
+    });
+    const translated = translateModelError(error);
+    assert.ok(translated instanceof ApplicationFailure);
+    assert.strictEqual(translated.type, 'ModelRateLimited');
+    assert.strictEqual(translated.nonRetryable, false);
+    assert.strictEqual(translated.nextRetryDelay, '15s');
+  });
+
+  it('leaves other errors alone', () => {
+    const error = new Error('boom');
+    assert.strictEqual(translateModelError(error), error);
+  });
+});
