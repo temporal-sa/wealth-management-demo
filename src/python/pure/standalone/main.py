@@ -1,25 +1,25 @@
 """The standalone version: the four agents as a command-line chat, in plain Python.
 
-No Temporal and no agent framework: the shared agent loop (common.agent_loop) calls the
+No Temporal and no agent framework: the shared agent loop (pure_agents.agent_loop) calls the
 model through LiteLLM and the tools call the data managers directly. Accounts are
 opened directly by a tool, so there is no KYC, compliance review or saga, and nothing
 survives a crash or an outage.
 
 Run it from this folder with ./startchat.sh, or from the repository root with:
 
-    uv run python -m pure_supervisor.main
+    uv run python -m standalone.main
 """
 
 import asyncio
 import logging
 
-from common.agent_constants import MAX_INITIAL_DEPOSIT, MIN_INITIAL_DEPOSIT, STANDALONE_OPEN_ACCOUNT_INSTRUCTIONS
-from common.agent_loop import Agent, AgentContext, ModelRequest, ModelResponse, function_tool, run_turn
+from prompts.agent_constants import MAX_INITIAL_DEPOSIT, MIN_INITIAL_DEPOSIT, STANDALONE_OPEN_ACCOUNT_INSTRUCTIONS
+from pure_agents.agent_loop import Agent, AgentContext, ModelRequest, ModelResponse, function_tool, run_turn
 from common.beneficiaries_manager import BeneficiariesManager
 from common.investment_manager import InvestmentAccount, InvestmentManager
-from common.llm import complete
-from common.llm_config import llm_model
-from common.wealth_agents import build_agents
+from pure_agents.llm import complete
+from pure_agents.llm_config import llm_model
+from pure_agents.wealth_agents import build_agents
 
 logger = logging.getLogger(__name__)
 

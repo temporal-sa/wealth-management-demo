@@ -9,8 +9,8 @@ invoke_model activity.
 
 import litellm
 
-from common.agent_loop import ModelRequest, ModelResponse, ToolCall
-from common.llm_config import llm_model
+from pure_agents.agent_loop import ModelRequest, ModelResponse, ToolCall
+from pure_agents.llm_config import llm_model
 
 # Don't send LiteLLM's anonymous usage telemetry.
 litellm.telemetry = False

@@ -26,13 +26,13 @@ from temporalio.exceptions import ApplicationError
 from temporalio.testing import ActivityEnvironment
 from temporalio.worker import Worker
 
-import common.llm as llm
-import temporal_supervisor.activities.model as model
-from common.agent_loop import ModelRequest
+import pure_agents.llm as llm
+import durable.activities.model as model
+from pure_agents.agent_loop import ModelRequest
 from common.chaos_manager import ChaosFlag
 from common.funding_manager import FundingManager, InsufficientFundsError
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.workflows.open_account_workflow import (
+from durable.activities.investments import Investments
+from durable.workflows.open_account_workflow import (
     OpenInvestmentAccountInput,
     OpenInvestmentAccountWorkflow,
 )

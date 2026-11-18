@@ -2,7 +2,7 @@
 
 Two workers share one client:
 
-* the chat task queue (TEMPORAL_TASK_QUEUE, default Supervisor) runs the workflows and
+* the chat task queue (TEMPORAL_TASK_QUEUE, default Pure-Supervisor) runs the workflows and
   the tool activities;
 * the model task queue (<TEMPORAL_TASK_QUEUE>-llm, or TEMPORAL_TASK_QUEUE_LLM) runs
   invoke_model. LLM_MAX_CALLS_PER_SECOND has the Temporal service rate limit model calls
@@ -19,18 +19,18 @@ import os
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from common.client_helper import ClientHelper
-from common.llm_config import llm_model
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.clients import ClientActivities
-from temporal_supervisor.activities.custodian import Custodian
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities
-from temporal_supervisor.activities.funding import Funding
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.activities.model import invoke_model
-from temporal_supervisor.activities.open_account import OpenAccount
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable import connection
+from pure_agents.llm_config import llm_model
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.clients import ClientActivities
+from durable.activities.custodian import Custodian
+from durable.activities.event_stream_activities import EventStreamActivities
+from durable.activities.funding import Funding
+from durable.activities.investments import Investments
+from durable.activities.model import invoke_model
+from durable.activities.open_account import OpenAccount
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 
 def tool_activities(client: Client) -> list:
@@ -66,8 +66,8 @@ async def main():
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s")
 
-    client_helper = ClientHelper()
-    client = await Client.connect(**client_helper.client_config)
+    client_helper = connection.client_helper()
+    client = await connection.connect(client_helper)
 
     workflows = [WealthManagementWorkflow]
     if client_helper.taskQueueOpenAccount == client_helper.taskQueue:
@@ -86,7 +86,7 @@ async def main():
     print(f"Worker connected to {client_helper.address}. Chat and tools on {client_helper.taskQueue}; "
           f"model calls ({llm_model()}) on {client_helper.taskQueueLLM}, "
           f"max calls per second: {max_llm_calls or 'unlimited'}")
-    print(client_helper.claim_check_status())
+    print(connection.claim_check_status())
     await asyncio.gather(worker.run(), llm_worker.run())
 
 

@@ -16,7 +16,7 @@ from aiohttp import hdrs, web
 from google.protobuf import json_format
 from temporalio.api.common.v1 import Payload, Payloads
 
-from common.claim_check import ClaimCheckCodec
+from common.claim_check.claim_check_codec import ClaimCheckCodec
 
 ALLOWED_ORIGINS = {"http://localhost:8233", "https://cloud.temporal.io"}
 HOST, PORT = "127.0.0.1", 8081

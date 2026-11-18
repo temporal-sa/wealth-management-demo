@@ -9,13 +9,13 @@ directly, the Temporal version's run activities.
     Open Account Agent -> Investment Agent
 """
 
-from common.agent_constants import (
+from prompts.agent_constants import (
     BENE_AGENT_NAME, BENE_HANDOFF, BENE_INSTRUCTIONS,
     INVEST_AGENT_NAME, INVEST_HANDOFF, INVEST_INSTRUCTIONS,
     OPEN_ACCOUNT_AGENT_NAME, OPEN_ACCOUNT_HANDOFF, OPEN_ACCOUNT_INSTRUCTIONS,
     SUPERVISOR_AGENT_NAME, SUPERVISOR_HANDOFF, SUPERVISOR_INSTRUCTIONS,
 )
-from common.agent_loop import Agent, Tool
+from pure_agents.agent_loop import Agent, Tool
 
 
 def build_agents(

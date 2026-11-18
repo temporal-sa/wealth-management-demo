@@ -1,16 +1,11 @@
 [project]
 name = "pure-wealth-management"
 version = "0.1.0"
-description = "Wealth Management agent demo in plain Python (no agent framework), with and without Temporal"
-authors = [
-    {name = "Rick Ross", email = "rick.ross@temporal.io"}
-]
+description = "Wealth management demo: the pure Python port (a hand-written agent loop on LiteLLM), with a Temporal durable-execution version"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "pydantic>=2.11.7,<3.0.0",
-    "fastapi==0.162.0",
-    "uvicorn==0.53.0",
     "redis>=6.2.0,<9.0.0",
     # The only model dependency: one API for Anthropic, OpenAI and Gemini.
     # Pinned to an exact, weeks-old release (see README, "Choosing the model").
@@ -26,9 +21,13 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build]
+# The port's own packages, plus src/python for the shared common/ package (and api/, whose
+# Temporal calls tests/test_api_client.py checks against this port's chat workflow).
+dev-mode-dirs = [".", ".."]
+
 [tool.hatch.build.targets.wheel]
-sources = ["src"]
-packages = ["src/common", "src/api", "src/pure_supervisor", "src/temporal_supervisor"]
+packages = ["standalone", "durable", "prompts", "pure_agents"]
 
 [dependency-groups]
 dev = [
@@ -41,4 +40,4 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "module"
 asyncio_default_test_loop_scope = "module"
 testpaths = ["tests"]
-pythonpath = ["src", "."]
+pythonpath = [".", ".."]

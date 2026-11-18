@@ -18,10 +18,10 @@ from temporalio import activity
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from common.agent_loop import Agent, ModelRequest, ModelResponse, ToolCall
-from common.task_queues import TASK_QUEUE_LLM
+from pure_agents.agent_loop import Agent, ModelRequest, ModelResponse, ToolCall
+from durable.task_queues import TASK_QUEUE_LLM
 from common.user_message import ProcessUserMessageInput
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 
 SCRIPT: list = []
 INSTRUCTIONS: list = []

@@ -1,14 +1,16 @@
 import pytest
+from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.testing import WorkflowEnvironment
 
-import temporal_supervisor.chaos as chaos
+import durable.chaos as chaos
 from common.chaos_manager import ChaosFlag
 
 
 @pytest.fixture(scope="module")
 async def temporal_env():
-    """Temporal's local test server (downloaded automatically on first run)."""
-    async with await WorkflowEnvironment.start_local() as env:
+    """Temporal's local test server (downloaded automatically on first run), with the Pydantic
+    data converter the worker and the shared API use (durable/connection.py)."""
+    async with await WorkflowEnvironment.start_local(data_converter=pydantic_data_converter) as env:
         yield env
 
 

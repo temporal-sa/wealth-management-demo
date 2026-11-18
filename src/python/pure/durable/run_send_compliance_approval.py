@@ -2,20 +2,18 @@ import argparse
 import asyncio
 import logging
 
-from temporalio.client import Client
-from common.client_helper import ClientHelper
-
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable import connection
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
 
 
 async def approve(workflow_id: str):
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s")
 
-    client_helper = ClientHelper()
+    client_helper = connection.client_helper()
     print(f"address is {client_helper.address}")
-    print(client_helper.claim_check_status())
-    client = await Client.connect(**client_helper.client_config)
+    print(connection.claim_check_status())
+    client = await connection.connect(client_helper)
 
     handle = client.get_workflow_handle(workflow_id=workflow_id)
     await handle.signal(OpenInvestmentAccountWorkflow.compliance_approved)

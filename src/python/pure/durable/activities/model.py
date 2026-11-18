@@ -18,10 +18,10 @@ from typing import Optional
 from temporalio import activity
 from temporalio.exceptions import ApplicationError
 
-from common.agent_loop import ModelRequest, ModelResponse
+from pure_agents.agent_loop import ModelRequest, ModelResponse
 from common.chaos_manager import ChaosFlag
-from common.llm_config import provider_name
-from temporal_supervisor.chaos import inject_failure
+from pure_agents.llm_config import provider_name
+from durable.chaos import inject_failure
 
 # Used when a 429 has no Retry-After header, and by the chaos panel's rate-limit switch.
 RATE_LIMIT_RETRY_AFTER = timedelta(seconds=15)
@@ -55,7 +55,7 @@ async def invoke_model(request: ModelRequest) -> ModelResponse:
     # Imported here so that importing this module (as the tests and the workflow's
     # activity references do) doesn't load LiteLLM.
     import litellm
-    from common.llm import complete
+    from pure_agents.llm import complete
 
     try:
         return await complete(request, num_retries=0)

@@ -2,7 +2,7 @@
 
 The routines are the reference port's (temporal-sa/oai-temporal-wealth-management),
 adapted only to this port's handoff mechanism: a handoff is a tool named
-transfer_to_<agent_name> (see common.agent_loop).
+transfer_to_<agent_name> (see pure_agents.agent_loop).
 """
 
 # Adapted from the OpenAI Agents SDK's RECOMMENDED_PROMPT_PREFIX for this port's handoff tools.

@@ -1,10 +1,10 @@
 """Off-topic questions are declined by the Supervisor Agent's prompt, in both versions."""
 
-import common.agent_constants as agent_constants
-import pure_supervisor.main as standalone
-from common.agent_constants import SUPERVISOR_AGENT_NAME
-from common.agent_loop import all_agents
-from temporal_supervisor.workflows.supervisor_workflow import init_agents
+import prompts.agent_constants as agent_constants
+import standalone.main as standalone
+from prompts.agent_constants import SUPERVISOR_AGENT_NAME
+from pure_agents.agent_loop import all_agents
+from durable.workflows.supervisor_workflow import init_agents
 
 DECLINE_BLOCK = [
     "You only help with wealth management: the customer's beneficiaries and investment accounts.",

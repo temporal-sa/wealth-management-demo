@@ -15,9 +15,9 @@ from temporalio import activity
 from temporalio.worker import Worker
 
 import tests.scripted_model as scripted_model
-from common.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME, OPEN_ACCOUNT_INSTRUCTIONS
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities, InMemoryEventStream
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from prompts.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME, OPEN_ACCOUNT_INSTRUCTIONS
+from durable.activities.event_stream_activities import EventStreamActivities, InMemoryEventStream
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from tests.scripted_model import handoff, message, model_worker, send, tool
 
 TASK_QUEUE = "test-client-id"

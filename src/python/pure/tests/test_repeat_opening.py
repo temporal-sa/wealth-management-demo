@@ -26,12 +26,12 @@ from temporalio.exceptions import ApplicationError
 from temporalio.worker import Worker
 
 import tests.scripted_model as scripted_model
-from common.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
-from common.task_queues import TASK_QUEUE_OPEN_ACCOUNT
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities, InMemoryEventStream
-from temporal_supervisor.activities.open_account import OpenAccount
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from prompts.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
+from durable.task_queues import TASK_QUEUE_OPEN_ACCOUNT
+from durable.activities.event_stream_activities import EventStreamActivities, InMemoryEventStream
+from durable.activities.open_account import OpenAccount
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from tests.scripted_model import handoff, message, model_worker, send, tool
 
 TASK_QUEUE = "test-repeat-opening"

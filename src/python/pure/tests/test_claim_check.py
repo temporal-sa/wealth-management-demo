@@ -5,6 +5,7 @@ test server (downloaded automatically on first run). No model key needed.
 """
 
 import base64
+import dataclasses
 import uuid
 
 import pytest
@@ -12,13 +13,13 @@ from aiohttp.test_utils import TestClient, TestServer
 from google.protobuf import json_format
 from temporalio.api.common.v1 import Payload, Payloads
 from temporalio.client import Client
-from temporalio.converter import DataConverter
+from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.worker import Worker
 
-from common.claim_check import CODEC_KEY, ClaimCheckCodec, use_claim_check
-from common.client_helper import ClientHelper
-from temporal_supervisor.codec_server import build_codec_server
-from temporal_supervisor.workflows.open_account_workflow import (
+from common.claim_check.claim_check_codec import CODEC_KEY, ClaimCheckCodec
+from durable import connection
+from durable.codec_server import build_codec_server
+from durable.workflows.open_account_workflow import (
     OpenInvestmentAccountInput,
     OpenInvestmentAccountWorkflow,
 )
@@ -79,20 +80,31 @@ async def test_a_missing_claim_check_fails_clearly(codec):
         await codec.decode([missing])
 
 
-def test_client_helper_uses_the_codec_only_when_claim_check_is_on(monkeypatch):
+async def test_the_port_connects_with_pydantic_json_and_the_codec_only_when_claim_check_is_on(
+        monkeypatch, temporal_env, tmp_path):
+    """connection.connect, used by the worker and scripts: Pydantic JSON like the shared API, plus
+    the shared claim check codec when USE_CLAIM_CHECK is on."""
+    empty_config = tmp_path / "temporal.toml"
+    empty_config.write_text("")
+    monkeypatch.setenv("TEMPORAL_CONFIG_FILE", str(empty_config))
+    monkeypatch.setenv("TEMPORAL_ADDRESS", temporal_env.client.service_client.config.target_host)
+    monkeypatch.setenv("TEMPORAL_NAMESPACE", temporal_env.client.namespace)
+
     monkeypatch.delenv("USE_CLAIM_CHECK", raising=False)
-    assert not use_claim_check()
-    assert "data_converter" not in ClientHelper().client_config
+    client = await connection.connect(connection.client_helper())
+    assert client.data_converter.payload_converter_class is pydantic_data_converter.payload_converter_class
+    assert client.data_converter.payload_codec is None
 
     monkeypatch.setenv("USE_CLAIM_CHECK", "true")
-    converter = ClientHelper().client_config["data_converter"]
-    assert isinstance(converter.payload_codec, ClaimCheckCodec)
+    client = await connection.connect(connection.client_helper())
+    assert client.data_converter.payload_converter_class is pydantic_data_converter.payload_converter_class
+    assert isinstance(client.data_converter.payload_codec, ClaimCheckCodec)
 
 
 async def test_workflow_history_holds_only_claim_checks(temporal_env, codec, redis_store):
     # A client with claim check on, connected to the same test server.
     config = temporal_env.client.config()
-    config["data_converter"] = DataConverter(payload_codec=codec)
+    config["data_converter"] = dataclasses.replace(pydantic_data_converter, payload_codec=codec)
     claim_checked = Client(**config)
     CALLS.clear()
     FAILURES.clear()
@@ -162,10 +174,10 @@ async def test_codec_server_decodes_for_the_temporal_ui(codec):
 
 def test_startup_message_says_whether_claim_check_is_on(monkeypatch):
     monkeypatch.delenv("USE_CLAIM_CHECK", raising=False)
-    assert ClientHelper().claim_check_status() == "Claim check: off"
+    assert connection.claim_check_status() == "Claim check: off"
 
     monkeypatch.setenv("USE_CLAIM_CHECK", "true")
     monkeypatch.setenv("REDIS_HOST", "redis.example")
     monkeypatch.setenv("REDIS_PORT", "6380")
-    assert ClientHelper().claim_check_status() == (
+    assert connection.claim_check_status() == (
         "Claim check: ON (payloads stored in Redis at redis.example:6380)")

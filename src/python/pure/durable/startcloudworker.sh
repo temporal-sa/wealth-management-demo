@@ -1,10 +1,10 @@
 #!/bin/bash
-# Start the worker against Temporal Cloud (settings in setcloudenv.sh in the repository root).
+# Start the worker against Temporal Cloud (settings in scripts/setcloudenv.sh).
 # Usage: startcloudworker.sh [open-account-task-queue]
 cd "$(dirname "$0")" || exit 1
-[ -f ../../setclaimcheck.sh ] && source ../../setclaimcheck.sh
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
 source ./_cloudenv.sh
-[ -f ../../setllmkey.sh ] && source ../../setllmkey.sh
+[ -f ../../../../scripts/setllmkey.sh ] && source ../../../../scripts/setllmkey.sh
 # With a task queue name, the open-account workflow runs on that queue instead.
-source ../../setsplitworkflows.sh "$1"
+source ../../../../scripts/setsplitworkflows.sh "$1"
 uv run python run_worker.py

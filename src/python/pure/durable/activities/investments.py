@@ -5,10 +5,10 @@ from temporalio.exceptions import ApplicationError
 
 with workflow.unsafe.imports_passed_through():
     from common.investment_manager import InvestmentManager, InvestmentAccount
-    from common.agent_constants import MAX_INITIAL_DEPOSIT, MIN_INITIAL_DEPOSIT
+    from prompts.agent_constants import MAX_INITIAL_DEPOSIT, MIN_INITIAL_DEPOSIT
     from common.chaos_manager import ChaosFlag
-    from temporal_supervisor import chaos
-    from temporal_supervisor.chaos import core_banking_api, maybe_slow_down
+    from durable import chaos
+    from durable.chaos import core_banking_api, maybe_slow_down
 
 WELCOME_BONUS_PROMO = "WELCOME-BONUS"
 

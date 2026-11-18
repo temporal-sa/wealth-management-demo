@@ -1,6 +1,6 @@
 """The chat workflow: one long-lived workflow per conversation, running the four agents.
 
-The agent loop (common.agent_loop) runs here as ordinary workflow code. Every model call
+The agent loop (pure_agents.agent_loop) runs here as ordinary workflow code. Every model call
 is the invoke_model activity and every tool that touches a system is an activity, so a
 worker crash, a model outage or a tool outage pauses the conversation instead of losing
 it: Temporal replays the workflow to where it was and the turn carries on.
@@ -19,16 +19,16 @@ from temporalio.workflow import ParentClosePolicy
 
 with workflow.unsafe.imports_passed_through():
     from common.account_context import UpdateAccountOpeningStateInput
-    from common.agent_loop import Agent, AgentContext, ModelRequest, ModelResponse, all_agents, function_tool, run_turn
+    from pure_agents.agent_loop import Agent, AgentContext, ModelRequest, ModelResponse, all_agents, function_tool, run_turn
     from common.status_update import StatusUpdate
-    from common.task_queues import TASK_QUEUE_LLM, TASK_QUEUE_OPEN_ACCOUNT
+    from durable.task_queues import TASK_QUEUE_LLM, TASK_QUEUE_OPEN_ACCOUNT
     from common.user_message import ChatInteraction, ProcessUserMessageInput
-    from common.wealth_agents import build_agents
-    from temporal_supervisor.activities.beneficiaries import Beneficiaries, Beneficiary
-    from temporal_supervisor.activities.investments import Investments
-    from temporal_supervisor.activities.model import invoke_model
-    from temporal_supervisor.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
-    from temporal_supervisor.workflows.open_account_workflow import (
+    from pure_agents.wealth_agents import build_agents
+    from durable.activities.beneficiaries import Beneficiaries, Beneficiary
+    from durable.activities.investments import Investments
+    from durable.activities.model import invoke_model
+    from durable.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
+    from durable.workflows.open_account_workflow import (
         OpenInvestmentAccountInput,
         OpenInvestmentAccountWorkflow,
     )

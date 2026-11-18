@@ -7,8 +7,8 @@ listing accounts) has to guess where each one stands.
 No model key, Redis or Temporal service needed.
 """
 
-from common.agent_loop import Agent
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementContext
+from pure_agents.agent_loop import Agent
+from durable.workflows.supervisor_workflow import WealthManagementContext
 
 AGENT = Agent(name="Investment Agent", handoff_description="", instructions="Instructions.")
 

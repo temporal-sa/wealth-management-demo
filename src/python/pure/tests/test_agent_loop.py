@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from common.agent_loop import Agent, AgentContext, ModelResponse, ToolCall, function_tool, run_turn
+from pure_agents.agent_loop import Agent, AgentContext, ModelResponse, ToolCall, function_tool, run_turn
 
 
 @function_tool("List the customer's accounts.", client_id="The customer's client ID")

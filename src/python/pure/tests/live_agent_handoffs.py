@@ -14,7 +14,7 @@ read data/*.json. The event stream is kept in memory and the chaos flags read as
 Not part of the default ``uv run pytest`` run (the file name doesn't match ``test_*.py``),
 because it calls the paid model API. Run it from the repository root with:
 
-    source ./setllmkey.sh && uv run pytest tests/live_agent_handoffs.py -s
+    source ../../../scripts/setllmkey.sh && uv run pytest tests/live_agent_handoffs.py -s
 
 LIVE_TEST_RUNS=<n> repeats the conversation n times (default 1), since model output varies.
 Skipped when the key for LLM_MODEL is not set. Requires the Temporal test server
@@ -26,11 +26,11 @@ import uuid
 
 from temporalio.worker import Worker
 
-from common.agent_constants import BENE_AGENT_NAME, INVEST_AGENT_NAME, SUPERVISOR_AGENT_NAME
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities, InMemoryEventStream
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from prompts.agent_constants import BENE_AGENT_NAME, INVEST_AGENT_NAME, SUPERVISOR_AGENT_NAME
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.event_stream_activities import EventStreamActivities, InMemoryEventStream
+from durable.activities.investments import Investments
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from tests.live_support import (AGENT_MESSAGES, RUNS, Conversation, chaos_off,  # noqa: F401
                                 live_model_worker, requires_model_key)
 

@@ -1,7 +1,7 @@
 # Temporal version
 
 The four agents run inside a Temporal workflow. The agent loop
-([common/agent_loop.py](../common/agent_loop.py)) is ordinary workflow code: every model call is
+([pure_agents/agent_loop.py](../pure_agents/agent_loop.py)) is ordinary workflow code: every model call is
 the `invoke_model` activity, and every tool that touches a system is an activity. A worker crash,
 a model outage or a tool outage pauses the conversation instead of losing it. When things recover,
 Temporal resumes the turn where it stopped.
@@ -37,7 +37,7 @@ React UI ──► API (FastAPI) ──► Temporal ──► Worker
 ## Running locally
 
 From the repository root, each in its own terminal (see the
-[root README](../../README.md#prerequisites) for prerequisites and the model key):
+[port README](../README.md#prerequisites) for prerequisites and the model key):
 
 ```bash
 temporal server start-dev
@@ -48,31 +48,32 @@ redis-server
 ```
 
 ```bash
-./src/temporal_supervisor/startlocalworker.sh
+./src/python/pure/durable/startlocalworker.sh
 ```
 
 ```bash
-./src/api/startlocalapi.sh
+./src/python/api/startlocalapi.sh pure
 ```
 
 ```bash
-cd src/frontend && npm install && npm start
+cd frontend && npm install && npm start
 ```
 
 Open http://localhost:3000 for the chat, and http://localhost:8233 for the Temporal UI.
 
 `startlocalworker.sh` takes an optional task queue name. With one, the open-account workflow runs
 on that queue and this worker doesn't register it. That's for a separate open-account worker,
-such as the [Java one](../../java/README.md): start it with the same queue name.
+such as the [Java one](../../../../interop/open_account/java/README.md): start it with the same queue name, and with
+`TEMPORAL_TASK_QUEUE=Pure-Supervisor` so it calls this port's activities.
 
 ## Running on Temporal Cloud
 
-The cloud scripts read the connection settings from `setcloudenv.sh` in the repository root,
+The cloud scripts read the connection settings from `scripts/setcloudenv.sh`,
 which is ignored by git. Copy the example and fill in your namespace, with either an mTLS client
 certificate and key or an API key:
 
 ```bash
-cp setcloudenv.example setcloudenv.sh
+cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
 Then, each in its own terminal, from the repository root (Redis and the web UI run locally as
@@ -83,21 +84,21 @@ redis-server
 ```
 
 ```bash
-./src/temporal_supervisor/startcloudworker.sh
+./src/python/pure/durable/startcloudworker.sh
 ```
 
 ```bash
-./src/api/startcloudapi.sh
+./src/python/api/startcloudapi.sh pure
 ```
 
 ```bash
-cd src/frontend && npm start
+cd frontend && npm start
 ```
 
 To approve an account opening as the compliance officer:
 
 ```bash
-./src/temporal_supervisor/cloudsendcomplianceapproval.sh <open-account workflow ID>
+./src/python/pure/durable/cloudsendcomplianceapproval.sh <open-account workflow ID>
 ```
 
 Find the workflow ID in the Temporal Cloud UI (https://cloud.temporal.io), or with the
@@ -130,7 +131,7 @@ checked to load for both mTLS and an API key, but the demo hasn't been run end t
 5. The opening waits for compliance approval, which comes from outside the chat:
 
    ```bash
-   ./src/temporal_supervisor/localsendcomplianceapproval.sh <open-account workflow ID>
+   ./src/python/pure/durable/localsendcomplianceapproval.sh <open-account workflow ID>
    ```
 
 6. The saga then creates the account record, transfers the deposit from the linked bank account,
@@ -157,11 +158,11 @@ approval sent by hand. For the third, it prints the workflow ID to approve. Run
 `localsendcomplianceapproval.sh` with that ID in another terminal. It stops its worker on exit.
 
 ```bash
-./src/temporal_supervisor/startlocalopenaccount.sh
+./src/python/pure/durable/startlocalopenaccount.sh
 ```
 
 ```bash
-./src/temporal_supervisor/localsendcomplianceapproval.sh testing-open-investment-account-workflow3
+./src/python/pure/durable/localsendcomplianceapproval.sh testing-open-investment-account-workflow3
 ```
 
 These scenarios change the demo data. Reset it with `git checkout data/`.
@@ -173,16 +174,16 @@ and activity inputs and results, signals, updates and queries, including the mod
 in Redis under a new UUID, and Temporal stores only the UUID. This is the
 [Claim Check pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/StoreInLibrary.html),
 implemented as a [payload codec](https://docs.temporal.io/payload-codec) in
-[common/claim_check.py](../common/claim_check.py). The Java worker's codec uses the same format, so
+the shared [common/claim_check](../../common/claim_check) package. The Java worker's codec uses the same format, so
 the two workers read each other's payloads.
 
-To turn it on, copy the example file in the repository root and make sure Redis is running:
+To turn it on, copy the example file (from the repository root) and make sure Redis is running:
 
 ```bash
-cp setclaimcheck.example setclaimcheck.sh
+cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
 ```
 
-Every start script sources `setclaimcheck.sh` if it exists: the workers (Python and Java, local and
+Every start script sources `scripts/setclaimcheck.sh` if it exists: the workers (Python and Java, local and
 cloud), the APIs, the compliance approval scripts, the open-account runner and the codec server.
 Restart them all after creating or deleting it, so that they agree on whether claim check is on.
 
@@ -196,7 +197,7 @@ The Temporal UI then shows only claim check IDs. To see the data, start the code
 decodes payloads for the UI by looking them up in Redis:
 
 ```bash
-./src/temporal_supervisor/startcodecserver.sh
+./src/python/pure/durable/startcodecserver.sh
 ```
 
 It listens on http://127.0.0.1:8081 and accepts requests from the local UI and Temporal Cloud only.
@@ -212,13 +213,13 @@ To point the UI at it:
 
 | Variable | Default | Used by | Meaning |
 |----------|---------|---------|---------|
-| `LLM_MODEL` | `anthropic/claude-opus-5-5` | Worker, standalone, API (chaos labels) | LiteLLM model name, `<provider>/<model>` |
+| `LLM_MODEL` | `anthropic/claude-opus-5-5` | Worker, standalone | LiteLLM model name, `<provider>/<model>` |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` | none | Worker, standalone | The key for the provider in `LLM_MODEL` |
 | `TEMPORAL_ADDRESS` | `127.0.0.1:7233` | Worker, API, scripts | Temporal service address |
 | `TEMPORAL_NAMESPACE` | `default` | Worker, API, scripts | Temporal namespace |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | Worker, API, scripts | mTLS client certificate and key for Temporal Cloud (`setcloudenv.sh`) |
 | `TEMPORAL_API_KEY` | none | Worker, API, scripts | API key for Temporal Cloud, instead of mTLS (`setcloudenv.sh`) |
-| `TEMPORAL_TASK_QUEUE` | `Supervisor` | Worker, API | Task queue of the chat workflow and its tools |
+| `TEMPORAL_TASK_QUEUE` | `Pure-Supervisor` (`DEFAULT_TASK_QUEUE` in `task_queues.py`) | Worker, API, Java worker | Task queue of the chat workflow and its tools. Start the shared API with `./startlocalapi.sh pure` and the Java worker with `TEMPORAL_TASK_QUEUE=Pure-Supervisor` |
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat queue | Worker, runner | Task queue of the open-account workflow (set by `startlocalworker.sh <queue>`) |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Worker | Task queue of the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Worker | Dispatch rate limit for model calls, across all workers |
@@ -268,12 +269,12 @@ opens the account with the bonus (1% of the deposit, up to $500). To re-arm the 
 back.
 
 The Java open-account worker has its own version of this bug. See its
-[README](../../java/README.md#bug-in-workflow-code-chaos-panel).
+[README](../../../../interop/open_account/java/README.md#bug-in-the-workflow-code-chaos-panel).
 
 ## Tests
 
 The default suite needs no model key, no Redis and no running Temporal service. It uses Temporal's
-local test server (downloaded on first run). From the repository root:
+local test server (downloaded on first run). From `src/python/pure`:
 
 ```bash
 uv run pytest
@@ -288,20 +289,21 @@ uv run pytest
 | `test_opening_status_notes.py` | Every agent is told each account opening's request and current state |
 | `test_off_topic.py` | The Supervisor Agent's prompt, in both versions, declines off-topic questions |
 | `test_agents.py` | The agents, tools and handoffs match the PRD in both versions, and the open-account prompt has the PRD's lines |
-| `test_claim_check.py` | The claim check codec, a workflow whose history holds only claim checks, and the codec server's decoding and CORS |
+| `test_claim_check.py` | The shared claim check codec, the port's connection (Pydantic JSON, plus the codec only when claim check is on), a workflow whose history holds only claim checks, and the codec server's decoding and CORS |
 | `test_agent_loop.py` | The agent loop on its own: same-turn handoffs, tool schemas, tool errors, the client ID |
+| `test_api_client.py` | The shared API's Temporal calls start, message and end the real chat workflow, and the API knows this port's task queue |
 
-The Java open-account worker has its own tests (`cd java && ./gradlew test`), described in its
-[README](../../java/README.md#tests).
+The Java open-account worker has its own tests (`cd interop/open_account/java && ./gradlew test`), described in its
+[README](../../../../interop/open_account/java/README.md#tests).
 
 The chat workflow tests replace the model with a scripted one. It is just an activity registered
-under the name `invoke_model` ([tests/scripted_model.py](../../tests/scripted_model.py)).
+under the name `invoke_model` ([tests/scripted_model.py](../tests/scripted_model.py)).
 
 The live tests call the real model (`LLM_MODEL`), so they are kept out of the default run. They
 repeat the conversation `LIVE_TEST_RUNS` times (default 1) and print each transcript:
 
 ```bash
-source ./setllmkey.sh && LIVE_TEST_RUNS=3 uv run pytest tests/live_*.py -s
+source ../../../scripts/setllmkey.sh && LIVE_TEST_RUNS=3 uv run pytest tests/live_*.py -s
 ```
 
 * `live_agent_handoffs.py`: "Who are my beneficiaries?", "123", "What investments do I have?". In

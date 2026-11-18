@@ -10,8 +10,8 @@ the model asks for, follows handoffs, and stops when the model replies without c
 tool. It does no I/O of its own. The model call and every tool are async functions passed
 in by the caller:
 
-* the standalone version (pure_supervisor) calls LiteLLM and the data managers directly;
-* the Temporal version (temporal_supervisor) runs them as activities, so the same loop
+* the standalone version (standalone/) calls LiteLLM and the data managers directly;
+* the Temporal version (durable/) runs them as activities, so the same loop
   runs as deterministic workflow code and every model and tool call is durable.
 
 Messages are kept in the OpenAI chat format, which LiteLLM translates for every provider.

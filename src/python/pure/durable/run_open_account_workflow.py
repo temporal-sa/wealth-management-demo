@@ -2,19 +2,20 @@ import asyncio
 import logging
 
 from temporalio.client import Client
-from common.client_helper import ClientHelper
 
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow, OpenInvestmentAccountInput
+from common.client_helper import ClientHelper
+from durable import connection
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow, OpenInvestmentAccountInput
 
 
 async def main():
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s")
 
-    client_helper = ClientHelper()
+    client_helper = connection.client_helper()
     print(f"address is {client_helper.address}, open-account task queue is {client_helper.taskQueueOpenAccount}")
-    print(client_helper.claim_check_status())
-    client = await Client.connect(**client_helper.client_config)
+    print(connection.claim_check_status())
+    client = await connection.connect(client_helper)
     print("Running the first scenario:")
     await scenario1(client, client_helper)
     print("Running the second scenario:")

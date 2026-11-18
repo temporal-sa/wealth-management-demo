@@ -12,21 +12,21 @@ import pytest
 from temporalio import activity
 from temporalio.worker import Worker
 
-import temporal_supervisor.chaos as chaos
-from common.agent_constants import BENE_AGENT_NAME, INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME, SUPERVISOR_AGENT_NAME
-from common.agent_loop import ModelRequest, ModelResponse
+import durable.chaos as chaos
+from prompts.agent_constants import BENE_AGENT_NAME, INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME, SUPERVISOR_AGENT_NAME
+from pure_agents.agent_loop import ModelRequest, ModelResponse
 from common.chaos_manager import ChaosFlag
-from common.llm_config import llm_model
-from common.task_queues import TASK_QUEUE_LLM
-from temporal_supervisor.activities.model import invoke_model
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from pure_agents.llm_config import llm_model
+from durable.task_queues import TASK_QUEUE_LLM
+from durable.activities.model import invoke_model
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from tests.scripted_model import send
 
 RUNS = max(1, int(os.getenv("LIVE_TEST_RUNS", "1")))
 
 _missing = litellm.validate_environment(model=llm_model()).get("missing_keys") or []
 requires_model_key = pytest.mark.skipif(
-    bool(_missing), reason=f"{', '.join(_missing)} not set for {llm_model()}: source ./setllmkey.sh first")
+    bool(_missing), reason=f"{', '.join(_missing)} not set for {llm_model()}: source ../../../scripts/setllmkey.sh first")
 
 # What each agent said, as (agent name, text), from every model call's output. The trace
 # only records handoffs and tool calls, and the reply concatenates every agent's messages.

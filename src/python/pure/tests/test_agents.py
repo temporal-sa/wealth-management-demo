@@ -1,11 +1,11 @@
 """The four agents, their tools and their handoffs match the PRD, in both versions,
 and the open-account prompt carries the PRD's lines word for word."""
 
-import common.agent_constants as agent_constants
-import pure_supervisor.main as standalone
-from common.agent_constants import BENE_AGENT_NAME, INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME, SUPERVISOR_AGENT_NAME
-from common.agent_loop import all_agents
-from temporal_supervisor.workflows.supervisor_workflow import init_agents
+import prompts.agent_constants as agent_constants
+import standalone.main as standalone
+from prompts.agent_constants import BENE_AGENT_NAME, INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME, SUPERVISOR_AGENT_NAME
+from pure_agents.agent_loop import all_agents
+from durable.workflows.supervisor_workflow import init_agents
 
 HANDOFFS = {
     SUPERVISOR_AGENT_NAME: [BENE_AGENT_NAME, INVEST_AGENT_NAME],

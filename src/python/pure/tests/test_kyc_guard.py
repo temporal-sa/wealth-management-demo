@@ -18,9 +18,9 @@ from temporalio import activity
 from temporalio.worker import Worker
 
 import tests.scripted_model as scripted_model
-from common.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities, InMemoryEventStream
-from temporal_supervisor.workflows.supervisor_workflow import (
+from prompts.agent_constants import INVEST_AGENT_NAME, OPEN_ACCOUNT_AGENT_NAME
+from durable.activities.event_stream_activities import EventStreamActivities, InMemoryEventStream
+from durable.workflows.supervisor_workflow import (
     WealthManagementContext,
     WealthManagementWorkflow,
     approve_kyc,

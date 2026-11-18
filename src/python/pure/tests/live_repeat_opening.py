@@ -15,7 +15,7 @@ and the chaos flags read as off (so no promo code).
 Not part of the default ``uv run pytest`` run, because it calls the paid model API. Run it
 from the repository root with:
 
-    source ./setllmkey.sh && uv run pytest tests/live_repeat_opening.py -s
+    source ../../../scripts/setllmkey.sh && uv run pytest tests/live_repeat_opening.py -s
 
 LIVE_TEST_RUNS=<n> repeats the conversation n times (default 1), since model output varies.
 Skipped when the key for LLM_MODEL is not set. Requires the Temporal test server
@@ -28,14 +28,14 @@ from temporalio import activity
 from temporalio.service import RPCError
 from temporalio.worker import Worker
 
-from common.task_queues import TASK_QUEUE_OPEN_ACCOUNT
-from temporal_supervisor.activities.beneficiaries import Beneficiaries
-from temporal_supervisor.activities.clients import ClientActivities
-from temporal_supervisor.activities.event_stream_activities import EventStreamActivities, InMemoryEventStream
-from temporal_supervisor.activities.investments import Investments
-from temporal_supervisor.activities.open_account import OpenAccount
-from temporal_supervisor.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from temporal_supervisor.workflows.supervisor_workflow import WealthManagementWorkflow
+from durable.task_queues import TASK_QUEUE_OPEN_ACCOUNT
+from durable.activities.beneficiaries import Beneficiaries
+from durable.activities.clients import ClientActivities
+from durable.activities.event_stream_activities import EventStreamActivities, InMemoryEventStream
+from durable.activities.investments import Investments
+from durable.activities.open_account import OpenAccount
+from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
+from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from tests.live_support import RUNS, Conversation, chaos_off, live_model_worker, requires_model_key  # noqa: F401
 
 pytestmark = requires_model_key
