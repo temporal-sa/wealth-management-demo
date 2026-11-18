@@ -1,7 +1,0 @@
-# Claim check (optional): Temporal stores an ID, and every payload is kept in Redis.
-# Copy this file to setclaimcheck.sh in the repository root. Every start script sources it if
-# it exists (workers, API, compliance approval, codec server, the open-account runner, and
-# the Java worker). setclaimcheck.sh is ignored by git.
-export USE_CLAIM_CHECK=true
-export REDIS_HOST=localhost
-export REDIS_PORT=6379

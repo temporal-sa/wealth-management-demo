@@ -1,9 +1,0 @@
-# Temporal Cloud with an API key. startcloudworker.sh chooses this profile when
-# ../setcloudenv.sh sets TEMPORAL_API_KEY.
-spring:
-  temporal:
-    namespace: ${TEMPORAL_NAMESPACE}
-    connection:
-      target: ${TEMPORAL_ADDRESS}
-      api-key: ${TEMPORAL_API_KEY}
-      enable-https: true
