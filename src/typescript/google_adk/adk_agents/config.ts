@@ -2,14 +2,17 @@
  * Settings read from the environment. Workflow code must not read the environment, so the worker
  * reads it here and the chat workflow gets what it needs from the get_worker_config local activity.
  */
-import { useClaimCheck } from './data-converter';
-import { loadRedisConfig } from './redis-config';
+import { useClaimCheck } from '../../common/data-converter';
+import { loadRedisConfig } from '../../common/redis-config';
 
-/** The default Gemini model, the same as the other ADK ports. Override it with GEMINI_MODEL. */
+/** The default Gemini model. Override it with GEMINI_MODEL. */
 export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
 
-/** The chat workflow's task queue when TEMPORAL_TASK_QUEUE is not set. */
-export const DEFAULT_TASK_QUEUE = 'Supervisor';
+/**
+ * The chat workflow's task queue when TEMPORAL_TASK_QUEUE is not set: this port's own, so its worker
+ * can run alongside the other ports'.
+ */
+export const DEFAULT_TASK_QUEUE = 'ADK-TS-Supervisor';
 
 export interface WorkerConfig {
   /** Runs the chat workflow and the tool activities (TEMPORAL_TASK_QUEUE). */

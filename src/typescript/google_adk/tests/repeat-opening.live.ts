@@ -2,7 +2,7 @@
  * Live: repeat opening. The handoff conversation, then "Open Vacation with $13,000", "Yes", and
  * "Open Vacation with $13,000" again: both replies show the KYC details, and ...-Vacation-1 and
  * ...-Vacation-2 were started.
- * Run with: source setgeminikey.sh && LIVE_TEST_RUNS=3 npm run test:live
+ * Run with: source ../../../scripts/setgeminikey.sh && LIVE_TEST_RUNS=3 npm run test:live
  */
 import assert from 'assert';
 import { after, before, describe, it } from 'mocha';

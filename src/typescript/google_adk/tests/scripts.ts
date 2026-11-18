@@ -7,7 +7,7 @@ import {
   INVEST_AGENT_NAME,
   OPEN_ACCOUNT_AGENT_NAME,
   SUPERVISOR_AGENT_NAME,
-} from '../../common/agent-constants';
+} from '../prompts/agent-constants';
 import { call, say, Script, ScriptedRequest, transfer } from './helpers';
 
 export const CLIENT_ID_LINE = "The customer's client ID is 123.";

@@ -26,7 +26,7 @@ import {
   SUPERVISOR_HANDOFF,
   SUPERVISOR_INSTRUCTIONS,
   withClientId,
-} from './agent-constants';
+} from '../prompts/agent-constants';
 
 export interface AgentTreeOptions {
   /** The model an agent uses, by agent name. */

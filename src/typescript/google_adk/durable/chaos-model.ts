@@ -10,7 +10,7 @@
  */
 import { BaseLlm, LLMRegistry, type BaseLlmConnection, type LlmRequest, type LlmResponse } from '@google/adk';
 import { ApplicationFailure } from '@temporalio/common';
-import { ChaosFlag } from '../common/chaos-manager';
+import { ChaosFlag } from '../../common/chaos-manager';
 import { injectFailure } from './chaos';
 
 /** How long a rate-limited call waits before its retry, like a Retry-After header. */

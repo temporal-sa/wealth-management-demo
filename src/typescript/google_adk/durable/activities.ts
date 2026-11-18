@@ -8,8 +8,8 @@
 import { ApplicationFailure } from '@temporalio/common';
 import { log } from '@temporalio/activity';
 import type { Client } from '@temporalio/client';
-import { ChaosFlag } from '../common/chaos-manager';
-import { WorkerConfig } from '../common/config';
+import { ChaosFlag } from '../../common/chaos-manager';
+import { WorkerConfig } from '../adk_agents/config';
 import {
   Beneficiary,
   DataStore,
@@ -18,8 +18,8 @@ import {
   InvestmentRecord,
   Transfer,
   WealthManagementClient,
-} from '../common/data-store';
-import { formatUsd } from '../common/money';
+} from '../adk_agents/data-store';
+import { formatUsd } from '../adk_agents/money';
 import { coreBankingApi, injectFailure, isEnabled, maybeSlowDown } from './chaos';
 import { EventStream } from './redis/event-stream-manager';
 import {

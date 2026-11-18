@@ -17,9 +17,9 @@ import {
   STATUS_LINE,
   SUPERVISOR_AGENT_NAME,
   withClientId,
-} from '../../common/agent-constants';
-import { buildAgentTree } from '../../common/agents';
-import { buildStandaloneAgents } from '../../adk_supervisor/main';
+} from '../prompts/agent-constants';
+import { buildAgentTree } from '../adk_agents/agents';
+import { buildStandaloneAgents } from '../standalone/main';
 
 const PRD_OFF_TOPIC =
   "You only help with wealth management: the customer's beneficiaries and investment accounts. If the customer " +

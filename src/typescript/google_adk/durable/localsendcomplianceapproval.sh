@@ -6,5 +6,5 @@ if [ -z "$1" ]; then
   echo "Usage: $0 <workflow ID>"
   exit 1
 fi
-[ -f ../../setclaimcheck.sh ] && source ../../setclaimcheck.sh
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
 npm run --silent compliance.approval -- --workflow-id "$1"

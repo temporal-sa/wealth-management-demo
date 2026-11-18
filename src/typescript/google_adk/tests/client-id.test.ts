@@ -9,7 +9,7 @@ import {
   getChatHistoryQuery,
   processUserMessageSignal,
   WealthManagementWorkflow,
-} from '../workflows/wealth-management';
+} from '../durable/workflows/wealth-management';
 import { createTestWorker, ScriptedLlm, waitFor } from './helpers';
 import { CLIENT_ID_LINE, handoffScript } from './scripts';
 

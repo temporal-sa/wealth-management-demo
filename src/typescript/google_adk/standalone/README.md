@@ -2,7 +2,7 @@
 
 The agents with the [Google Agent Development Kit for TypeScript](https://github.com/google/adk-js)
 alone, as a command-line chat. There is no Temporal here: the model and tool calls are not durable,
-and a crash loses the conversation. The [Temporal version](../temporal_supervisor/README.md) runs the
+and a crash loses the conversation. The [Temporal version](../durable/README.md) runs the
 same agents durably.
 
 What it leaves out: there is no Open Account Agent, as in the reference port's standalone version. The
@@ -16,18 +16,18 @@ Scenarios:
 * Off-topic questions are declined by the Supervisor Agent
 
 The agents, their prompts and the tree are shared with the Temporal version
-([`src/common/agents.ts`](../common/agents.ts), [`src/common/agent-constants.ts`](../common/agent-constants.ts)).
+([`adk_agents/agents.ts`](../adk_agents/agents.ts), [`prompts/agent-constants.ts`](../prompts/agent-constants.ts)).
 
 ## Run
 
-Install the dependencies and set up your Gemini key as described in the [root README](../../README.md).
-Then, from the repository root:
+Install the dependencies and set up your Gemini key as described in the [port's README](../README.md).
+Then, from `src/typescript/google_adk`:
 
 ```bash
-source setgeminikey.sh && npm run adk
+source ../../../scripts/setgeminikey.sh && npm run adk
 ```
 
-Type `end`, `exit` or `quit` to leave. The chat changes the files in `data/`; reset them with
+Type `end`, `exit` or `quit` to leave. The chat changes the shared files in the repository's `data/`; reset them with
 `git checkout data/`.
 
 Example:

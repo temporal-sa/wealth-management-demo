@@ -1,9 +1,0 @@
-lib
-node_modules
-setgeminikey.sh
-setclaimcheck.sh
-setcloudenv.sh
-tsconfig.tsbuildinfo
-.idea
-.DS_Store
-.claude/settings.local.json

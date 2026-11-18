@@ -8,14 +8,14 @@ import { after, before, describe, it } from 'mocha';
 import type { WorkflowHandle } from '@temporalio/client';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { ChaosFlag } from '../../common/chaos-manager';
-import { OpenInvestmentAccountInput, PROCESS_USER_MESSAGE_SIGNAL, STATE_COMPLETE } from '../shared';
+import { OpenInvestmentAccountInput, PROCESS_USER_MESSAGE_SIGNAL, STATE_COMPLETE } from '../durable/shared';
 import {
   complianceApprovedSignal,
   getCurrentStateQuery,
   OpenInvestmentAccountWorkflow,
   verifyKycSignal,
-} from '../workflows/open-account';
-import { WealthManagementWorkflow } from '../workflows/wealth-management';
+} from '../durable/workflows/open-account';
+import { WealthManagementWorkflow } from '../durable/workflows/wealth-management';
 import { chatSender, createTestWorker, openingStates, ScriptedLlm, TestWorker, waitFor } from './helpers';
 import { handoffScript } from './scripts';
 

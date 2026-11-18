@@ -11,10 +11,10 @@ Opening an account starts a child workflow with KYC, a compliance officer's appr
 
 ## Architecture
 
-![Architecture](../../images/architecture.png)
+![Architecture](../../../../docs/images/vercel_ai/architecture.png)
 
 * **Chat workflow** (`WealthManagementWorkflow`, [`workflows/wealth-management.ts`](workflows/wealth-management.ts)):
-  one long-lived workflow per chat. It builds the ADK agent tree ([`src/common/agents.ts`](../common/agents.ts))
+  one long-lived workflow per chat. It builds the ADK agent tree ([`adk_agents/agents.ts`](../adk_agents/agents.ts))
   and runs ADK's `InMemoryRunner` on each customer message, one at a time. Each agent's model is a
   `TemporalModel`, so each model call is the integration's `adk-invokeModel` activity on the model task
   queue. The tools are ADK `FunctionTool`s in workflow code that run the tool activities. After each
@@ -25,8 +25,9 @@ Opening an account starts a child workflow with KYC, a compliance officer's appr
 * **Worker** ([`worker.ts`](worker.ts)): runs both workflows and every activity on `TEMPORAL_TASK_QUEUE`,
   and the model activity on `<TEMPORAL_TASK_QUEUE>-llm`, where the Temporal service can rate-limit
   model calls. `GoogleAdkPlugin` bundles ADK into the workflow sandbox and registers the model activity.
-* **API** ([`src/api/server.ts`](../api/server.ts)) and the **web UI** ([`frontend/`](../../frontend/README.md)):
-  the UI talks only to the API, and the API only to Temporal and Redis.
+* **API** ([`src/python/api`](../../../python/api/README.md), the one API every port shares) and the **web UI**
+  ([`frontend/`](../../../../frontend/README.md)): the UI talks only to the API, and the API only to Temporal and
+  Redis. The API starts this port's chat workflows with `google_adk_ts` as its AI framework.
 * A compliance officer approves an opening from outside the chat, with
   [`localsendcomplianceapproval.sh`](localsendcomplianceapproval.sh).
 
@@ -43,7 +44,7 @@ What the integration does, and what this port adds:
 
 ## Running locally
 
-Install the dependencies and set up your Gemini key as described in the [root README](../../README.md).
+Install the dependencies and set up your Gemini key as described in the [port's README](../README.md).
 
 ### Start Temporal and Redis
 
@@ -58,17 +59,21 @@ redis-server
 ### Start the worker
 
 ```bash
-src/temporal_supervisor/startlocalworker.sh
+src/typescript/google_adk/durable/startlocalworker.sh
 ```
 
-It sources `setgeminikey.sh` and, if it exists, `setclaimcheck.sh` from the repository root. It prints
-the claim-check state, the task queues and the model at startup.
+It sources `scripts/setgeminikey.sh` and, if it exists, `scripts/setclaimcheck.sh`. It polls the
+`ADK-TS-Supervisor` task queue, so it can run next to another port's worker, and prints the claim-check state,
+the task queues and the model at startup.
 
 ### Start the API
 
 ```bash
-api/startlocalapi.sh
+src/python/api/startlocalapi.sh google_adk_ts
 ```
+
+The argument is the AI framework the API serves. The web app names this port's chats
+`adk-ts-temporal-agent-<random>`.
 
 ### Start the web UI
 
@@ -83,7 +88,7 @@ Watch the workflows in the Temporal UI at http://localhost:8233.
 
 After the customer confirms their details, the opening waits for compliance review:
 
-![Waiting for compliance review](../../images/ux-waiting-compliance-review.png)
+![Waiting for compliance review](../../../../docs/images/vercel_ai/ux-waiting-compliance-review.png)
 
 Find the opening's workflow ID in the Temporal UI, or list the openings:
 
@@ -94,7 +99,7 @@ temporal workflow list --query 'WorkflowType="OpenInvestmentAccountWorkflow" AND
 Then approve it:
 
 ```bash
-src/temporal_supervisor/localsendcomplianceapproval.sh "OpenAccount-adk-ts-temporal-agent-<random>-123-Vacation-1"
+src/typescript/google_adk/durable/localsendcomplianceapproval.sh "OpenAccount-adk-ts-temporal-agent-<random>-123-Vacation-1"
 ```
 
 The saga runs, its states appear in the UI, and the agent reports the result when asked.
@@ -136,14 +141,14 @@ temporal workflow list --query 'WorkflowId STARTS_WITH "OpenAccount-adk-ts-tempo
 ### With the Java open-account workflow
 
 Start the worker with a task queue name for the open-account workflow, and the
-[Java worker](../../java/README.md) with the same name:
+[Java worker](../../../../interop/open_account/java/README.md) with the same name:
 
 ```bash
-src/temporal_supervisor/startlocalworker.sh Open-Account-Java
+src/typescript/google_adk/durable/startlocalworker.sh Open-Account-Java
 ```
 
 ```bash
-cd java && ./startlocalworker.sh Open-Account-Java
+cd interop/open_account/java && TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor ./startlocalworker.sh Open-Account-Java
 ```
 
 The Java workflow calls this worker's activities by name, so the chaos flags apply unchanged.
@@ -156,14 +161,14 @@ details updated (which completes KYC); and a compliance approval you send by han
 on exit. With Temporal running:
 
 ```bash
-src/temporal_supervisor/startlocalopenaccount.sh
+src/typescript/google_adk/durable/startlocalopenaccount.sh
 ```
 
 For scenario 3, send the approval from another terminal with the command it prints. To run the
 scenarios against the Java workflow, start the Java worker first and pass its queue:
 
 ```bash
-src/temporal_supervisor/startlocalopenaccount.sh Open-Account-Java
+src/typescript/google_adk/durable/startlocalopenaccount.sh Open-Account-Java
 ```
 
 `--scenario N` runs one scenario, and `--amount X` changes the deposit (300000 shows the rollback for
@@ -209,18 +214,18 @@ opening resumes on the next workflow-task retry and opens the account with the b
 deposit, up to $500). Re-arm the bug afterwards:
 
 ```bash
-git checkout src/temporal_supervisor/workflows/open-account.ts
+git checkout src/typescript/google_adk/durable/workflows/open-account.ts
 ```
 
 ## Claim check (optional)
 
 With the claim check on, a payload codec stores each payload in Redis and puts only its key in the
 event history. Every component must agree: the worker, the API, the scripts, the codec server and the
-Java worker all source `setclaimcheck.sh` from the repository root if it exists, and each prints at
+Java worker all source `scripts/setclaimcheck.sh` if it exists, and each prints at
 startup whether the claim check is on, with the `USE_CLAIM_CHECK` value.
 
 ```bash
-cp setclaimcheck.example setclaimcheck.sh
+cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
 ```
 
 `USE_CLAIM_CHECK` accepts `true`, `yes` or `1`. Restart every component after changing it.
@@ -230,36 +235,36 @@ cp setclaimcheck.example setclaimcheck.sh
 To see the payloads in the Temporal UI, start the codec server:
 
 ```bash
-src/temporal_supervisor/startcodecserver.sh
+src/typescript/google_adk/durable/startcodecserver.sh
 ```
 
 Then, in the Temporal UI at exactly http://localhost:8233 (the codec server allows only that origin
 and Temporal Cloud), open the data encoder settings and set the codec server to `http://127.0.0.1:8081`.
 
-![Configure the codec server](../../images/config-codec-server.png)
+![Configure the codec server](../../../../docs/images/vercel_ai/config-codec-server.png)
 
 ## Running on Temporal Cloud
 
 ```bash
-cp src/temporal_supervisor/setcloudenv.example setcloudenv.sh
+cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
-Fill in `setcloudenv.sh` (at the repository root, git-ignored) with your namespace address, namespace
-and the paths to your mTLS certificate and key. Then use the cloud scripts in place of the local ones:
+Fill in `scripts/setcloudenv.sh` (git-ignored) with your namespace address, namespace and either the paths
+to your mTLS certificate and key or an API key. Then use the cloud scripts in place of the local ones:
 
 ```bash
-src/temporal_supervisor/startcloudworker.sh
-```
-
-```bash
-api/startcloudapi.sh
+src/typescript/google_adk/durable/startcloudworker.sh
 ```
 
 ```bash
-src/temporal_supervisor/cloudsendcomplianceapproval.sh "<open-account workflow ID>"
+src/python/api/startcloudapi.sh google_adk_ts
 ```
 
-Redis still runs locally. For the Java worker on Temporal Cloud, see the [Java README](../../java/README.md#running-with-temporal-cloud).
+```bash
+src/typescript/google_adk/durable/cloudsendcomplianceapproval.sh "<open-account workflow ID>"
+```
+
+Redis still runs locally. For the Java worker on Temporal Cloud, see the [Java README](../../../../interop/open_account/java/README.md#running-with-temporal-cloud).
 
 ## Environment variables
 
@@ -270,16 +275,17 @@ Redis still runs locally. For the Java worker on Temporal Cloud, see the [Java R
 | `TEMPORAL_ADDRESS` | `localhost:7233` | Every Temporal client and worker |
 | `TEMPORAL_NAMESPACE` | `default` | Every Temporal client and worker |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | mTLS, for Temporal Cloud |
-| `TEMPORAL_TASK_QUEUE` | `Supervisor` | The chat workflow, the open-account workflow and the activities |
+| `TEMPORAL_TASK_QUEUE` | `ADK-TS-Supervisor` | The chat workflow, the open-account workflow and the activities |
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `TEMPORAL_TASK_QUEUE` | The open-account workflow (set by the worker scripts' argument) |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | The model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | none | A cap on model calls per second across all workers |
 | `REDIS_HOST`, `REDIS_PORT` | `localhost`, `6379` | The event stream, the chaos flags and the claim check |
 | `USE_CLAIM_CHECK` | off | The claim check (`true`, `yes` or `1`) |
-| `API_HOST`, `API_PORT` | `127.0.0.1`, `8000` | The API |
-| `DATA_DIR` | `data/` | The demo data folder |
+| `DATA_DIR` | the repository's `data/` | The demo data folder |
 
 ## Tests
+
+From `src/typescript/google_adk`:
 
 ```bash
 npm test
@@ -287,30 +293,30 @@ npm test
 
 The default suite runs with no model key, no Redis and no running Temporal service: it uses the SDK's
 local test server, the real workflows and activities over a copy of the demo data
-([`mocha/fixtures/data`](mocha/fixtures/data)), an in-memory event stream and chaos flags, and a
-scripted model in place of Gemini ([`mocha/helpers.ts`](mocha/helpers.ts)).
+([`mocha/fixtures/data`](../tests/fixtures/data)), an in-memory event stream and chaos flags, and a
+scripted model in place of Gemini ([`mocha/helpers.ts`](../tests/helpers.ts)).
 
 | Test | Checks |
 | --- | --- |
-| [`failure-scenarios.test.ts`](mocha/failure-scenarios.test.ts) | Retries through a tool and a model outage; the business-rule refusal; the 429's 15 s retry delay; the saga's success; the rollback after a custodian rejection and after insufficient funds; the saga states reported to the chat; the bug pausing the workflow without failing it |
-| [`kyc-guard.test.ts`](mocha/kyc-guard.test.ts) | `approve_kyc` refuses until this opening's details were shown in an earlier turn |
-| [`repeat-opening.test.ts`](mocha/repeat-opening.test.ts) | Two "Vacation" openings start `...-Vacation-1` and `...-Vacation-2`, both run, and the second needs its own KYC |
-| [`client-id.test.ts`](mocha/client-id.test.ts) | Every agent is told the client ID once a tool used it; handoffs happen in the same turn |
-| [`prompts.test.ts`](mocha/prompts.test.ts) | The Supervisor Agent prompt declines off-topic questions in the Temporal and standalone versions; the PRD's prompt lines; the agent tree |
+| [`failure-scenarios.test.ts`](../tests/failure-scenarios.test.ts) | Retries through a tool and a model outage; the business-rule refusal; the 429's 15 s retry delay; the saga's success; the rollback after a custodian rejection and after insufficient funds; the saga states reported to the chat; the bug pausing the workflow without failing it |
+| [`kyc-guard.test.ts`](../tests/kyc-guard.test.ts) | `approve_kyc` refuses until this opening's details were shown in an earlier turn |
+| [`repeat-opening.test.ts`](../tests/repeat-opening.test.ts) | Two "Vacation" openings start `...-Vacation-1` and `...-Vacation-2`, both run, and the second needs its own KYC |
+| [`client-id.test.ts`](../tests/client-id.test.ts) | Every agent is told the client ID once a tool used it; handoffs happen in the same turn |
+| [`prompts.test.ts`](../tests/prompts.test.ts) | The Supervisor Agent prompt declines off-topic questions in the Temporal and standalone versions; the PRD's prompt lines; the agent tree |
 
 The live tests call the paid Gemini API. They run the real chat workflow and model on the test
 server, with an in-memory event stream and the chaos flags off, repeat each conversation
 `LIVE_TEST_RUNS` times (default 1), and print every run's transcript:
 
 ```bash
-source setgeminikey.sh && LIVE_TEST_RUNS=3 npm run test:live
+source ../../../scripts/setgeminikey.sh && LIVE_TEST_RUNS=3 npm run test:live
 ```
 
-* [`agent-handoffs.live.ts`](mocha/agent-handoffs.live.ts): "Who are my beneficiaries?", "123", then
+* [`agent-handoffs.live.ts`](../tests/agent-handoffs.live.ts): "Who are my beneficiaries?", "123", then
   "What investments do I have?" lists the beneficiaries, hands off from the Beneficiary Agent to the
   supervisor to the Investment Agent in the last turn, lists Checking, Savings and 401K without asking
   for the client ID again, and no agent mentions a transfer.
-* [`repeat-opening.live.ts`](mocha/repeat-opening.live.ts): the same three messages, then "Open Vacation
+* [`repeat-opening.live.ts`](../tests/repeat-opening.live.ts): the same three messages, then "Open Vacation
   with $13,000", "Yes", and the open request again: both replies show the KYC details, and
   `-Vacation-1` and `-Vacation-2` were started.
 

@@ -1,8 +1,8 @@
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { temporal } from '@temporalio/proto';
-import { ClaimCheckCodec } from '../common/claim-check-codec';
-import { claimCheckStatus } from '../common/config';
-import { createRedisClient } from '../common/redis-config';
+import { ClaimCheckCodec } from '../../common/claim-check-codec';
+import { claimCheckStatus } from '../adk_agents/config';
+import { createRedisClient } from '../../common/redis-config';
 
 const Payloads = temporal.api.common.v1.Payloads;
 

@@ -6,16 +6,16 @@
 import { LLMRegistry } from '@google/adk';
 import type { WorkflowHandle } from '@temporalio/client';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
-import { loadWorkerConfig } from '../../common/config';
-import { ChatInteraction } from '../shared';
-import { WealthManagementWorkflow } from '../workflows/wealth-management';
+import { loadWorkerConfig } from '../adk_agents/config';
+import { ChatInteraction } from '../durable/shared';
+import { WealthManagementWorkflow } from '../durable/workflows/wealth-management';
 import { chatSender, createTestWorker, TestWorker } from './helpers';
 
 export const LIVE_TEST_RUNS = Math.max(1, Number(process.env.LIVE_TEST_RUNS ?? 1));
 
 export function requireApiKey(): void {
   if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENAI_API_KEY && !process.env.GOOGLE_API_KEY) {
-    throw new Error('The live tests call Gemini: set GEMINI_API_KEY (source setgeminikey.sh)');
+    throw new Error('The live tests call Gemini: set GEMINI_API_KEY (source scripts/setgeminikey.sh)');
   }
 }
 

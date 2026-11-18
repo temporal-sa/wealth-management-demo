@@ -5,8 +5,8 @@
 import assert from 'assert';
 import { after, before, describe, it } from 'mocha';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
-import { STATE_WAITING_COMPLIANCE, STATE_WAITING_KYC } from '../shared';
-import { WealthManagementWorkflow } from '../workflows/wealth-management';
+import { STATE_WAITING_COMPLIANCE, STATE_WAITING_KYC } from '../durable/shared';
+import { WealthManagementWorkflow } from '../durable/workflows/wealth-management';
 import { chatSender, createTestWorker, openingStates, ScriptedLlm, waitFor } from './helpers';
 import { handoffScript } from './scripts';
 

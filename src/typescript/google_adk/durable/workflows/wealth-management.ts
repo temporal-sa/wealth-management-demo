@@ -25,10 +25,10 @@ import {
   startChild,
   workflowInfo,
 } from '@temporalio/workflow';
-import { INVEST_INSTRUCTIONS } from '../../common/agent-constants';
-import { buildAgentTree } from '../../common/agents';
-import type { WorkerConfig } from '../../common/config';
-import { CLIENT_FIELDS, type WealthManagementClient } from '../../common/data-store';
+import { INVEST_INSTRUCTIONS } from '../../prompts/agent-constants';
+import { buildAgentTree } from '../../adk_agents/agents';
+import type { WorkerConfig } from '../../adk_agents/config';
+import { CLIENT_FIELDS, type WealthManagementClient } from '../../adk_agents/data-store';
 import type { Activities } from '../activities';
 import { LLM_RETRY_POLICY, MODEL_TIMEOUT, TOOL_RETRY_POLICY, TOOL_TIMEOUT } from '../retry-policies';
 import {

@@ -1,22 +1,17 @@
 {
-  "name": "adk-ts-wealth-management",
+  "name": "@wealth-management/google-adk",
   "version": "0.1.0",
   "private": true,
+  "description": "The Google ADK for TypeScript port of the wealth management agent",
   "scripts": {
-    "build": "tsc --build",
-    "build.watch": "tsc --build --watch",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "lint": "eslint .",
-    "adk": "ts-node src/adk_supervisor/main.ts",
-    "temporal:worker": "ts-node src/temporal_supervisor/worker.ts",
-    "start": "ts-node src/temporal_supervisor/worker.ts",
-    "codec-server": "ts-node src/temporal_supervisor/codec_server.ts",
-    "api": "ts-node src/api/server.ts",
-    "test": "mocha --exit --require ts-node/register --require source-map-support/register \"src/temporal_supervisor/mocha/*.test.ts\"",
-    "test:live": "mocha --exit --require ts-node/register --require source-map-support/register \"src/temporal_supervisor/mocha/*.live.ts\"",
-    "compliance.approval": "ts-node src/temporal_supervisor/run_send_compliance_approval.ts",
-    "open-account.scenarios": "ts-node src/temporal_supervisor/run_open_account_workflow.ts"
+    "adk": "ts-node standalone/main.ts",
+    "temporal:worker": "ts-node durable/worker.ts",
+    "start": "ts-node durable/worker.ts",
+    "codec-server": "ts-node durable/codec_server.ts",
+    "test": "mocha --exit --require ts-node/register --require source-map-support/register 'tests/*.test.ts'",
+    "test:live": "mocha --exit --require ts-node/register --require source-map-support/register 'tests/*.live.ts'",
+    "compliance.approval": "ts-node durable/run_send_compliance_approval.ts",
+    "open-account.scenarios": "ts-node durable/run_open_account_workflow.ts"
   },
   "dependencies": {
     "@google/adk": ">=2.0.0 <2.1.0",
@@ -29,8 +24,6 @@
     "@temporalio/google-adk": "^0.1.0",
     "@temporalio/worker": "^1.26.0",
     "@temporalio/workflow": "^1.26.0",
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
     "ioredis": "^5.10.1",
     "long": "^5.3.2",
     "nanoid": "3.x",
@@ -38,24 +31,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@temporalio/testing": "^1.26.0",
-    "@tsconfig/node20": "^20.0.0",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/mocha": "8.x",
-    "@types/node": "^22.9.1",
-    "@typescript-eslint/eslint-plugin": "^8.18.0",
-    "@typescript-eslint/parser": "^8.18.0",
-    "eslint": "^8.57.1",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-deprecation": "^3.0.0",
-    "mocha": "^11.7.6",
-    "prettier": "^3.4.2",
-    "source-map-support": "^0.5.21",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.6.3"
-  },
-  "engines": {
-    "node": ">=22.12.0"
+    "@temporalio/testing": "^1.26.0"
   }
 }

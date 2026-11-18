@@ -23,9 +23,9 @@
  */
 import { randomUUID } from 'crypto';
 import type { Client, WorkflowHandle } from '@temporalio/client';
-import { ClientHelper } from '../common/client-helper';
-import type { WealthManagementClient } from '../common/data-store';
-import { claimCheckStatus } from '../common/config';
+import { ClientHelper } from '../../common/client-helper';
+import { claimCheckStatus, DEFAULT_TASK_QUEUE } from '../adk_agents/config';
+import type { WealthManagementClient } from '../adk_agents/data-store';
 import type { OpenInvestmentAccountInput, OpenInvestmentAccountOutput } from './shared';
 import type { OpenInvestmentAccountWorkflow } from './workflows/open-account';
 
@@ -157,7 +157,7 @@ class Runner {
     await followStates(handle, (s) => s === WAITING_COMPLIANCE_REVIEW, undefined, seen);
 
     console.log('*****>>> Send the compliance approval for this workflow, in another terminal:');
-    console.log(`*****>>>   src/temporal_supervisor/localsendcomplianceapproval.sh "${handle.workflowId}"`);
+    console.log(`*****>>>   src/typescript/google_adk/durable/localsendcomplianceapproval.sh "${handle.workflowId}"`);
     await followStates(handle, (s) => s !== WAITING_COMPLIANCE_REVIEW, 24 * 60 * 60 * 1000, seen);
     console.log('Compliance approved');
     await finish(handle, seen);
@@ -211,7 +211,7 @@ function parseArgs(argv: string[]): { scenarios: number[]; amount?: number } {
 async function main(): Promise<void> {
   const { scenarios, amount } = parseArgs(process.argv.slice(2));
   console.log(claimCheckStatus());
-  const helper = new ClientHelper();
+  const helper = new ClientHelper(DEFAULT_TASK_QUEUE);
   const taskQueue = process.env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT || helper.taskQueue;
   const { connection, client } = await helper.connectClient();
   try {

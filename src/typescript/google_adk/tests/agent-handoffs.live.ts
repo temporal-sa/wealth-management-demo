@@ -1,6 +1,6 @@
 /**
  * Live: agent handoffs. "Who are my beneficiaries?", "123", then "What investments do I have?".
- * Run with: source setgeminikey.sh && LIVE_TEST_RUNS=3 npm run test:live
+ * Run with: source ../../../scripts/setgeminikey.sh && LIVE_TEST_RUNS=3 npm run test:live
  */
 import assert from 'assert';
 import { after, before, describe, it } from 'mocha';

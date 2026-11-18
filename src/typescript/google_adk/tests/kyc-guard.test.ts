@@ -5,14 +5,14 @@
 import assert from 'assert';
 import { after, before, describe, it } from 'mocha';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
-import { OPEN_ACCOUNT_AGENT_NAME } from '../../common/agent-constants';
-import { STATE_WAITING_COMPLIANCE, STATE_WAITING_KYC } from '../shared';
+import { OPEN_ACCOUNT_AGENT_NAME } from '../prompts/agent-constants';
+import { STATE_WAITING_COMPLIANCE, STATE_WAITING_KYC } from '../durable/shared';
 import {
   detailsDisplayed,
   kycApprovalRefusal,
   KYC_NOT_APPROVED,
   WealthManagementWorkflow,
-} from '../workflows/wealth-management';
+} from '../durable/workflows/wealth-management';
 import { chatSender, createTestWorker, openingStates, ScriptedLlm, waitFor } from './helpers';
 import { handoffScript, openAccountScript } from './scripts';
 

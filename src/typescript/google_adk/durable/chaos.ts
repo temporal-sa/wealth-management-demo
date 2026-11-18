@@ -4,7 +4,7 @@
  * I/O, so they run only in activities (the model activity included), never in workflow code.
  */
 import { Context } from '@temporalio/activity';
-import { ChaosEvent, ChaosFlag, ChaosManager } from '../common/chaos-manager';
+import { ChaosEvent, ChaosFlag, ChaosManager } from '../../common/chaos-manager';
 
 const SLOW_STEP_MS = 4000;
 const FLAG_READ_TIMEOUT_MS = 1000;

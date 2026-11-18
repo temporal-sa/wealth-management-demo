@@ -4,17 +4,17 @@
  * has no Open Account Agent: the Investment Agent opens an account directly with its open_investment
  * tool, with no KYC, compliance review or saga.
  *
- * Usage (from the repository root): source setgeminikey.sh && npm run adk
+ * Usage (from src/typescript/google_adk): source ../../../scripts/setgeminikey.sh && npm run adk
  */
 import * as readline from 'readline/promises';
 import { BaseTool, FunctionTool, InMemoryRunner } from '@google/adk';
 import { Type, type Schema } from '@google/genai';
-import { STANDALONE_INVEST_INSTRUCTIONS } from '../common/agent-constants';
-import { buildAgentTree } from '../common/agents';
-import { claimCheckStatus, loadWorkerConfig } from '../common/config';
-import { DataStore } from '../common/data-store';
-import { formatUsd } from '../common/money';
-import { MAX_INITIAL_DEPOSIT, MIN_INITIAL_DEPOSIT } from '../temporal_supervisor/shared';
+import { STANDALONE_INVEST_INSTRUCTIONS } from '../prompts/agent-constants';
+import { buildAgentTree } from '../adk_agents/agents';
+import { claimCheckStatus, loadWorkerConfig } from '../adk_agents/config';
+import { DataStore } from '../adk_agents/data-store';
+import { formatUsd } from '../adk_agents/money';
+import { MAX_INITIAL_DEPOSIT, MIN_INITIAL_DEPOSIT } from '../durable/shared';
 
 const APP_NAME = 'wealth-management-standalone';
 const USER_ID = 'customer';

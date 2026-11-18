@@ -3,7 +3,7 @@
  * {type, content}. The same key and event format as the reference port, so the shared UI reads it.
  */
 import Redis from 'ioredis';
-import { loadRedisConfig } from '../../common/redis-config';
+import { loadRedisConfig } from '../../../common/redis-config';
 import type { ChatInteraction, StatusUpdate } from '../shared';
 
 export type StreamEvent =

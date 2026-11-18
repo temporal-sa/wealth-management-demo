@@ -12,18 +12,18 @@ import { GoogleAdkPlugin } from '@temporalio/google-adk';
 import type { WorkflowHandle } from '@temporalio/client';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { DefaultLogger, Runtime, Worker } from '@temporalio/worker';
-import { WorkerConfig } from '../../common/config';
-import { DataStore } from '../../common/data-store';
-import { createActivities } from '../activities';
-import { InMemoryChaos, setChaosSource } from '../chaos';
-import { chaosModelProvider } from '../chaos-model';
-import { InMemoryEventStream } from '../redis/event-stream-manager';
+import { WorkerConfig } from '../adk_agents/config';
+import { DataStore } from '../adk_agents/data-store';
+import { createActivities } from '../durable/activities';
+import { InMemoryChaos, setChaosSource } from '../durable/chaos';
+import { chaosModelProvider } from '../durable/chaos-model';
+import { InMemoryEventStream } from '../durable/redis/event-stream-manager';
 import {
   ChatInteraction,
   GET_ACCOUNT_OPENING_STATES_QUERY,
   GET_CHAT_HISTORY_QUERY,
   PROCESS_USER_MESSAGE_SIGNAL,
-} from '../shared';
+} from '../durable/shared';
 
 // Keep the SDK's logs quiet unless TEST_LOG is set. Installed when this module loads, before any
 // test environment starts (which would install the default runtime).
@@ -167,7 +167,7 @@ export async function createTestWorker(
   const worker = await Worker.create({
     connection: env.nativeConnection,
     taskQueue,
-    workflowsPath: require.resolve('../workflows/index'),
+    workflowsPath: require.resolve('../durable/workflows/index'),
     activities,
     plugins: [
       new GoogleAdkPlugin({

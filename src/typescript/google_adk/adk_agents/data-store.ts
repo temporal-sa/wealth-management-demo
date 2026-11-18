@@ -73,7 +73,7 @@ export class InsufficientFundsError extends Error {}
 
 /** The data folder: DATA_DIR, or data/ at the repository root. */
 export function dataDir(): string {
-  return process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data');
+  return process.env.DATA_DIR || path.join(__dirname, '..', '..', '..', '..', 'data');
 }
 
 function newId(prefix: string, taken: Set<string>): string {

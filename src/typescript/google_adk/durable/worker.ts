@@ -8,10 +8,10 @@
  */
 import { DefaultLogger, LogEntry, NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { GoogleAdkPlugin } from '@temporalio/google-adk';
-import { ClientHelper, getSharedClient } from '../common/client-helper';
-import { claimCheckStatus, llmMaxCallsPerSecond, loadWorkerConfig } from '../common/config';
-import { buildDataConverter } from '../common/data-converter';
-import { DataStore } from '../common/data-store';
+import { ClientHelper, getSharedClient } from '../../common/client-helper';
+import { claimCheckStatus, DEFAULT_TASK_QUEUE, llmMaxCallsPerSecond, loadWorkerConfig } from '../adk_agents/config';
+import { buildDataConverter } from '../../common/data-converter';
+import { DataStore } from '../adk_agents/data-store';
 import { createActivities } from './activities';
 import { chaosModelProvider } from './chaos-model';
 import { RedisEventStream } from './redis/event-stream-manager';
@@ -40,7 +40,7 @@ Runtime.install({
 
 async function run(): Promise<void> {
   console.error(claimCheckStatus());
-  const helper = new ClientHelper();
+  const helper = new ClientHelper(DEFAULT_TASK_QUEUE);
   const config = loadWorkerConfig();
   const ownOpenAccount = config.open_account_task_queue === config.task_queue;
   console.error(
@@ -54,7 +54,9 @@ async function run(): Promise<void> {
       (maxCallsPerSecond ? `, limited to ${maxCallsPerSecond} per second` : ''),
   );
   if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENAI_API_KEY && !process.env.GOOGLE_API_KEY) {
-    console.error('Warning: no GEMINI_API_KEY is set (see setgeminikey.example); model calls will fail and retry.');
+    console.error(
+      'Warning: no GEMINI_API_KEY is set (see scripts/setgeminikey.example); model calls will fail and retry.',
+    );
   }
 
   const activities = createActivities({

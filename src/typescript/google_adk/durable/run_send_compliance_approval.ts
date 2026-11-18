@@ -2,13 +2,13 @@
  * Sends compliance_approved to an open-account workflow: what a compliance officer does from outside
  * the chat. Usage: localsendcomplianceapproval.sh <workflow ID>
  */
-import { ClientHelper } from '../common/client-helper';
-import { claimCheckStatus } from '../common/config';
+import { ClientHelper } from '../../common/client-helper';
+import { claimCheckStatus, DEFAULT_TASK_QUEUE } from '../adk_agents/config';
 import { COMPLIANCE_APPROVED_SIGNAL } from './shared';
 
 async function approve(workflowId: string): Promise<void> {
   console.log(claimCheckStatus());
-  const { connection, client } = await new ClientHelper().connectClient();
+  const { connection, client } = await new ClientHelper(DEFAULT_TASK_QUEUE).connectClient();
   try {
     await client.workflow.getHandle(workflowId).signal(COMPLIANCE_APPROVED_SIGNAL);
     console.log(`Compliance approval sent to workflow: ${workflowId}`);
