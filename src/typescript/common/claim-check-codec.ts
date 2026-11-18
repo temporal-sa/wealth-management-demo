@@ -8,9 +8,8 @@ const Payload = temporal.api.common.v1.Payload;
 
 const ENCODING_METADATA_KEY = 'temporal.io/claim-check-codec';
 const ENCODING_METADATA_VALUE = Buffer.from('v1');
-// The encoding every port's claim check writes (Python's ClaimCheckCodec and the Java worker's), so
-// the Java worker, which only decodes payloads with this encoding, reads this port's payloads.
-// Decoding checks the codec metadata key instead, so it reads either.
+// The encoding every port's claim check writes (Python's ClaimCheckCodec and the Java worker's). The
+// Java worker only decodes payloads with this encoding.
 const CLAIM_CHECK_ENCODING = Buffer.from('claim-checked');
 
 export class ClaimCheckCodec implements PayloadCodec {
