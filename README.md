@@ -28,14 +28,14 @@ src/<language>/
 
 | Framework | Language | Folder | Original repo |
 |---|---|---|---|
-| OpenAI Agents SDK (reference) | Python | `src/python/openai_agents` | temporal-sa/oai-temporal-wealth-management |
-| Google ADK | Python | `src/python/google_adk` | temporal-sa/adk-wealth-management |
-| Pydantic AI | Python | `src/python/pyai` | temporal-sa/pyai-wealth-management |
-| Strands Agents | Python | `src/python/strands_agents` | temporal-sa/strands-wealth-management |
-| Pure Python (LiteLLM) | Python | `src/python/pure` | temporal-sa/pure-wealth-management |
-| Vercel AI SDK | TypeScript | `src/typescript/vercel_ai` | temporal-sa/vai-wealth-management |
-| Google ADK | TypeScript | `src/typescript/google_adk` | temporal-sa/adk-ts-wealth-management |
-| Google ADK | Go | `src/go/google_adk` | temporal-sa/adk-go-wealth-management |
+| [OpenAI Agents SDK](src/python/openai_agents/README.md) (reference) | Python | `src/python/openai_agents` | temporal-sa/oai-temporal-wealth-management |
+| [Google ADK](src/python/google_adk/README.md) | Python | `src/python/google_adk` | temporal-sa/adk-wealth-management |
+| [Pydantic AI](src/python/pyai/README.md) | Python | `src/python/pyai` | temporal-sa/pyai-wealth-management |
+| [Strands Agents](src/python/strands_agents/README.md) | Python | `src/python/strands_agents` | temporal-sa/strands-wealth-management |
+| [Pure Python (LiteLLM)](src/python/pure/README.md) | Python | `src/python/pure` | temporal-sa/pure-wealth-management |
+| [Vercel AI SDK](src/typescript/vercel_ai/README.md) | TypeScript | `src/typescript/vercel_ai` | temporal-sa/vai-wealth-management |
+| [Google ADK](src/typescript/google_adk/README.md) | TypeScript | `src/typescript/google_adk` | temporal-sa/adk-ts-wealth-management |
+| [Google ADK](src/go/google_adk/README.md) | Go | `src/go/google_adk` | temporal-sa/adk-go-wealth-management |
 
 ## Adding an integration
 
