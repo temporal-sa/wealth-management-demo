@@ -9,7 +9,7 @@ It uses the [API](../src/python/api/README.md) to interact with Temporal.
 
 The web application relies on the API to communicate with Temporal. 
 Be sure to follow the instructions to run the API, which can be found [here](../src/python/api/README.md).
-The one API serves every port, including the TypeScript ones.
+The one API serves every port, including the TypeScript and Go ones.
 Start it for the port whose worker you're running, because that decides which task queue chats start on
 and how their workflow IDs are named:
 
@@ -22,6 +22,7 @@ cd src/python/api
 ./startlocalapi.sh pure            # Pure Python (LiteLLM): pure-temporal-agent-<random> on Pure-Supervisor
 ./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-<random> on VAI-Supervisor
 ./startlocalapi.sh google_adk_ts   # Google ADK (TypeScript): adk-ts-temporal-agent-<random> on ADK-TS-Supervisor
+./startlocalapi.sh google_adk_go   # Google ADK (Go): adk-go-temporal-agent-<random> on ADK-Go-Supervisor
 ```
 
 Note that the web application communicates directly with the API and the API is what 

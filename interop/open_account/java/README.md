@@ -42,7 +42,7 @@ cd interop/open_account/java
 ./startlocalworker.sh Open-Account-Java
 ```
 
-The Java workflow calls the port's activities (Python or TypeScript) on its main task queue, `TEMPORAL_TASK_QUEUE`
+The Java workflow calls the port's activities (Python, TypeScript or Go) on its main task queue, `TEMPORAL_TASK_QUEUE`
 (default `Supervisor`, the OpenAI Agents port's). For another port, set it to that port's queue:
 
 | Port | Start the Java worker with |
@@ -54,6 +54,7 @@ The Java workflow calls the port's activities (Python or TypeScript) on its main
 | Pure Python (LiteLLM) | `TEMPORAL_TASK_QUEUE=Pure-Supervisor ./startlocalworker.sh Open-Account-Java` |
 | Vercel AI SDK (TypeScript) | `TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh Open-Account-Java` |
 | Google ADK (TypeScript) | `TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor ./startlocalworker.sh Open-Account-Java` |
+| Google ADK (Go) | `TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./startlocalworker.sh Open-Account-Java` |
 
 The script sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` from the argument, sources `scripts/setclaimcheck.sh`
 if it exists (claim check is optional) and runs `./gradlew runWorker`. It connects to `127.0.0.1:7233`, namespace `default`, as set
