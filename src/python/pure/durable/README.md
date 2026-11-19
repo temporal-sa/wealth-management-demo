@@ -376,6 +376,7 @@ Temporal Cloud.
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, the chaos flags and claim check |
 | `USE_CLAIM_CHECK` | `false` | Store payloads in Redis and send Temporal only their IDs (`scripts/setclaimcheck.sh`) |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `LIVE_TEST_RUNS` / `LIVE_TURN_TIMEOUT` | `1` / `300` | Live tests: conversations to run, and seconds to wait for each reply |
 
 The API has its own settings; see the [API README](../../../python/api/README.md).

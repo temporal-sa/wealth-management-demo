@@ -8,3 +8,5 @@ export REDIS_PORT=6379
 # export REDIS_PASSWORD="Your Redis Password Goes Here"
 # Optional: the whole connection as a URL, which wins over REDIS_HOST, REDIS_PORT and REDIS_PASSWORD
 # export REDIS_URL="redis://:<password>@<host>:<port>/<db>"
+# Optional: how long Redis keeps claim-checked payloads, in seconds (default 7 days; 0 keeps them forever)
+# export CLAIM_CHECK_TTL_SECONDS=604800

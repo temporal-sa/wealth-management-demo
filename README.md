@@ -102,7 +102,8 @@ run on `<queue>-open-account`.
   users at once. The import stops at the commit before it (d85b5d3).
   - *Brought in, for every framework:* a Redis password or `REDIS_URL` (and event streams that expire a day after
     their last event), the Gemini model from `GEMINI_MODEL`, an "Approve compliance review" button in the web UI,
-    and chats that end after an hour idle.
+    and chats that end after an hour idle. Not from that commit, but related: claim check payloads expire in Redis
+    after 7 days (`CLAIM_CHECK_TTL_SECONDS`).
   - *Left as is, by choice:* the "Bug in workflow code" chaos switch healing paused openings when turned off.
     Fixing the code and restarting the worker stays the point of that scenario.
   - *Still to decide:* multi-user (a session cookie issued by the API, chat workflow IDs picked by the API, chaos

@@ -40,7 +40,7 @@ class FakeRedis:
     def __init__(self):
         self.data: dict = {}
 
-    async def set(self, key: str, value: bytes) -> None:
+    async def set(self, key: str, value: bytes, ex=None) -> None:
         self.data[key] = value
 
     async def get(self, key: str):

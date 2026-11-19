@@ -2,12 +2,18 @@
 // read the others' (the Java worker only decodes payloads whose encoding is "claim-checked").
 import assert from 'assert';
 import type Redis from 'ioredis';
-import { ClaimCheckCodec } from '../../common/claim-check-codec';
+import { ClaimCheckCodec, claimCheckTtlSeconds } from '../../common/claim-check-codec';
+
+// Seconds each key expires in, as set by SET key value EX seconds
+const expiries = new Map<string, number | undefined>();
 
 function fakeRedis(): Redis {
   const store = new Map<string, Buffer>();
   return {
-    set: async (key: string, value: Buffer) => void store.set(key, Buffer.from(value)),
+    set: async (key: string, value: Buffer, mode?: string, seconds?: number) => {
+      store.set(key, Buffer.from(value));
+      expiries.set(key, mode === 'EX' ? seconds : undefined);
+    },
     getBuffer: async (key: string) => store.get(key) ?? null,
   } as unknown as Redis;
 }
@@ -31,5 +37,17 @@ describe('claim check codec', () => {
   it('leaves other payloads alone', async () => {
     const [decoded] = await new ClaimCheckCodec(fakeRedis()).decode([payload]);
     assert.strictEqual(decoded, payload);
+  });
+
+  it('stores payloads that expire after seven days by default', async () => {
+    const [encoded] = await new ClaimCheckCodec(fakeRedis(), claimCheckTtlSeconds({})).encode([payload]);
+    assert.strictEqual(expiries.get(Buffer.from(encoded.data!).toString()), 7 * 24 * 60 * 60);
+  });
+
+  it('reads the expiry from CLAIM_CHECK_TTL_SECONDS, where 0 keeps payloads forever', async () => {
+    assert.strictEqual(claimCheckTtlSeconds({ CLAIM_CHECK_TTL_SECONDS: '3600' }), 3600);
+    assert.strictEqual(claimCheckTtlSeconds({ CLAIM_CHECK_TTL_SECONDS: '0' }), 0);
+    const [encoded] = await new ClaimCheckCodec(fakeRedis(), 0).encode([payload]);
+    assert.strictEqual(expiries.get(Buffer.from(encoded.data!).toString()), undefined);
   });
 });

@@ -96,7 +96,8 @@ The Java cloud script can be run from any directory. It sources `scripts/setclai
 `TEMPORAL_CERT_PATH` the Java worker reads, uses the Spring profile `tc`
 (`src/main/resources/application-tc.yaml`), and runs `./gradlew runWorker`. With this profile, the
 claim check Redis comes from `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` (default `localhost:6379`, no password), or
-`REDIS_URL` when it is set.
+`REDIS_URL` when it is set. With either profile, stored payloads expire after `CLAIM_CHECK_TTL_SECONDS` (default 7 days; `0`
+keeps them forever), as in the frameworks.
 
 Java's TLS needs the client key as an unencrypted PKCS8 key (`-----BEGIN PRIVATE KEY-----`). If
 `TEMPORAL_TLS_CLIENT_KEY_PATH` points to a different format, the script stops and prints the command

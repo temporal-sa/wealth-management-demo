@@ -388,6 +388,7 @@ The worker and scripts read these (see [common/client-helper.ts](../../common/cl
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, the chaos flags and claim check |
 | `USE_CLAIM_CHECK` | `false` | `true`, `1` or `yes` (any case) turns on claim check (`scripts/setclaimcheck.sh`) |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `CODEC_SERVER_HOST` / `CODEC_SERVER_PORT` | `127.0.0.1` / `8081` | Codec server bind address |
 | `LIVE_TEST_RUNS` | `1` | Live tests: how many times to repeat the conversation |
 

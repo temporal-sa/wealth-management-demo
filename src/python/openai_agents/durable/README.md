@@ -357,6 +357,7 @@ environment configuration.
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, chaos flags and claim check (Python components) |
 | `USE_CLAIM_CHECK` | `false` | Turns on the claim check codec (`scripts/setclaimcheck.sh`) |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `SKIP_OPENAI_PLUGIN` | `False` | Runs the worker without the `OpenAIAgentsPlugin` (set by `startlocalopenaccount.sh`) |
 
 ## Tests

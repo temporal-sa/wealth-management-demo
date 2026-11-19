@@ -385,6 +385,7 @@ For the Java open-account worker, start the worker with `startcloudworker.sh jav
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, chaos flags and claim check payloads |
 | `USE_CLAIM_CHECK` | `false` | `true` turns on the claim check codec (`scripts/setclaimcheck.sh`) |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 
 The scripts pass the environment through, so you can prefix any of them, for example
 `LLM_MAX_CALLS_PER_SECOND=0.2 ./src/python/google_adk/durable/startlocalworker.sh`.

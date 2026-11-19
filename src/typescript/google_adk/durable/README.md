@@ -352,6 +352,7 @@ For the Java worker on Temporal Cloud, see the
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | The event stream, the chaos flags and the claim check |
 | `USE_CLAIM_CHECK` | off | The claim check (`true`, `yes` or `1`). Set in `scripts/setclaimcheck.sh` |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `CODEC_SERVER_HOST`, `CODEC_SERVER_PORT` | `127.0.0.1`, `8081` | Where the codec server listens |
 | `DATA_DIR` | the repository's `data/` | The demo data folder |
 | `LIVE_TEST_RUNS` | `1` | How many times each live test repeats its conversation |

@@ -8,8 +8,13 @@ unchanged, so histories written without the codec stay readable.
 The metadata and storage format match the Java worker's ``ClaimCheckCodec``
 (interop/open_account/java/src/main/java/io/temporal/demo/wealthmanagement/claimcheck), so either
 side can decode the other's payloads.
+
+Stored payloads expire after CLAIM_CHECK_TTL_SECONDS (default 7 days; 0 keeps them forever), so
+they don't pile up in Redis. A workflow needs its payloads to replay, and the Temporal UI needs
+them to show its history, so keep the expiry well beyond how long a workflow runs.
 """
 
+import os
 import uuid
 from typing import Any, Iterable, List, Optional
 
@@ -22,14 +27,24 @@ ENCODING = b"claim-checked"
 CODEC_KEY = "temporal.io/claim-check-codec"
 CODEC_VERSION = b"v1"
 
+DEFAULT_TTL_SECONDS = 7 * 24 * 60 * 60
+
+
+def claim_check_ttl_seconds() -> Optional[int]:
+    """How long stored payloads are kept (CLAIM_CHECK_TTL_SECONDS); None keeps them forever."""
+    value = os.getenv("CLAIM_CHECK_TTL_SECONDS", "").strip()
+    seconds = int(value) if value else DEFAULT_TTL_SECONDS
+    return seconds if seconds > 0 else None
+
 
 class ClaimCheckCodec(PayloadCodec):
     def __init__(self, config: Optional[RedisConfig] = None, redis_client: Any = None):
         """Store payloads in the Redis at ``config`` (REDIS_URL, or REDIS_HOST / REDIS_PORT / REDIS_PASSWORD).
 
         ``redis_client`` replaces the Redis connection with any object that has
-        async ``get(key)`` and ``set(key, value)`` methods (used by the tests).
+        async ``get(key)`` and ``set(key, value, ex=seconds)`` methods (used by the tests).
         """
+        self.ttl_seconds = claim_check_ttl_seconds()
         if redis_client is None:
             config = config or RedisConfig()
             redis_client = config.async_client(decode_responses=False)
@@ -43,7 +58,7 @@ class ClaimCheckCodec(PayloadCodec):
 
     async def _encode_payload(self, payload: Payload) -> Payload:
         claim_id = str(uuid.uuid4())
-        await self.redis_client.set(claim_id, payload.SerializeToString())
+        await self.redis_client.set(claim_id, payload.SerializeToString(), ex=self.ttl_seconds)
         return Payload(
             metadata={"encoding": ENCODING, CODEC_KEY: CODEC_VERSION},
             data=claim_id.encode("utf-8"),
