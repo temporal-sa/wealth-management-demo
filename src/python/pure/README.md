@@ -4,18 +4,18 @@ A multi-agent banking chat that shows what Temporal adds to an AI agent. A custo
 and deletes beneficiaries, and lists, opens and closes investment accounts. Opening an account
 starts a child workflow with KYC, a human compliance approval and a saga.
 
-This port uses **no agent framework**. The agents, tools and handoffs are a small agent loop in
+Pure Python uses **no agent framework**. The agents, tools and handoffs are a small agent loop in
 plain Python ([pure_agents/agent_loop.py](pure_agents/agent_loop.py)), and the model is called
 through [LiteLLM](https://docs.litellm.ai/), so you can switch between Anthropic, OpenAI and
-Gemini by changing one environment variable. It implements the same demo as the other ports
+Gemini by changing one environment variable. It implements the same demo as the other frameworks
 and keeps their Temporal contracts, so the same web UI, scripts and compliance tooling work with it.
 
-This port was imported from [temporal-sa/pure-wealth-management](https://github.com/temporal-sa/pure-wealth-management).
+This framework was imported from [temporal-sa/pure-wealth-management](https://github.com/temporal-sa/pure-wealth-management).
 It shares `src/python/common`, the [API](../api/README.md), the [web application](../../../frontend/README.md),
-the [Java worker](../../../interop/open_account/java/README.md), `scripts/` and `data/` with the other ports.
+the [Java worker](../../../interop/open_account/java/README.md), `scripts/` and `data/` with the other frameworks.
 
 Its chat workflows run on the `Pure-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in
-`durable/task_queues.py`), so its worker can run next to another port's. Start the API for it with
+`durable/task_queues.py`), so its worker can run next to another framework's. Start the API for it with
 `./startlocalapi.sh pure`; the web app then names its chats `pure-temporal-agent-<random>`.
 
 The demo is implemented twice:
@@ -189,7 +189,7 @@ The Temporal version works with the shared optional components:
   open-account workflow in Java (start it with `TEMPORAL_TASK_QUEUE=Pure-Supervisor`);
 * the Temporal Cloud scripts. See
   [Running on Temporal Cloud](durable/README.md#running-on-temporal-cloud);
-* the Redis claim check (the shared codec in `src/python/common/claim_check`) and this port's codec
+* the Redis claim check (the shared codec in `src/python/common/claim_check`) and this framework's codec
   server. See [Claim check and codec server](durable/README.md#claim-check-and-codec-server-optional).
 
 ## Layout

@@ -1,6 +1,6 @@
 # Go common
 
-Go packages shared by the Go ports, with no agent framework:
+Go packages shared by the Go frameworks, with no agent framework:
 
 | Package | Holds |
 |---|---|
@@ -12,5 +12,5 @@ Go packages shared by the Go ports, with no agent framework:
 | `redisx` | Redis connection settings |
 | `testfixtures` | The test copy of the demo data |
 
-They are part of the one Go module, `src/go/go.mod`. The prompts, agents and client settings are per port
+They are part of the one Go module, `src/go/go.mod`. The prompts, agents and client settings are per framework
 (for example `google_adk/internal/prompts` and `google_adk/internal/config`).

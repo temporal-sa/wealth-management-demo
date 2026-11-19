@@ -10,14 +10,14 @@ Supervisor Agent routes each request to a Beneficiary Agent or an Investment Age
 Agent hands account openings to an Open Account Agent. ADK hands off between agents with its built-in
 `transfer_to_agent` tool, inside one turn.
 
-This port was imported from [temporal-sa/adk-ts-wealth-management](https://github.com/temporal-sa/adk-ts-wealth-management).
-It shares [`src/typescript/common`](../common) with the Vercel AI SDK port, and the
+This framework was imported from [temporal-sa/adk-ts-wealth-management](https://github.com/temporal-sa/adk-ts-wealth-management).
+It shares [`src/typescript/common`](../common) with the Vercel AI SDK framework, and the
 [API](../../python/api/README.md) (written in Python), the [web application](../../../frontend/README.md), the
-[Java worker](../../../interop/open_account/java/README.md), `scripts/` and `data/` with every port. Its chat
-workflows keep the same Temporal contract as the other ports, which is what lets the Python API serve it.
+[Java worker](../../../interop/open_account/java/README.md), `scripts/` and `data/` with every framework. Its chat
+workflows keep the same Temporal contract as the other frameworks, which is what lets the Python API serve it.
 
 Its chat workflows run on the `ADK-TS-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in
-[adk_agents/config.ts](adk_agents/config.ts)), so its worker can run next to another port's. Start the API for
+[adk_agents/config.ts](adk_agents/config.ts)), so its worker can run next to another framework's. Start the API for
 it with the `google_adk_ts` AI framework (`./startlocalapi.sh google_adk_ts`); the web app then names its chats
 `adk-ts-temporal-agent-<random>`.
 
@@ -49,7 +49,7 @@ There are two versions:
 * A [Gemini API key](https://aistudio.google.com/apikey)
 * JDK 25, only for the optional Java worker
 
-Install the dependencies. The TypeScript code (this port, the Vercel AI SDK port and `common`) is one set of npm
+Install the dependencies. The TypeScript code (this framework, the Vercel AI SDK framework and `common`) is one set of npm
 workspaces with one `node_modules`, so from the repository root:
 
 ```bash
@@ -59,7 +59,7 @@ npm install
 
 ## Set up your Gemini API key
 
-From the repository root, copy the shared Gemini key file (the other Gemini ports use it too) and put your key in
+From the repository root, copy the shared Gemini key file (the other Gemini frameworks use it too) and put your key in
 it. `scripts/setgeminikey.sh` is git-ignored; never commit a real key.
 
 ```bash
@@ -145,7 +145,7 @@ source ../../../scripts/setgeminikey.sh && LIVE_TEST_RUNS=3 npm run test:live
 | [adk_agents/](adk_agents) | Code both versions use: the agent tree, settings, the data store, money formatting |
 | [prompts/](prompts) | The agents' instructions |
 | [tests/](tests) | Default tests (`*.test.ts`), live tests (`*.live.ts`) and the test copy of the demo data |
-| [package.json](package.json) | This port's dependencies and npm scripts |
+| [package.json](package.json) | This framework's dependencies and npm scripts |
 
 The TypeScript tooling (`tsconfig.json`, ESLint, Prettier, `.nvmrc` and the lock file) is in `src/typescript`,
 shared by every TypeScript workspace.

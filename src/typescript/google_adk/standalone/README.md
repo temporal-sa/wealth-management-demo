@@ -5,7 +5,7 @@ alone, as a command-line chat. There is no Temporal here: the model and tool cal
 and a crash loses the conversation. The [Temporal version](../durable/README.md) runs the
 same agents durably.
 
-What it leaves out: there is no Open Account Agent, as in the reference port's standalone version. The
+What it leaves out: there is no Open Account Agent, as in the reference framework's standalone version. The
 Investment Agent opens an account directly with its `open_investment` tool, with no KYC, compliance
 review or saga. The deposit must still be from $100 to $1,000,000.
 
@@ -20,7 +20,7 @@ The agents, their prompts and the tree are shared with the Temporal version
 
 ## Run
 
-Install the dependencies and set up your Gemini key as described in the [port's README](../README.md).
+Install the dependencies and set up your Gemini key as described in the [framework's README](../README.md).
 Then, from `src/typescript/google_adk`:
 
 ```bash

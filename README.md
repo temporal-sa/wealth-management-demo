@@ -98,7 +98,7 @@ run on `<queue>-open-account`.
 
 ## Open decisions before migrating code
 
-- **Hosting:** the Python ADK repo's latest commit (temporal-sa/adk-wealth-management#11) made it hostable for many users at once: a session cookie issued by the API, chat workflow IDs picked by the API, chaos flags and sample data per browser session in Redis, a Redis password or URL, a one-hour idle timeout, and a Docker build. The import stops at the commit before it (d85b5d3). Decide whether to bring hosting into the shared API, web app and `common` code for every port.
+- **Hosting:** the Python ADK repo's latest commit (temporal-sa/adk-wealth-management#11) made it hostable for many users at once: a session cookie issued by the API, chat workflow IDs picked by the API, chaos flags and sample data per browser session in Redis, a Redis password or URL, a one-hour idle timeout, and a Docker build. The import stops at the commit before it (d85b5d3). Decide whether to bring hosting into the shared API, web app and `common` code for every framework.
 - **Java worker:** the Pure Python repo's copy of the Java worker (temporal-sa/pure-wealth-management at 8470bdc) has things the shared one in `interop/open_account/java` doesn't: a Temporal Cloud API-key profile (`application-tc-apikey.yaml`, chosen by `startcloudworker.sh` when `TEMPORAL_API_KEY` is set) and unit tests for the claim check codec. The import kept the shared worker. Decide whether to bring those into it.
 - **One UI for every framework:** the plan is one web app where the user picks the AI framework. The task queue names
   already support it; the notes for when that work starts:
@@ -116,4 +116,4 @@ run on `<queue>-open-account`.
   - *Other shared state.* The chaos flags are global in Redis (`chaos:flags`), so a flag affects every framework at
     once, and every framework reads and writes the same `data/*.json`, so openings from different frameworks at the same
     time can overwrite each other's changes (see Hosting: per-session data in Redis would fix both).
-- **History:** import each repo the way the first two were: on a branch, `git mv` its files into place in rename-only commits, remove the files the monorepo already shares, then merge with `--allow-unrelated-histories`. The ports started from the same layout, so `git log --follow` on a moved file can show commits from more than one port; `git log <path-in-the-original-repo>` on the import's second parent shows one port's history.
+- **History:** import each repo the way the first two were: on a branch, `git mv` its files into place in rename-only commits, remove the files the monorepo already shares, then merge with `--allow-unrelated-histories`. The frameworks started from the same layout, so `git log --follow` on a moved file can show commits from more than one framework; `git log <path-in-the-original-repo>` on the import's second parent shows one framework's history.

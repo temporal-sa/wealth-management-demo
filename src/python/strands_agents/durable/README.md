@@ -9,7 +9,7 @@ The integration is Temporal's
 `activity_as_tool`.
 
 Setup (Python, dependencies and the Gemini key in `scripts/setgeminikey.sh`) is in the
-[port's README](../README.md). The version without Temporal is in [standalone/](../standalone/README.md).
+[framework's README](../README.md). The version without Temporal is in [standalone/](../standalone/README.md).
 
 ![Web UI](../../../../docs/images/strands_agents/ux-waiting-compliance-review.png)
 
@@ -37,7 +37,7 @@ continue-as-new for long conversations (see the TODO in `workflows/supervisor_wo
 
 ### How the agents work
 
-Strands has no agent-to-agent handoff, so this port uses the Strands
+Strands has no agent-to-agent handoff, so this framework uses the Strands
 ["agents as tools"](https://strandsagents.com/latest/documentation/docs/user-guide/concepts/multi-agent/agents-as-tools/)
 pattern, nested two levels deep. Each specialist is itself a `TemporalAgent`, wrapped in a Strands `@tool`
 (`_make_*_assistant` in `workflows/supervisor_workflow.py`):
@@ -52,7 +52,7 @@ pattern, nested two levels deep. Each specialist is itself a `TemporalAgent`, wr
 - **Delegation is one way.** A caller passes the client ID and the request to a specialist and relays its
   reply; a specialist never calls back up. Every customer message reaches the supervisor first.
 - **The specialists are persistent.** Each is built once per conversation and reused across turns, so it
-  remembers the question it asked, like a handoff in the other ports. The open-account agent holds the
+  remembers the question it asked, like a handoff in the other frameworks. The open-account agent holds the
   open-account workflow ID while it walks the customer through KYC, and it is given the current status of
   every account opening at the start of each turn.
 - **Model calls.** Every agent uses the model `gemini` (`gemini-2.5-flash`, `model_config.py`), called in an
@@ -62,7 +62,7 @@ pattern, nested two levels deep. Each specialist is itself a `TemporalAgent`, wr
   tools are plain `@tool` functions that run in the workflow and call activities themselves.
 - **Off-topic questions** are declined by the supervisor's prompt (`prompts/agent_constants.py`); there is
   no guardrail code.
-- **Confirming a delete or close.** As in the other ports, deleting a beneficiary or closing an account is
+- **Confirming a delete or close.** As in the other frameworks, deleting a beneficiary or closing an account is
   confirmed in the chat. The agent asks ("Are you sure you want to delete beneficiary John Doe?") and the
   turn ends with the question; the customer's next message answers it. `ConfirmationGuard`, a Strands hook
   on the specialists, makes sure the agent really asked: the first `delete_beneficiary` or
@@ -91,7 +91,7 @@ redis-server
 ./src/python/strands_agents/durable/startlocalworker.sh
 ```
 
-The worker polls `Strands-Supervisor` and `Strands-Supervisor-llm`, so it can run next to other ports'
+The worker polls `Strands-Supervisor` and `Strands-Supervisor-llm`, so it can run next to other frameworks'
 workers on the same Temporal service. The script sources `scripts/setgeminikey.sh` and
 `scripts/setclaimcheck.sh` if they exist.
 
@@ -231,7 +231,7 @@ the scenarios change `data/*.json`.
 
 [interop/open_account/java](../../../../interop/open_account/java/README.md) has a Java version of
 `OpenInvestmentAccountWorkflow` with the same states, updates, signals, saga and status updates. It calls
-the Python activities by name on `Strands-Supervisor`. Start this port's worker with the argument `java`:
+the Python activities by name on `Strands-Supervisor`. Start this framework's worker with the argument `java`:
 
 ```bash
 ./src/python/strands_agents/durable/startlocalworker.sh java
@@ -239,7 +239,7 @@ the Python activities by name on `Strands-Supervisor`. Start this port's worker 
 
 The chat workflow then starts the open-account workflow on `Strands-Supervisor-open-account`, and the
 Python worker doesn't register its own version (it still runs all the activities). Start the Java worker
-for this port (JDK 25):
+for this framework (JDK 25):
 
 ```bash
 TEMPORAL_TASK_QUEUE=Strands-Supervisor ./interop/open_account/java/startlocalworker.sh
@@ -254,7 +254,7 @@ Click **Chaos** in the chat header to open the chaos panel. Its switches inject 
 activities and the model read the flags from Redis on every attempt, so you can turn a failure on and off
 mid-conversation without restarting anything. The panel lists each injected failure as it happens. Open
 the [Temporal UI](http://localhost:8233) alongside it to show the pending activity, its attempt count and
-the last failure. **Reset all** turns every flag off. The flags are shared by every port using the same
+the last failure. **Reset all** turns every flag off. The flags are shared by every framework using the same
 Redis.
 
 | Scenario | How to show it | What Temporal does |
@@ -301,7 +301,7 @@ The [claim check pattern](https://www.enterpriseintegrationpatterns.com/patterns
 stores each payload sent to Temporal (workflow and activity inputs and results, signals, updates, model
 calls) in Redis and sends only its ID. A
 [custom payload codec](https://docs.temporal.io/develop/python/converters-and-encryption#custom-payload-codec)
-(`src/python/common/claim_check/`) does the substitution. In this port, `connect_client` in
+(`src/python/common/claim_check/`) does the substitution. In this framework, `connect_client` in
 `client_helper.py` builds every Temporal client and adds `ClaimCheckPlugin` after the `StrandsPlugin` when
 `USE_CLAIM_CHECK=true`. To turn it on:
 
@@ -341,7 +341,7 @@ certificate paths:
 cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
-This port connects with mTLS only (`TEMPORAL_TLS_CLIENT_CERT_PATH` and `TEMPORAL_TLS_CLIENT_KEY_PATH`);
+This framework connects with mTLS only (`TEMPORAL_TLS_CLIENT_CERT_PATH` and `TEMPORAL_TLS_CLIENT_KEY_PATH`);
 it doesn't read `TEMPORAL_API_KEY`. Start the worker and the API (the web UI starts as before):
 
 ```bash
@@ -469,7 +469,7 @@ Activities, by name, on `Strands-Supervisor`:
 - Event stream (local activities): `append_chat_interaction`, `append_status_update`, `delete_conversation`,
   each taking the chat workflow ID (and the event).
 
-## Port notes
+## Framework notes
 
 **CLI client.** A command-line client drives the chat workflow without the API or web UI (the worker must
 be running):

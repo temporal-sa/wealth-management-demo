@@ -8,14 +8,14 @@ A supervisor agent routes requests to specialist agents (beneficiaries, investme
 off to each other with tools. The model is Gemini (`gemini-2.5-pro`). In the Temporal version, every model call
 runs as an activity through Temporal's AI SDK plugin (`@temporalio/vercel-ai-sdk`).
 
-This port was imported from [temporal-sa/vai-wealth-management](https://github.com/temporal-sa/vai-wealth-management).
-It is the first TypeScript port: it shares [`src/typescript/common`](../common) with the TypeScript ports to
+This framework was imported from [temporal-sa/vai-wealth-management](https://github.com/temporal-sa/vai-wealth-management).
+It is the first TypeScript framework: it shares [`src/typescript/common`](../common) with the TypeScript frameworks to
 come, and the [API](../../python/api/README.md) (written in Python), the [web application](../../../frontend/README.md),
-the [Java worker](../../../interop/open_account/java/README.md), `scripts/` and `data/` with every port. Its chat
-workflows keep the same Temporal contract as the Python ports, which is what lets the Python API serve it.
+the [Java worker](../../../interop/open_account/java/README.md), `scripts/` and `data/` with every framework. Its chat
+workflows keep the same Temporal contract as the Python frameworks, which is what lets the Python API serve it.
 
 Its chat workflows run on the `VAI-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in
-[durable/task-queues.ts](durable/task-queues.ts)), so its worker can run next to another port's. Start the API
+[durable/task-queues.ts](durable/task-queues.ts)), so its worker can run next to another framework's. Start the API
 for it with the `vercel_ai` AI framework (`./startlocalapi.sh vercel_ai`); the web app then names its chats
 `vai-temporal-agent-<random>`.
 
@@ -39,7 +39,7 @@ The demo is implemented twice:
 | [Java JDK](https://adoptium.net/) 25 | Optional Java open-account worker only |
 | A [Gemini API key](https://aistudio.google.com/app/apikey) | Both versions, and the live tests |
 
-Install the dependencies. The TypeScript code (this port and `common`) is one set of npm workspaces
+Install the dependencies. The TypeScript code (this framework and `common`) is one set of npm workspaces
 with one `node_modules`, so from the repository root:
 
 ```bash
@@ -49,7 +49,7 @@ npm install
 
 ## Gemini key setup
 
-From the repository root, copy the shared Gemini key file (the Strands Agents and Google ADK ports use it too)
+From the repository root, copy the shared Gemini key file (the Strands Agents and Google ADK frameworks use it too)
 and fill in your key. `scripts/setgeminikey.sh` is ignored by git.
 
 ```bash
@@ -125,7 +125,7 @@ tests call Gemini and are not part of the default run; see
 | [prompts/](prompts) | The agents' instructions |
 | [tests/](tests) | Default tests (`*.test.ts`) and live tests (`*.live.ts`) |
 | [gemini.ts](gemini.ts) | The Gemini provider and API key, used by both versions |
-| [package.json](package.json) | This port's dependencies and npm scripts |
+| [package.json](package.json) | This framework's dependencies and npm scripts |
 
 The TypeScript tooling (`tsconfig.json`, ESLint, Prettier, `.nvmrc` and the lock file) is in `src/typescript`,
 shared by every TypeScript workspace.

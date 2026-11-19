@@ -14,16 +14,16 @@ It ships in two flavors:
   The web app is the shared [`frontend/`](../../../frontend/README.md) and the API the shared
   [`src/python/api`](../api/README.md); start it with `./startlocalapi.sh strands_agents`.
 
-This port was imported from [temporal-sa/strands-wealth-management](https://github.com/temporal-sa/strands-wealth-management). It shares `src/python/common`, the API, the web application, the [Java worker](../../../interop/open_account/java/README.md) and `data/` with the other ports. Its own code:
+This framework was imported from [temporal-sa/strands-wealth-management](https://github.com/temporal-sa/strands-wealth-management). It shares `src/python/common`, the API, the web application, the [Java worker](../../../interop/open_account/java/README.md) and `data/` with the other frameworks. Its own code:
 
 | Folder | What it is |
 |---|---|
 | `standalone/` | The Strands version without Temporal |
 | `durable/` | The Temporal version: workflows, activities, worker, the `StrandsPlugin` client (`client_helper.py`) and scripts |
 | `prompts/` | The agents' instructions and the confirmation wording (`approval_prompts.py`) |
-| `tests/` | The port's tests |
+| `tests/` | The framework's tests |
 
-Its chat workflows run on the `Strands-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in `durable/model_config.py`), so its worker can run next to another port's, and the web app names them `strands-temporal-agent-<random>`. As in every port, the customer confirms a delete or close in the chat: the agent asks, and the customer's next message answers.
+Its chat workflows run on the `Strands-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in `durable/model_config.py`), so its worker can run next to another framework's, and the web app names them `strands-temporal-agent-<random>`. As in every framework, the customer confirms a delete or close in the chat: the agent asks, and the customer's next message answers.
 
 Scenarios currently implemented include:
 

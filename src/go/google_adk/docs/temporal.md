@@ -7,7 +7,7 @@ saga.
 
 The agents are built with the [Google Agent Development Kit for Go](https://google.github.io/adk-docs/) and
 run with Temporal's [Go integration for Google ADK](https://docs.temporal.io/develop/go/integrations/google-adk)
-(`go.temporal.io/googleadk`). Do the setup in the [port's README](../README.md) first (prerequisites and
+(`go.temporal.io/googleadk`). Do the setup in the [framework's README](../README.md) first (prerequisites and
 Gemini key).
 
 ![Web UI](../../../../docs/images/google_adk_go/ux-waiting-compliance-review.png)
@@ -17,9 +17,9 @@ Gemini key).
 ![Architecture](../../../../docs/images/google_adk_go/application-architecture.png)
 
 * **Web UI and API**: the web UI ([`frontend/`](../../../../frontend/README.md)) polls the API
-  ([`src/python/api`](../../../python/api/README.md), the one API every port shares). The API starts the chat
+  ([`src/python/api`](../../../python/api/README.md), the one API every framework shares). The API starts the chat
   workflow, signals each customer message to it, and reads the conversation from the chat's Redis event
-  stream. It serves this port with `google_adk_go` as its AI framework.
+  stream. It serves this framework with `google_adk_go` as its AI framework.
 * **Chat workflow** (`WealthManagementWorkflow`, [`internal/workflows/chat.go`](../internal/workflows/chat.go)):
   runs the ADK agent tree for each customer message, one message at a time. Agents hand off with ADK's
   built-in `transfer_to_agent`, in the same turn as the request. Each agent's model is a
@@ -79,7 +79,7 @@ The Temporal UI is at http://localhost:8233.
 ```
 
 It sources `scripts/setgeminikey.sh` and, if it exists, `scripts/setclaimcheck.sh`. It polls the
-`ADK-Go-Supervisor` and `ADK-Go-Supervisor-llm` task queues, so it can run next to other ports' workers.
+`ADK-Go-Supervisor` and `ADK-Go-Supervisor-llm` task queues, so it can run next to other frameworks' workers.
 
 ### Start the API
 
@@ -211,7 +211,7 @@ When the third scenario waits for compliance approval, send it from another term
 
 Scenario 2 changes Don Doe's last name to Doenut, so reset the data afterwards.
 
-To run the scenarios on the Java worker, start the Java worker for this port first (below) and pass `java`:
+To run the scenarios on the Java worker, start the Java worker for this framework first (below) and pass `java`:
 
 ```bash
 ./src/go/google_adk/scripts/startlocalopenaccount.sh java
@@ -220,7 +220,7 @@ To run the scenarios on the Java worker, start the Java worker for this port fir
 ## Java open-account worker (optional)
 
 The [Java worker](../../../../interop/open_account/java/README.md) runs `OpenInvestmentAccountWorkflow` in
-Java and calls this port's activities by name, so the chaos flags apply unchanged. Start the Go worker with
+Java and calls this framework's activities by name, so the chaos flags apply unchanged. Start the Go worker with
 the argument `java`, so the open-account workflow runs on `ADK-Go-Supervisor-open-account` and the Go worker
 doesn't run it:
 
@@ -228,7 +228,7 @@ doesn't run it:
 ./src/go/google_adk/scripts/startlocalworker.sh java
 ```
 
-Then start the Java worker for this port:
+Then start the Java worker for this framework:
 
 ```bash
 TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./interop/open_account/java/startlocalworker.sh
@@ -295,7 +295,7 @@ signals, queries and updates) with an ID: the
 A [payload codec](https://docs.temporal.io/develop/go/converters-and-encryption#custom-payload-codec)
 ([`src/go/internal/common/claimcheck`](../../internal/common/claimcheck/claimcheck.go)) stores the original
 payload in Redis under a new UUID and puts only the UUID in the event history. Its format matches the other
-ports' Python and Java codecs, so the Java worker works with it too. To turn it on:
+frameworks' Python and Java codecs, so the Java worker works with it too. To turn it on:
 
 ```bash
 cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
@@ -368,7 +368,7 @@ the [Java README](../../../../interop/open_account/java/README.md#running-with-t
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | mTLS client certificate and key, for Temporal Cloud. Set in `scripts/setcloudenv.sh` |
 | `TEMPORAL_API_KEY` | none | An API key, for Temporal Cloud, in place of mTLS |
 | `TEMPORAL_TASK_QUEUE` | `ADK-Go-Supervisor` | Task queue of the chat workflow and the tool activities |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat's queue | Task queue of the open-account workflow. `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port; `startlocalworker.sh java` sets it, and the worker then doesn't run that workflow |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat's queue | Task queue of the open-account workflow. `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this framework; `startlocalworker.sh java` sets it, and the worker then doesn't run that workflow |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue of the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Rate limit the Temporal service applies to model calls, across all workers |
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
@@ -400,7 +400,7 @@ using the `temporal` CLI on your PATH (or downloading it). The tests live next t
 | `TestKYCGuardAndRepeatOpening` | `approve_kyc` refuses until this opening's details were shown in an earlier turn; two "Vacation" openings start `-Vacation-1` and `-Vacation-2`, each with its own KYC |
 | `TestClientIDSharedAcrossAgents` | Every agent is told the client ID once a tool has used it; handoffs happen in one turn |
 | `TestOffTopicPrompt` (both versions), `TestPRDPromptLines` | The Supervisor Agent's prompt declines off-topic questions; the PRD's required prompt lines |
-| `TestOpenAccountTaskQueue`, `TestLoadUsesThePortsQueues` | The open-account task queue rule (`java` and the default) and this port's task queues |
+| `TestOpenAccountTaskQueue`, `TestLoadUsesThePortsQueues` | The open-account task queue rule (`java` and the default) and this framework's task queues |
 | `TestFormat`, `TestDecodeOtherPorts`, `TestDataConverterRoundTrip` | The claim-check payload format, decoding the Python and Java codecs' payloads, and a round trip (with an in-memory Redis) |
 | `TestMoney`, `TestDemoData`, `TestTransfersAreIdempotent`, `TestBeneficiariesAndClients` | The shared data store, over the test copy of the demo data |
 
@@ -424,7 +424,7 @@ cd src/go/google_adk && source ../../../scripts/setgeminikey.sh && LIVE_TEST_RUN
 
 ## Temporal contracts
 
-These names and payloads match the other ports exactly, so the API, the web UI, the scripts and the Java
+These names and payloads match the other frameworks exactly, so the API, the web UI, the scripts and the Java
 worker work with this one.
 
 | Workflow | Kind | Name | Payload |
