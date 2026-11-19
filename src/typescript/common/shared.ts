@@ -1,7 +1,7 @@
-// The Temporal contract every port shares (signal names and payloads), so the APIs, the Java
-// open-account worker and any port's workers work together.
+// The Temporal contract every framework shares (signal names and payloads), so the APIs, the Java
+// open-account worker and any framework's workers work together.
 
-// Signal names — must match the other ports' signal definitions exactly
+// Signal names — must match the other frameworks' signal definitions exactly
 export const PROCESS_USER_MESSAGE_SIGNAL = 'process_user_message';
 export const END_WORKFLOW_SIGNAL = 'end_workflow';
 export const UPDATE_ACCOUNT_OPENING_STATE_SIGNAL = 'update_account_opening_state';

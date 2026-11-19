@@ -2,7 +2,7 @@
   "name": "@wealth-management/vercel-ai",
   "version": "0.1.0",
   "private": true,
-  "description": "The Vercel AI SDK port of the wealth management agent",
+  "description": "The Vercel AI SDK framework of the wealth management agent",
   "scripts": {
     "vai": "ts-node standalone/main.ts",
     "temporal:worker": "ts-node durable/worker.ts",

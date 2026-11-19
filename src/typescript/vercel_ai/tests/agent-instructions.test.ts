@@ -59,7 +59,7 @@ describe('agent instructions', () => {
   });
 
   it('has no guardrail code', () => {
-    // This port's code and the TypeScript common code
+    // This framework's code and the TypeScript common code
     const dirs = ['../standalone', '../durable', '../prompts', '../../common'].map((d) => path.resolve(__dirname, d));
     for (const file of dirs.flatMap(sourceFiles)) {
       assert.ok(!/guardrail|tripwire/i.test(fs.readFileSync(file, 'utf8')), `guardrail code found in ${file}`);

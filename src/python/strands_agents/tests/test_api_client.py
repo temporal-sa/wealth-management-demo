@@ -1,10 +1,10 @@
-"""The shared API's Temporal calls work against this port's real chat workflow.
+"""The shared API's Temporal calls work against this framework's real chat workflow.
 
-The API (src/python/api) connects without this port's StrandsPlugin or workflow class:
+The API (src/python/api) connects without this framework's StrandsPlugin or workflow class:
 it uses the contract names and the Pydantic data converter. This test makes the API's
 exact calls, from ``api.client``, to the real ``WealthManagementWorkflow``, run with
 the scripted model from test_chat_confirmation: start the chat, ask to delete a
-beneficiary, confirm it in the next message, and end the chat. Like the other ports,
+beneficiary, confirm it in the next message, and end the chat. Like the other frameworks,
 the confirmation goes through the chat, so the API needs nothing else. The delete
 must run once, after the confirmation.
 
@@ -59,7 +59,7 @@ async def test_the_api_client_starts_messages_and_ends_the_real_chat_workflow(mo
 
 
 def test_the_api_knows_this_ports_task_queue():
-    """./startlocalapi.sh strands_agents starts chats where this port's worker listens by default."""
+    """./startlocalapi.sh strands_agents starts chats where this framework's worker listens by default."""
     from api.frameworks import FRAMEWORKS
     from durable.model_config import DEFAULT_TASK_QUEUE
 

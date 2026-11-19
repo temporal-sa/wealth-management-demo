@@ -37,7 +37,7 @@ async def main():
 
     client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
     # Without the agents (no chat workflow, no model calls), for the open-account scenarios.
-    # SKIP_AGENTS is the monorepo's name; SKIP_ADK_PLUGIN, this port's older one, still works.
+    # SKIP_AGENTS is the monorepo's name; SKIP_ADK_PLUGIN, this framework's older one, still works.
     skip_agents = client_helper.skipAgents or str_to_bool(os.getenv("SKIP_ADK_PLUGIN", "False"))
     # Model calls go through ChaosAwareGemini, so the chaos panel can fail them
     register_chaos_aware_gemini()

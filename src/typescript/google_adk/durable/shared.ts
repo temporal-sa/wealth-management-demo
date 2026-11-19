@@ -1,7 +1,7 @@
 /**
  * The shared Temporal contract: workflow, signal, query, update and activity names and payloads.
- * They match the reference port exactly (snake_case even in TypeScript), so the scripts, the shared
- * UI and the Java open-account worker work with every port.
+ * They match the reference framework exactly (snake_case even in TypeScript), so the scripts, the shared
+ * UI and the Java open-account worker work with every framework.
  *
  * No module imports here, so workflow code can use this file.
  */

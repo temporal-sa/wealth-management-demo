@@ -1,7 +1,7 @@
-"""The shared API's Temporal calls work against this port's real chat workflow.
+"""The shared API's Temporal calls work against this framework's real chat workflow.
 
-The API (src/python/api) connects without this port's workflow class: it uses the
-contract names and Temporal's Pydantic data converter, the same converter this port's
+The API (src/python/api) connects without this framework's workflow class: it uses the
+contract names and Temporal's Pydantic data converter, the same converter this framework's
 worker uses (durable/connection.py; the temporal_env fixture uses it too). This test
 makes the API's exact calls, from ``api.client``, to the real ``WealthManagementWorkflow``
 run with the scripted model, and checks the workflow decodes the message, answers it,
@@ -60,7 +60,7 @@ async def test_the_api_client_starts_messages_and_ends_the_real_chat_workflow(te
 
 
 def test_the_api_knows_this_ports_task_queue():
-    """./startlocalapi.sh pure starts chats where this port's worker listens by default."""
+    """./startlocalapi.sh pure starts chats where this framework's worker listens by default."""
     from api.frameworks import FRAMEWORKS
     from durable.task_queues import DEFAULT_TASK_QUEUE
 

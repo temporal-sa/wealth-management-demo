@@ -21,13 +21,13 @@ from durable.chaos import inject_failure
 MODEL_NAME = "gemini"
 MODEL_ID = "gemini-2.5-flash"
 
-# This port's default chat task queue, so its worker can run next to other ports'.
+# This framework's default chat task queue, so its worker can run next to other frameworks'.
 # Start the shared API with ./startlocalapi.sh strands_agents to use it.
 DEFAULT_TASK_QUEUE = "Strands-Supervisor"
 TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", DEFAULT_TASK_QUEUE)
 # Model calls run on their own task queue so they can be rate limited (and scaled)
 # independently of the tools. See run_worker.py. TEMPORAL_TASK_QUEUE_LLM matches the
-# other ports; TEMPORAL_LLM_TASK_QUEUE is still accepted for existing setups.
+# other frameworks; TEMPORAL_LLM_TASK_QUEUE is still accepted for existing setups.
 LLM_TASK_QUEUE = (
     os.getenv("TEMPORAL_TASK_QUEUE_LLM")
     or os.getenv("TEMPORAL_LLM_TASK_QUEUE")

@@ -1,7 +1,7 @@
-"""How this port's worker and scripts connect to Temporal.
+"""How this framework's worker and scripts connect to Temporal.
 
 The connection settings come from the shared ClientHelper (src/python/common), with this
-port's default task queue. Payloads use Temporal's Pydantic data converter, like the shared
+framework's default task queue. Payloads use Temporal's Pydantic data converter, like the shared
 API (src/python/api), so both sides read each other's signals and results. With
 USE_CLAIM_CHECK on, the shared claim check codec (common.claim_check) stores every payload in
 Redis; the Java worker uses the same format.
@@ -17,7 +17,7 @@ from durable.task_queues import DEFAULT_TASK_QUEUE
 
 
 def client_helper() -> ClientHelper:
-    """Connection settings and task queues, defaulting to this port's task queue."""
+    """Connection settings and task queues, defaulting to this framework's task queue."""
     return ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
 
 

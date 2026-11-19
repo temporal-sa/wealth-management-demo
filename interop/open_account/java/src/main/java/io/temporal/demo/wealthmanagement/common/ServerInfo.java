@@ -25,14 +25,14 @@ public class ServerInfo {
     }
 
     /**
-     * The task queue of the port whose activities the open-account workflow calls
-     * (TEMPORAL_TASK_QUEUE). There is no default: every port has its own queue, so the worker must
-     * be told which port it serves.
+     * The task queue of the framework whose activities the open-account workflow calls
+     * (TEMPORAL_TASK_QUEUE). There is no default: every framework has its own queue, so the worker must
+     * be told which framework it serves.
      */
     public static String getTaskqueue() {
         String queue = System.getenv("TEMPORAL_TASK_QUEUE");
         if (queue == null || queue.isBlank()) {
-            throw new IllegalStateException("TEMPORAL_TASK_QUEUE is not set. Set it to the task queue of the port"
+            throw new IllegalStateException("TEMPORAL_TASK_QUEUE is not set. Set it to the task queue of the framework"
                     + " whose account openings this worker runs, for example TEMPORAL_TASK_QUEUE=OAI-Supervisor"
                     + " (see interop/open_account/java/README.md).");
         }
@@ -46,9 +46,9 @@ public class ServerInfo {
 
     /**
      * The open-account workflow's task queue: TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT (value) if it names
-     * one, otherwise the port's own {@code <task queue>-open-account}. The ports start the workflow
-     * there when their worker script gets the argument {@code java}, so every port has its own
-     * open-account queue and several ports can use Java workers at once.
+     * one, otherwise the framework's own {@code <task queue>-open-account}. The frameworks start the workflow
+     * there when their worker script gets the argument {@code java}, so every framework has its own
+     * open-account queue and several frameworks can use Java workers at once.
      */
     static String openAccountTaskQueue(String taskQueue, String value) {
         if (value == null || value.isBlank() || value.trim().equalsIgnoreCase("java")) {

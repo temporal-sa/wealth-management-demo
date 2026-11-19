@@ -1,4 +1,4 @@
-// The open-account workflow's task queue (common/task-queues.ts), which every TypeScript port uses.
+// The open-account workflow's task queue (common/task-queues.ts), which every TypeScript framework uses.
 import assert from 'assert';
 import { openAccountTaskQueue } from '../../common/task-queues';
 import { workflowsModule } from '../durable/worker-workflows';
@@ -10,7 +10,7 @@ describe('open-account task queue', () => {
     }
   });
 
-  it("is the port's own <task queue>-open-account with java", () => {
+  it("is the framework's own <task queue>-open-account with java", () => {
     for (const value of ['java', 'Java', ' JAVA ']) {
       assert.strictEqual(openAccountTaskQueue('VAI-Supervisor', value), 'VAI-Supervisor-open-account');
     }

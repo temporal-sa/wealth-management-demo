@@ -2,7 +2,7 @@
   "name": "@wealth-management/google-adk",
   "version": "0.1.0",
   "private": true,
-  "description": "The Google ADK for TypeScript port of the wealth management agent",
+  "description": "The Google ADK for TypeScript framework of the wealth management agent",
   "scripts": {
     "adk": "ts-node standalone/main.ts",
     "temporal:worker": "ts-node durable/worker.ts",

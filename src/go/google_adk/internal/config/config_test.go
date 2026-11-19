@@ -7,7 +7,7 @@ import (
 )
 
 // TestOpenAccountTaskQueue: the open-account workflow's task queue, the same rule as the other
-// languages' ports.
+// languages' frameworks.
 func TestOpenAccountTaskQueue(t *testing.T) {
 	for _, value := range []string{"", "  "} {
 		assert.Equal(t, "ADK-Go-Supervisor", OpenAccountTaskQueue("ADK-Go-Supervisor", value))

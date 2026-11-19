@@ -23,9 +23,9 @@ other financial products), politely decline, say that you can only help with ben
 and investment accounts, and do not answer the question. Then ask how you can help with
 their beneficiaries or investment accounts."""
 
-PORT = pathlib.Path(__file__).resolve().parents[1]
-# The port's code, plus the shared Python code it uses (src/python/common).
-CODE_DIRS = [PORT / "standalone", PORT / "durable", PORT / "prompts", PORT.parent / "common"]
+FRAMEWORK_DIR = pathlib.Path(__file__).resolve().parents[1]
+# The framework's code, plus the shared Python code it uses (src/python/common).
+CODE_DIRS = [FRAMEWORK_DIR / "standalone", FRAMEWORK_DIR / "durable", FRAMEWORK_DIR / "prompts", FRAMEWORK_DIR.parent / "common"]
 
 
 def test_supervisors_decline_off_topic_questions():
@@ -49,5 +49,5 @@ def test_no_guardrail_code_remains():
     pattern = re.compile(r"guardrail|tripwire|ROUTING_INSTRUCTIONS|disable_guardrails", re.IGNORECASE)
     files = [path for code_dir in CODE_DIRS for path in code_dir.rglob("*.py")]
     assert len(files) > 20  # the scan really covers the code
-    offenders = [str(path.relative_to(PORT.parent)) for path in files if pattern.search(path.read_text())]
+    offenders = [str(path.relative_to(FRAMEWORK_DIR.parent)) for path in files if pattern.search(path.read_text())]
     assert offenders == []

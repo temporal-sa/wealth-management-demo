@@ -8,8 +8,8 @@ class ClientHelper:
     def __init__(self, default_task_queue: str):
         """Temporal connection settings, from the environment configuration and these variables.
 
-        default_task_queue is the port's chat task queue when TEMPORAL_TASK_QUEUE isn't set,
-        so ports can run side by side (the Pydantic AI port uses "PYAI-Supervisor").
+        default_task_queue is the framework's chat task queue when TEMPORAL_TASK_QUEUE isn't set,
+        so frameworks can run side by side (the Pydantic AI framework uses "PYAI-Supervisor").
         """
         self.client_config = ClientConfig.load_client_connect_config()
         # hack to stuff in a default value if it isn't set
@@ -20,10 +20,10 @@ class ClientHelper:
         self.namespace = self.client_config.get('namespace')
         self.taskQueue = os.getenv("TEMPORAL_TASK_QUEUE", default_task_queue)
         # Task queue for the open-account workflow: the chat's queue, or with
-        # TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java this port's <task queue>-open-account (the Java worker)
+        # TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java this framework's <task queue>-open-account (the Java worker)
         self.taskQueueOpenAccount = open_account_task_queue(self.taskQueue)
         # Run a worker without the agents (no chat workflow, no model calls), for the open-account
-        # scenarios. SKIP_OPENAI_PLUGIN is the OpenAI Agents port's name; SKIP_AGENTS the others'.
+        # scenarios. SKIP_OPENAI_PLUGIN is the OpenAI Agents framework's name; SKIP_AGENTS the others'.
         self.skipOpenAIPlugin = str_to_bool(os.getenv("SKIP_OPENAI_PLUGIN", "False"))
         self.skipAgents = str_to_bool(os.getenv("SKIP_AGENTS", "False"))
         # Task Queue for the model (LLM) calls, so that they can be rate limited separately from the tools

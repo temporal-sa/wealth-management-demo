@@ -24,7 +24,7 @@ import (
 // Flag is one failure-injection switch.
 type Flag string
 
-// The six chaos flags. Their names are shared with the other ports and the web UI.
+// The six chaos flags. Their names are shared with the other frameworks and the web UI.
 const (
 	ToolDown         Flag = "tool_down"
 	LLMDown          Flag = "llm_down"

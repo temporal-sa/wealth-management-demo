@@ -21,7 +21,7 @@ from common.chaos_manager import ChaosFlag
 from durable.chaos import inject_failure
 from durable.task_queues import DEFAULT_TASK_QUEUE
 
-# Same default as ClientHelper.taskQueue in this port.
+# Same default as ClientHelper.taskQueue in this framework.
 TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", DEFAULT_TASK_QUEUE)
 # TEMPORAL_TASK_QUEUE_LLM is the name the OpenAI Agents SDK version uses;
 # TEMPORAL_LLM_TASK_QUEUE is still accepted.

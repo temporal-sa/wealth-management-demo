@@ -1,4 +1,4 @@
-"""The open-account workflow's task queue (common/task_queues.py), which every Python port uses."""
+"""The open-account workflow's task queue (common/task_queues.py), which every Python framework uses."""
 
 import pytest
 

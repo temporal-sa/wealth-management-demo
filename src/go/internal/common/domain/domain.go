@@ -2,7 +2,7 @@
 // updates, activity arguments and results) and the Redis event stream.
 //
 // The JSON field names are part of the shared Temporal contract: the scripts, the
-// shared web front end and the other ports' workers depend on them, so they stay
+// shared web front end and the other frameworks' workers depend on them, so they stay
 // snake_case.
 package domain
 

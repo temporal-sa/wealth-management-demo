@@ -1,6 +1,6 @@
 /**
  * The conversation the UI polls: a Redis list per chat, events:<workflow ID>, of JSON events
- * {type, content}. The same key and event format as the reference port, so the shared UI reads it.
+ * {type, content}. The same key and event format as the reference framework, so the shared UI reads it.
  */
 import Redis from 'ioredis';
 import { loadRedisConfig } from '../../../common/redis-config';

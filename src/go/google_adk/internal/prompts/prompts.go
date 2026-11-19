@@ -1,7 +1,7 @@
 // Package prompts holds the agents' names, descriptions and instructions, shared by the
 // Temporal and standalone versions.
 //
-// They are the reference port's prompts (src/common/agent_constants.py), with the tool
+// They are the reference framework's prompts (src/common/agent_constants.py), with the tool
 // and handoff names adapted to ADK: ADK hands off with its built-in transfer_to_agent
 // tool. The lines the PRD requires word for word are marked below.
 package prompts

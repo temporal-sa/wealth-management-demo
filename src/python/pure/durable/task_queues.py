@@ -9,15 +9,15 @@ import os
 
 from common.task_queues import open_account_task_queue
 
-# This port's default chat task queue, used when TEMPORAL_TASK_QUEUE isn't set. Each port
+# This framework's default chat task queue, used when TEMPORAL_TASK_QUEUE isn't set. Each framework
 # has its own default so their workers can run against the same Temporal service at once.
 # Start the shared API with ./startlocalapi.sh pure and the Java worker with
-# TEMPORAL_TASK_QUEUE=Pure-Supervisor to use this port.
+# TEMPORAL_TASK_QUEUE=Pure-Supervisor to use this framework.
 DEFAULT_TASK_QUEUE = "Pure-Supervisor"
 
 # The chat workflow, its tools, and by default the open-account workflow.
 TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", DEFAULT_TASK_QUEUE)
-# The open-account child workflow. TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java gives it this port's
+# The open-account child workflow. TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java gives it this framework's
 # <task queue>-open-account, so the Java worker runs it.
 TASK_QUEUE_OPEN_ACCOUNT = open_account_task_queue(TASK_QUEUE)
 # Model (LLM) calls, so they can be rate limited separately from the tools (LLM_MAX_CALLS_PER_SECOND).

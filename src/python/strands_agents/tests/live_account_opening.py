@@ -12,7 +12,7 @@ again. Checked:
   - Account-opening replies don't end with the "open, close, or list" next steps,
     which don't fit a reply that asks the customer to confirm their details.
   - Each opening's child workflow ID is OpenAccount-<chat ID>-<client ID>-<account
-    name>-<n>, as in the other ports, where n counts the openings started in the
+    name>-<n>, as in the other frameworks, where n counts the openings started in the
     conversation: the reopened account gets a new ID (...-Vacation-1, then -2).
   - Listing the investments afterwards puts each account on its own line.
 

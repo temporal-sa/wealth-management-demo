@@ -60,7 +60,7 @@ func main() {
 	}}
 	w.RegisterWorkflowWithOptions(chat.Run, workflow.RegisterOptions{Name: workflows.WealthManagementWorkflowName})
 	// The open-account workflow runs here unless it has its own task queue (for example
-	// the other ports' Java worker).
+	// the other frameworks' Java worker).
 	if cfg.TaskQueueOpenAccount == cfg.TaskQueue {
 		w.RegisterWorkflowWithOptions(workflows.OpenInvestmentAccountWorkflow,
 			workflow.RegisterOptions{Name: workflows.OpenInvestmentAccountWorkflowName})
