@@ -192,8 +192,9 @@ Send compliance approval with the Cloud script, quoting the workflow ID:
 ./src/go/google_adk/scripts/cloudsendcomplianceapproval.sh "OpenAccount-<chat workflow ID>-123-Vacation-1"
 ```
 
-Watch the workflows in the Temporal Cloud UI, in your namespace. `startcloudworker.sh <queue>` moves the
-open-account workflow onto another task queue, as `startlocalworker.sh <queue>` does.
+Watch the workflows in the Temporal Cloud UI, in your namespace. `startcloudworker.sh java` moves the
+open-account workflow onto this port's `ADK-Go-Supervisor-open-account` queue for the Java worker, as
+`startlocalworker.sh java` does.
 
 ## How account opening works
 
@@ -234,15 +235,15 @@ open-account workflow onto another task queue, as `startlocalworker.sh <queue>` 
 ### With the Java open-account workflow
 
 The optional [Java worker](../../../../interop/open_account/java/README.md) runs `OpenInvestmentAccountWorkflow` on its own task
-queue and calls this port's activities by name. Start the Go worker with the queue name, then the Java
-worker with the same name:
+queue and calls this port's activities by name. Start the Go worker with the argument `java`, so account
+openings run on this port's own `ADK-Go-Supervisor-open-account` queue, then the Java worker for this port:
 
 ```bash
-./src/go/google_adk/scripts/startlocalworker.sh Open-Account-Java
+./src/go/google_adk/scripts/startlocalworker.sh java
 ```
 
 ```bash
-cd interop/open_account/java && TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./startlocalworker.sh Open-Account-Java
+cd interop/open_account/java && TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./startlocalworker.sh
 ```
 
 The Java version has its own bug in workflow code: see the [Java README](../../../../interop/open_account/java/README.md).
@@ -257,8 +258,8 @@ starts its own worker and stops it on exit:
 ./src/go/google_adk/scripts/startlocalopenaccount.sh
 ```
 
-To run them on the Java worker instead, start it first (above), then pass its queue name:
-`./src/go/google_adk/scripts/startlocalopenaccount.sh Open-Account-Java`.
+To run them on the Java worker instead, start it first (above), then pass `java`:
+`./src/go/google_adk/scripts/startlocalopenaccount.sh java`.
 
 When the third scenario waits for compliance approval, send it from another terminal:
 
@@ -278,7 +279,7 @@ Scenario 2 changes Don Doe's last name to Doenut, so reset the data afterwards w
 | `TEMPORAL_NAMESPACE` | `default` | all | Temporal namespace |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | all | mTLS client certificate and key, for Temporal Cloud. Set in `scripts/setcloudenv.sh`. |
 | `TEMPORAL_TASK_QUEUE` | `ADK-Go-Supervisor` | worker, API | Task queue of the chat workflow and the tool activities |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat's queue | worker, runner | Task queue of the open-account workflow. `startlocalworker.sh <queue>` sets it; the worker then doesn't run that workflow. |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat's queue | worker, runner | `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port. Task queue of the open-account workflow. `startlocalworker.sh java` sets it; the worker then doesn't run that workflow. |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | worker | Task queue of the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | worker | Rate limit the Temporal service applies to model calls, across all workers |
 | `REDIS_URL` | none | worker, API | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |

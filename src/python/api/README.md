@@ -36,9 +36,9 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 
 | AI framework | Start the API with | Task queue | Chat workflow IDs |
 |---|---|---|---|
-| [OpenAI Agents SDK](../openai_agents/durable/README.md) | `./startlocalapi.sh openai_agents` | `Supervisor` | `oai-temporal-agent-<random>` |
-| [Pydantic AI](../pyai/durable/README.md) | `./startlocalapi.sh pyai` | `PY-AI-Supervisor` | `pyai-temporal-agent-<random>` |
-| [Strands Agents](../strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents` | `wealth-management-strands` | `strands-temporal-agent-<random>` |
+| [OpenAI Agents SDK](../openai_agents/durable/README.md) | `./startlocalapi.sh openai_agents` | `OAI-Supervisor` | `oai-temporal-agent-<random>` |
+| [Pydantic AI](../pyai/durable/README.md) | `./startlocalapi.sh pyai` | `PYAI-Supervisor` | `pyai-temporal-agent-<random>` |
+| [Strands Agents](../strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents` | `Strands-Supervisor` | `strands-temporal-agent-<random>` |
 | [Google ADK](../google_adk/durable/README.md) | `./startlocalapi.sh google_adk` | `ADK-Supervisor` | `adk-temporal-agent-<random>` |
 | [Pure Python (LiteLLM)](../pure/durable/README.md) | `./startlocalapi.sh pure` | `Pure-Supervisor` | `pure-temporal-agent-<random>` |
 | [Vercel AI SDK (TypeScript)](../../typescript/vercel_ai/durable/README.md) | `./startlocalapi.sh vercel_ai` | `VAI-Supervisor` | `vai-temporal-agent-<random>` |

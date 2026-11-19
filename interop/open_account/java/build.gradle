@@ -67,6 +67,9 @@ jar {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // One task queue for the workflow and every activity, so the tests need a single worker
+    environment 'TEMPORAL_TASK_QUEUE', 'Test-Supervisor'
+    environment 'TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT', 'Test-Supervisor'
 }
 
 tasks.register('runWorker', JavaExec) {

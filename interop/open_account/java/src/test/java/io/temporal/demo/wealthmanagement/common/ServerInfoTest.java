@@ -15,6 +15,20 @@ class ServerInfoTest {
     }
 
     @Test
+    void theOpenAccountQueueDefaultsToThePortsOwn() {
+        for (String value : new String[] {null, "", "  ", "java", "Java", " JAVA "}) {
+            assertEquals("OAI-Supervisor-open-account", ServerInfo.openAccountTaskQueue("OAI-Supervisor", value),
+                    String.valueOf(value));
+        }
+        assertEquals("ADK-Go-Supervisor-open-account", ServerInfo.openAccountTaskQueue("ADK-Go-Supervisor", "java"));
+    }
+
+    @Test
+    void anOpenAccountQueueNameIsUsedAsGiven() {
+        assertEquals("My-Queue", ServerInfo.openAccountTaskQueue("OAI-Supervisor", "My-Queue"));
+    }
+
+    @Test
     void everythingElseIsOff() {
         for (String value : new String[] {"false", "f", "no", "n", "0", "", "on", "2", null}) {
             assertFalse(ServerInfo.isTrue(value), String.valueOf(value));

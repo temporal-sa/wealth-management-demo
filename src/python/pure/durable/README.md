@@ -61,10 +61,11 @@ cd frontend && npm install && npm start
 
 Open http://localhost:3000 for the chat, and http://localhost:8233 for the Temporal UI.
 
-`startlocalworker.sh` takes an optional task queue name. With one, the open-account workflow runs
-on that queue and this worker doesn't register it. That's for a separate open-account worker,
-such as the [Java one](../../../../interop/open_account/java/README.md): start it with the same queue name, and with
-`TEMPORAL_TASK_QUEUE=Pure-Supervisor` so it calls this port's activities.
+`startlocalworker.sh java` runs the open-account workflow on this port's own `Pure-Supervisor-open-account`
+queue instead, and this worker doesn't register it. That's for the
+[Java worker](../../../../interop/open_account/java/README.md): start it with
+`TEMPORAL_TASK_QUEUE=Pure-Supervisor` so it polls that queue and calls this port's activities. Any other
+argument names the open-account queue.
 
 ## Running on Temporal Cloud
 
@@ -104,7 +105,7 @@ To approve an account opening as the compliance officer:
 Find the workflow ID in the Temporal Cloud UI (https://cloud.temporal.io), or with the
 [query above](#how-account-opening-works) run against your namespace. Each script prints the address
 and namespace it connects to, and stops with instructions if `setcloudenv.sh` is missing.
-`startcloudworker.sh` takes the same optional open-account task queue name as
+`startcloudworker.sh` takes the same optional `java` (or open-account task queue) argument as
 `startlocalworker.sh`.
 
 The connection uses Temporal's
@@ -220,7 +221,7 @@ To point the UI at it:
 | `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | Worker, API, scripts | mTLS client certificate and key for Temporal Cloud (`setcloudenv.sh`) |
 | `TEMPORAL_API_KEY` | none | Worker, API, scripts | API key for Temporal Cloud, instead of mTLS (`setcloudenv.sh`) |
 | `TEMPORAL_TASK_QUEUE` | `Pure-Supervisor` (`DEFAULT_TASK_QUEUE` in `task_queues.py`) | Worker, API, Java worker | Task queue of the chat workflow and its tools. Start the shared API with `./startlocalapi.sh pure` and the Java worker with `TEMPORAL_TASK_QUEUE=Pure-Supervisor` |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat queue | Worker, runner | Task queue of the open-account workflow (set by `startlocalworker.sh <queue>`) |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat queue | Worker, runner | `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port. Task queue of the open-account workflow (set by `startlocalworker.sh java`) |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Worker | Task queue of the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Worker | Dispatch rate limit for model calls, across all workers |
 | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Workers, API, codec server | Redis for the event stream, the chaos flags and claim check |

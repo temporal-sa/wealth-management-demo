@@ -15,9 +15,9 @@ and how their workflow IDs are named:
 
 ```bash
 cd src/python/api
-./startlocalapi.sh openai_agents   # OpenAI Agents SDK: oai-temporal-agent-<random> on Supervisor
-./startlocalapi.sh pyai            # Pydantic AI: pyai-temporal-agent-<random> on PY-AI-Supervisor
-./startlocalapi.sh strands_agents  # Strands Agents: strands-temporal-agent-<random> on wealth-management-strands
+./startlocalapi.sh openai_agents   # OpenAI Agents SDK: oai-temporal-agent-<random> on OAI-Supervisor
+./startlocalapi.sh pyai            # Pydantic AI: pyai-temporal-agent-<random> on PYAI-Supervisor
+./startlocalapi.sh strands_agents  # Strands Agents: strands-temporal-agent-<random> on Strands-Supervisor
 ./startlocalapi.sh google_adk      # Google ADK: adk-temporal-agent-<random> on ADK-Supervisor
 ./startlocalapi.sh pure            # Pure Python (LiteLLM): pure-temporal-agent-<random> on Pure-Supervisor
 ./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-<random> on VAI-Supervisor

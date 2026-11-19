@@ -299,7 +299,7 @@ claim check and cloud settings from the files in `scripts/`.
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | empty | mTLS auth |
 | `TEMPORAL_TASK_QUEUE` | `ADK-Supervisor` (`DEFAULT_TASK_QUEUE` in `task_queues.py`) | Task queue for the workflows and tools. The worker, API and Java worker must agree: start the shared API with `./startlocalapi.sh google_adk` and the Java worker with `TEMPORAL_TASK_QUEUE=ADK-Supervisor` |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue for the Gemini model calls |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `TEMPORAL_TASK_QUEUE` | Task queue for the Open Account workflow (set by `startlocalworker.sh <queue>`) |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `TEMPORAL_TASK_QUEUE` | Task queue for the Open Account workflow (set by `startlocalworker.sh java`, which means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port) |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Rate limit for model calls across all workers |
 | `REDIS_HOST`, `REDIS_PORT` | `localhost`, `6379` | Redis for chat history, events and the chaos flags |
 | `USE_CLAIM_CHECK` | `false` | Claim check codec |
@@ -375,12 +375,12 @@ simply off). From any directory:
 src/python/google_adk/durable/startlocalopenaccount.sh
 ```
 
-With a task queue name, the workflow runs on that queue, so you can run the same scenarios against
-the Java workflow (start it first, from `interop/open_account/java`, with
-`TEMPORAL_TASK_QUEUE=ADK-Supervisor ./startlocalworker.sh <queue>`):
+With the argument `java`, the workflow runs on this port's `ADK-Supervisor-open-account` queue, so you can
+run the same scenarios against the Java workflow (start it first, from `interop/open_account/java`, with
+`TEMPORAL_TASK_QUEUE=ADK-Supervisor ./startlocalworker.sh`):
 
 ```bash
-src/python/google_adk/durable/startlocalopenaccount.sh Open-Account-Java
+src/python/google_adk/durable/startlocalopenaccount.sh java
 ```
 
 Further arguments go to `run_open_account_workflow.py`: `--scenario N` (repeatable) runs only some
@@ -394,19 +394,19 @@ and claim check setting (`scripts/setclaimcheck.sh`) as the worker. Like the dem
 ## Running the Open Account Workflow in Java (optional)
 
 The Open Account workflow can run in a Java worker while the supervisor (AI) workflow and all
-of the activities stay in Python. Pass the same task queue name to both workers. The Python
-supervisor then starts the Open Account child workflow on that task queue, and the Java worker
-picks it up.
+of the activities stay in Python. Start the Python worker with the argument `java`: the Python
+supervisor then starts the Open Account child workflow on this port's own `ADK-Supervisor-open-account`
+task queue, and the Java worker for this port picks it up.
 
 ```bash
-src/python/google_adk/durable/startlocalworker.sh Open-Account-Java     # or startcloudworker.sh Open-Account-Java
+src/python/google_adk/durable/startlocalworker.sh java     # or startcloudworker.sh java
 ```
 
 The shared Java worker calls the activities on its `TEMPORAL_TASK_QUEUE`, so start it with this port's queue:
 
 ```bash
 cd interop/open_account/java
-TEMPORAL_TASK_QUEUE=ADK-Supervisor ./startlocalworker.sh Open-Account-Java     # or ./startcloudworker.sh Open-Account-Java
+TEMPORAL_TASK_QUEUE=ADK-Supervisor ./startlocalworker.sh     # or ./startcloudworker.sh
 ```
 
 Without the argument, the Python worker runs the Open Account workflow itself. See

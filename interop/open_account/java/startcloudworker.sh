@@ -2,17 +2,18 @@
 # Starts the Java Open Account worker against Temporal Cloud, using the connection settings
 # in ../../../scripts/setcloudenv.sh (see scripts/setcloudenv.example) and the claim check
 # settings in ../../../scripts/setclaimcheck.sh.
-# The argument is the Open Account task queue; pass the same value to
-# src/python/openai_agents/durable/startcloudworker.sh so the Python supervisor starts the workflow there.
-if [ -z "$1" ]
-  then
-    echo "**** Missing required parameter: Task Queue Name for the Open Account Workflow"
-    echo "(e.g. setting the TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT environment variable to match"
-    echo "the same name when starting the python worker."
-    exit 1
-fi
+# Usage: TEMPORAL_TASK_QUEUE=<port's task queue> ./startcloudworker.sh [open-account task queue]
+# TEMPORAL_TASK_QUEUE (required) is the task queue of the port whose account openings this worker
+# runs. The workflow runs on <TEMPORAL_TASK_QUEUE>-open-account, where that port starts it when its
+# cloud worker script gets the argument java. An argument names another open-account queue instead.
 cd "$(dirname "$0")" || exit 1
-export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"
+if [ -z "$TEMPORAL_TASK_QUEUE" ]; then
+  echo "**** Set TEMPORAL_TASK_QUEUE to the task queue of the port this worker serves, for example:"
+  echo "  TEMPORAL_TASK_QUEUE=OAI-Supervisor $0"
+  echo "Each port's queue is listed in interop/open_account/java/README.md."
+  exit 1
+fi
+[ -n "$1" ] && export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"
 
 if [ ! -f ../../../scripts/setcloudenv.sh ]; then
   echo "**** ../../../scripts/setcloudenv.sh not found. Copy scripts/setcloudenv.example to"
@@ -64,5 +65,5 @@ export TEMPORAL_KEY_PKCS8_PATH="$KEY_PATH"
 export SPRING_PROFILES_ACTIVE=tc
 
 echo "*** Connecting the Open Account worker to $TEMPORAL_NAMESPACE at $TEMPORAL_ADDRESS"
-echo "*** Task queue: $TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT"
+echo "*** Open-account workflow on ${TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT:-$TEMPORAL_TASK_QUEUE-open-account}, calling the activities on $TEMPORAL_TASK_QUEUE"
 ./gradlew runWorker

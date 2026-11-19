@@ -238,11 +238,12 @@ Temporal must be running (Redis too, for the chaos flags the activities read). F
 src/python/strands_agents/durable/startlocalopenaccount.sh
 ```
 
-With a task queue name, the workflow runs on that queue, so you can run the same scenarios against
-the Java workflow (start `java/startlocalworker.sh <queue>` first):
+With the argument `java`, the workflow runs on this port's `Strands-Supervisor-open-account` queue, so you can
+run the same scenarios against the Java workflow (start
+`TEMPORAL_TASK_QUEUE=Strands-Supervisor interop/open_account/java/startlocalworker.sh` first):
 
 ```bash
-src/python/strands_agents/durable/startlocalopenaccount.sh Open-Account-Java
+src/python/strands_agents/durable/startlocalopenaccount.sh java
 ```
 
 Further arguments go to `run_open_account_workflow.py`: `--scenario N` (repeatable) runs only some
@@ -261,21 +262,21 @@ Opening and closing accounts and editing beneficiaries change the JSON files in
 
 [`interop/open_account/java`](../../../../interop/open_account/java/README.md) has a Java (Spring Boot) version of `OpenInvestmentAccountWorkflow`
 with the same states, updates, signals, saga and status updates as the Python version. It calls the
-Python activities by name on the Python worker's task queue. To use it, give both workers the same
-open-account task queue name, and start the Java worker on this port's main queue
-(`TEMPORAL_TASK_QUEUE=wealth-management-strands`) so it calls this port's activities. From the repository root:
+Python activities by name on the Python worker's task queue. To use it, start the Python worker with the
+argument `java` and the Java worker for this port (`TEMPORAL_TASK_QUEUE=Strands-Supervisor`). From the
+repository root:
 
 ```bash
-src/python/strands_agents/durable/startlocalworker.sh Open-Account-Java   # terminal 1
-TEMPORAL_TASK_QUEUE=wealth-management-strands interop/open_account/java/startlocalworker.sh Open-Account-Java   # terminal 2 (needs JDK 25)
+src/python/strands_agents/durable/startlocalworker.sh java   # terminal 1
+TEMPORAL_TASK_QUEUE=Strands-Supervisor interop/open_account/java/startlocalworker.sh   # terminal 2 (needs JDK 25)
 ```
 
-The argument sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT`. The supervisor then starts the child workflow
-on that queue, and the Python worker doesn't register the Python version of the workflow (it still
+The argument sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java`. The supervisor then starts the child workflow
+on this port's own `Strands-Supervisor-open-account` queue, which the Java worker polls, and the Python worker doesn't register the Python version of the workflow (it still
 runs all the activities, including the ones the Java workflow calls). Without an argument everything
 runs in Python, as before. Start the API and frontend and approve compliance as usual. For Temporal
-Cloud, use `src/python/strands_agents/durable/startcloudworker.sh Open-Account-Java` and
-`TEMPORAL_TASK_QUEUE=wealth-management-strands interop/open_account/java/startcloudworker.sh Open-Account-Java`; see [interop/open_account/java/README.md](../../../../interop/open_account/java/README.md).
+Cloud, use `src/python/strands_agents/durable/startcloudworker.sh java` and
+`TEMPORAL_TASK_QUEUE=Strands-Supervisor interop/open_account/java/startcloudworker.sh`; see [interop/open_account/java/README.md](../../../../interop/open_account/java/README.md).
 
 ## Claim check (optional)
 
@@ -340,7 +341,7 @@ every flag off.
 | **Tool / API down** | Turn on *Core banking API down*, then ask to list your investments (or open an account, so it fails after compliance approval). Turn it off. | The activity retries (1s backoff, capped at 5s) for as long as the outage lasts. The agent waits mid-turn and answers once the API is back. Nothing is lost or re-asked. |
 | **LLM down** | Turn on *Gemini API down* and send a message. Turn it off. | The model call is an activity, so it retries the same way (backoff capped at 10s). The conversation picks up exactly where it was. |
 | **LLM rate limited (reactive)** | Turn on *Gemini rate limited (429)* and send a message. | The model raises an `ApplicationError` with `next_retry_delay` (15s, like a `Retry-After` header), which overrides the retry policy's backoff. Real Gemini 429s are handled the same way (`ChaosAwareGeminiModel` in `model_config.py`). |
-| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND=0.2 src/python/strands_agents/durable/startlocalworker.sh`, then chat in several browser tabs at once. | Model calls run on their own task queue (`wealth-management-strands-llm` by default; set with `TEMPORAL_TASK_QUEUE_LLM`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
+| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND=0.2 src/python/strands_agents/durable/startlocalworker.sh`, then chat in several browser tabs at once. | Model calls run on their own task queue (`Strands-Supervisor-llm` by default; set with `TEMPORAL_TASK_QUEUE_LLM`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
 | **Business rule (non-retryable)** | Ask to open an account with $2,000,000 (or less than $100). | `validate_new_account` raises a non-retryable `ApplicationError`: one attempt, no retries. The reason goes back to the agent, which explains it to the customer. Compare it with *Tool / API down* in the Temporal UI. |
 | **Saga** | Turn on *Custodian rejects new accounts* (and *Slow account-opening steps* so you can watch), then open an account through compliance approval. Without flags: as client `123`, open an account with $300,000 (the linked bank account has $250,000). | After compliance approval the child workflow creates the account record, transfers the deposit from the linked bank account, and registers with the custodian. When a step fails non-retryably, the completed steps are undone in reverse order (refund, then remove the account). Compensations are activities too, so they are retried until they succeed. Kill the worker mid-rollback and the rollback still finishes. Transfers are idempotent (the transfer ID is `<child workflow ID>-<run ID>-initial-deposit`, refunds `...-refund`), so a retried debit or refund never moves money twice, while opening an account with the same name again after a rollback is a new opening with a new child workflow ID, and so a new transfer. |
 | **Bug in workflow code** | Turn on *Bug in workflow code*, then open an account through compliance approval. See below. | The workflow pauses at the failing line, keeping all its state, until a worker with fixed code picks it up. |
@@ -432,10 +433,10 @@ All parameters are query parameters.
 | `TEMPORAL_ADDRESS` | `localhost:7233` | Temporal service address |
 | `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH` | | mTLS cert and key for Temporal Cloud (both must be set) |
-| `TEMPORAL_TASK_QUEUE` | `wealth-management-strands` (`DEFAULT_TASK_QUEUE` in `model_config.py`) | Main task queue (workflows and tools). The worker, API, Java worker and CLI client must agree: start the shared API with `./startlocalapi.sh strands_agents` and the Java worker with `TEMPORAL_TASK_QUEUE=wealth-management-strands` |
+| `TEMPORAL_TASK_QUEUE` | `Strands-Supervisor` (`DEFAULT_TASK_QUEUE` in `model_config.py`) | Main task queue (workflows and tools). The worker, API, Java worker and CLI client must agree: start the shared API with `./startlocalapi.sh strands_agents` and the Java worker with `TEMPORAL_TASK_QUEUE=Strands-Supervisor` |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue for model calls. The older name `TEMPORAL_LLM_TASK_QUEUE` is still accepted |
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Max model calls per second dispatched from the LLM queue, across all workers |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `<TEMPORAL_TASK_QUEUE>` | Task queue the open-account child workflow is started on. Set it with the argument to `startlocalworker.sh` / `startcloudworker.sh` (and pass the same name to `java/startlocalworker.sh` / `java/startcloudworker.sh`). When it differs from `TEMPORAL_TASK_QUEUE`, the Python worker doesn't register `OpenInvestmentAccountWorkflow` |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `<TEMPORAL_TASK_QUEUE>` | `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port. Task queue the open-account child workflow is started on. Set it with the argument to `startlocalworker.sh` / `startcloudworker.sh` (and pass the same name to `java/startlocalworker.sh` / `java/startcloudworker.sh`). When it differs from `TEMPORAL_TASK_QUEUE`, the Python worker doesn't register `OpenInvestmentAccountWorkflow` |
 | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Redis for chat history, status updates, chaos flags, and claim check payloads |
 | `USE_CLAIM_CHECK` | `false` | `true` turns on the claim check codec (`scripts/setclaimcheck.sh`); see [Claim check](#claim-check-optional) |
 
@@ -561,8 +562,9 @@ cd src/frontend && npm install && npm start
 
 Running the worker by hand still works:
 `source ./setcloudenv.sh && source ./setgeminikey.sh && uv run python src/python/strands_agents/durable/run_worker.py`.
-To use the Java open-account workflow, pass the same task queue name to
-`src/python/strands_agents/durable/startcloudworker.sh <queue>` and `java/startcloudworker.sh <queue>` (see
+To use the Java open-account workflow, run
+`src/python/strands_agents/durable/startcloudworker.sh java` and
+`TEMPORAL_TASK_QUEUE=Strands-Supervisor interop/open_account/java/startcloudworker.sh` (see
 [interop/open_account/java/README.md](../../../../interop/open_account/java/README.md#running-with-temporal-cloud)).
 
 `connect_client` (`client_helper.py`) reads `TEMPORAL_ADDRESS`,

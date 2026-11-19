@@ -190,20 +190,21 @@ can run next to another port's worker, and runs the model calls on `VAI-Supervis
 
 ### Run the Open Account workflow in Java (optional)
 
-To run the Open Account child workflow in Java instead, pass a task queue name to the worker
-and start the [Java worker](../../../../interop/open_account/java/README.md) with the same name. The argument sets
-`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` (see `scripts/setsplitworkflows.sh`). When that queue
+To run the Open Account child workflow in Java instead, start the worker with the argument `java` and the
+[Java worker](../../../../interop/open_account/java/README.md) for this port. The argument sets
+`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java`, which the worker turns into this port's own
+`VAI-Supervisor-open-account` queue ([common/task-queues.ts](../../common/task-queues.ts)). When that queue
 differs from the worker's own (`TEMPORAL_TASK_QUEUE`), the TypeScript worker registers only the supervisor
 workflow ([workflows/supervisor-only.ts](workflows/supervisor-only.ts)) and leaves the Open Account workflow
 to the Java worker; otherwise it registers both ([workflows/index.ts](workflows/index.ts)). This works the
 same way with `startcloudworker.sh`.
 
 ```shell
-./src/typescript/vercel_ai/durable/startlocalworker.sh Open-Account-Java
+./src/typescript/vercel_ai/durable/startlocalworker.sh java
 
 # in another terminal: TEMPORAL_TASK_QUEUE makes the Java workflow call this port's activities
 cd interop/open_account/java
-TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh Open-Account-Java
+TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh
 ```
 
 ### Start the API
@@ -279,11 +280,11 @@ Temporal must be running (and Redis, as for the demo). The script can be run fro
 src/typescript/vercel_ai/durable/startlocalopenaccount.sh
 ```
 
-With a task queue name, the workflow runs on that queue, so you can run the same scenarios against the Java
-workflow (start the Java worker first: `cd interop/open_account/java && TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh <queue>`):
+With the argument `java`, the workflow runs on this port's `VAI-Supervisor-open-account` queue, so you can run
+the same scenarios against the Java workflow (start the Java worker first: `cd interop/open_account/java && TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh`):
 
 ```shell
-src/typescript/vercel_ai/durable/startlocalopenaccount.sh Open-Account-Java
+src/typescript/vercel_ai/durable/startlocalopenaccount.sh java
 ```
 
 Further arguments go to `run_open_account_workflow.ts`: `--scenario N` (repeatable) runs only some scenarios,
@@ -402,7 +403,7 @@ The worker, API and scripts read these (see `src/typescript/common/client-helper
 | `TEMPORAL_API_KEY` | empty | API key auth for Temporal Cloud |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | empty | mTLS auth for Temporal Cloud |
 | `TEMPORAL_TASK_QUEUE` | `VAI-Supervisor` | Task queue for the supervisor workflow, the activities and (by default) the Open Account workflow |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | unset | Task queue for the Open Account workflow (the Java worker). Set by the worker start scripts' optional argument. When it differs from `TEMPORAL_TASK_QUEUE`, the TypeScript worker does not register the Open Account workflow |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | unset | `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port. Task queue for the Open Account workflow (the Java worker). Set by the worker start scripts' optional argument. When it differs from `TEMPORAL_TASK_QUEUE`, the TypeScript worker does not register the Open Account workflow |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm`, i.e. `VAI-Supervisor-llm` | Task queue for the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Server-side rate limit for the model calls task queue, e.g. `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh` |
 | `REDIS_HOST`, `REDIS_PORT` | `localhost`, `6379` | Redis for chat history, chaos flags and claim check |
@@ -490,8 +491,8 @@ out of the repository.
 ./src/typescript/vercel_ai/durable/startcloudworker.sh
 ```
 
-To run the Open Account workflow in Java, use `startcloudworker.sh Open-Account-Java` here and in
-`interop/open_account/java/` (with `TEMPORAL_TASK_QUEUE=VAI-Supervisor`)
+To run the Open Account workflow in Java, use `startcloudworker.sh java` here and
+`TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startcloudworker.sh` in `interop/open_account/java/`
 (see [Run the Open Account workflow in Java](#run-the-open-account-workflow-in-java-optional)).
 
 ### Start the API

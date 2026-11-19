@@ -3,8 +3,9 @@
  * model calls on their own task queue (<TEMPORAL_TASK_QUEUE>-llm, or TEMPORAL_TASK_QUEUE_LLM), where
  * LLM_MAX_CALLS_PER_SECOND has the Temporal service cap their rate across all workers.
  *
- * Usage: startlocalworker.sh [open-account task queue]. With a queue name, the open-account workflow
- * runs on that queue (the Java worker in java/) and this worker doesn't register it.
+ * Usage: startlocalworker.sh [java | open-account task queue]. With java, the open-account workflow
+ * runs on this port's <task queue>-open-account (the Java worker in interop/open_account/java) and
+ * this worker doesn't register it.
  */
 import { DefaultLogger, LogEntry, NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import { GoogleAdkPlugin } from '@temporalio/google-adk';

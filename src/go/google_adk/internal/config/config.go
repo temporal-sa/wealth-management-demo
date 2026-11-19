@@ -28,8 +28,8 @@ const DefaultTaskQueue = "ADK-Go-Supervisor"
 type Config struct {
 	// TaskQueue runs the chat workflow and the tool activities (TEMPORAL_TASK_QUEUE).
 	TaskQueue string
-	// TaskQueueOpenAccount runs OpenInvestmentAccountWorkflow (TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT).
-	// It defaults to TaskQueue; set it to run the workflow on another worker.
+	// TaskQueueOpenAccount runs OpenInvestmentAccountWorkflow (TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT, see
+	// OpenAccountTaskQueue). It defaults to TaskQueue; "java" gives it <TaskQueue>-open-account.
 	TaskQueueOpenAccount string
 	// TaskQueueLLM runs the model calls, so they can be rate limited on their own
 	// (TEMPORAL_TASK_QUEUE_LLM, default <TaskQueue>-llm).
@@ -41,12 +41,33 @@ type Config struct {
 	LLMMaxCallsPerSecond float64
 }
 
+// JavaOpenAccount is the TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT value (and the worker scripts' argument)
+// that gives the open-account workflow this port's own queue, so the Java worker can run it.
+const JavaOpenAccount = "java"
+
+// OpenAccountTaskQueue is the open-account workflow's task queue, from
+// TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT (value). Empty: the chat workflow's queue, so this worker runs
+// it. "java": <taskQueue>-open-account, a queue for this port alone, which the Java worker started
+// with TEMPORAL_TASK_QUEUE=<taskQueue> polls; every port gets its own, so several can use Java at
+// once. Anything else is the queue's name. The other languages' ports follow the same rule.
+func OpenAccountTaskQueue(taskQueue, value string) string {
+	value = strings.TrimSpace(value)
+	switch {
+	case value == "":
+		return taskQueue
+	case strings.EqualFold(value, JavaOpenAccount):
+		return taskQueue + "-open-account"
+	default:
+		return value
+	}
+}
+
 // Load reads the configuration from the environment.
 func Load() Config {
 	taskQueue := getenv("TEMPORAL_TASK_QUEUE", DefaultTaskQueue)
 	c := Config{
 		TaskQueue:            taskQueue,
-		TaskQueueOpenAccount: getenv("TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT", taskQueue),
+		TaskQueueOpenAccount: OpenAccountTaskQueue(taskQueue, os.Getenv("TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT")),
 		TaskQueueLLM:         getenv("TEMPORAL_TASK_QUEUE_LLM", taskQueue+"-llm"),
 		GeminiModel:          getenv("GEMINI_MODEL", DefaultGeminiModel),
 	}

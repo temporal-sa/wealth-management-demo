@@ -2,14 +2,15 @@
 # Run the open-account workflow on its own, with no chat and no model, for three scenarios (see
 # run_open_account_workflow.ts). It starts a worker in the background, which needs no model key, and
 # stops it on exit.
-# Usage: startlocalopenaccount.sh [open-account task queue] [--scenario N ...] [--amount X]
-# With a queue name, the workflow runs on that queue: start the Java worker on it first
-# (interop/open_account/java/startlocalworker.sh <queue>, with TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor).
+# Usage: startlocalopenaccount.sh [java | <open-account task queue>] [runner arguments]
+# With java, the workflow runs on this port's ADK-TS-Supervisor-open-account: start the Java worker for
+# this port first (TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor interop/open_account/java/startlocalworker.sh).
+# Another value names the queue.
 cd "$(dirname "$0")" || exit 1
 [ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
 if [ -n "$1" ] && [ "${1#-}" = "$1" ]; then
   export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"
-  echo "*** Running the open-account workflow on task queue $1 (the Java worker must poll it). ***"
+  echo "*** Open-account workflow on: $1 (java means this port's <task queue>-open-account, for the Java worker). ***"
   shift
 fi
 cd .. || exit 1

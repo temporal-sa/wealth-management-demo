@@ -192,24 +192,23 @@ cd src/python/openai_agents/durable
 ./startlocalworker.sh
 ```
 
-The worker also runs the model (LLM) activities on a second task queue (`Supervisor-llm` by default).
+The worker also runs the model (LLM) activities on a second task queue (`OAI-Supervisor-llm` by default; the chat itself runs on `OAI-Supervisor`, this port's own queue, so its worker can run next to the other ports').
 See [Environment variables](#environment-variables) to change the task queues or rate limit the model calls.
 
-If you want to use the Java Open Investment Account Workflow, 
-you need to specify the name of the Task Queue when running the Python worker
-(`setsplitworkflows.sh` sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` from it, and the Python worker then
-doesn't register the Python Open Account workflow):
+If you want to use the Java Open Investment Account Workflow, start the Python worker with the
+argument `java`. The chat workflow then starts the account openings on this port's own
+`OAI-Supervisor-open-account` queue, and the Python worker doesn't register the Python Open Account
+workflow:
 
 ```bash
 cd src/python/openai_agents/durable
-./startlocalworker.sh Open-Account-Java
+./startlocalworker.sh java
 ```
-and then start the Java worker, making sure you pass in the same name as you did 
-when you started the Python worker
+and then start the Java worker for this port:
 
 ```bash
 cd interop/open_account/java
-./startlocalworker.sh Open-Account-Java
+TEMPORAL_TASK_QUEUE=OAI-Supervisor ./startlocalworker.sh
 ```
 
 See [interop/open_account/java/README.md](../../../../interop/open_account/java/README.md) for details.
@@ -289,19 +288,18 @@ cd src/python/openai_agents/durable
 ./startcloudworker.sh
 ```
 
-If you want to use the Java Open Investment Account Workflow, 
-you need to specify the name of the Task Queue when running the Python worker:
+If you want to use the Java Open Investment Account Workflow, start the Python worker with the
+argument `java`:
 
 ```bash
 cd src/python/openai_agents/durable
-./startcloudworker.sh Open-Account-Java
+./startcloudworker.sh java
 ```
-and then start the Java worker, making sure you pass in the same name as you did 
-when you started the Python worker
+and then start the Java worker for this port:
 
 ```bash
 cd interop/open_account/java
-./startcloudworker.sh Open-Account-Java
+TEMPORAL_TASK_QUEUE=OAI-Supervisor ./startcloudworker.sh
 ```
 
 The Java cloud worker needs the client key in PKCS8 format; the script prints the `openssl`
@@ -412,11 +410,11 @@ be running. The script can be run from any directory:
 src/python/openai_agents/durable/startlocalopenaccount.sh
 ```
 
-With a task queue name, the workflow runs on that queue (`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT`), so you
-can run the same scenarios against the Java workflow (start `interop/open_account/java/startlocalworker.sh <queue>` first):
+With the argument `java`, the workflow runs on this port's `OAI-Supervisor-open-account` queue, so you
+can run the same scenarios against the Java workflow (start `TEMPORAL_TASK_QUEUE=OAI-Supervisor interop/open_account/java/startlocalworker.sh` first):
 
 ```bash
-src/python/openai_agents/durable/startlocalopenaccount.sh Open-Account-Java
+src/python/openai_agents/durable/startlocalopenaccount.sh java
 ```
 
 When the output asks you to signal the third workflow, in another terminal run:
@@ -437,8 +435,8 @@ The start scripts set most of these for you. The Python components read them thr
 | `TEMPORAL_ADDRESS` | `127.0.0.1:7233` | Temporal service address (`setcloudenv.sh` for Temporal Cloud) |
 | `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | mTLS client certificate and key for Temporal Cloud |
-| `TEMPORAL_TASK_QUEUE` | `Supervisor` | Task queue of the chat workflow and the tool activities. The worker, the API and the Java worker must use the same value. |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | value of `TEMPORAL_TASK_QUEUE` | Task queue of the Open Account child workflow. Set by the first argument to `startlocalworker.sh` / `startcloudworker.sh` (through `setsplitworkflows.sh`) and `startlocalopenaccount.sh`. |
+| `TEMPORAL_TASK_QUEUE` | `OAI-Supervisor` (`durable/task_queues.py`) | Task queue of the chat workflow and the tool activities. The worker, the API and the Java worker must use the same value. |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | value of `TEMPORAL_TASK_QUEUE` | Task queue of the Open Account child workflow; `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port. Set by the first argument to `startlocalworker.sh` / `startcloudworker.sh` (through `setsplitworkflows.sh`) and `startlocalopenaccount.sh`. |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue of the model (LLM) activities |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Rate limit for model calls across all workers, e.g. `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh` |
 | `REDIS_HOST`, `REDIS_PORT` | `localhost`, `6379` | Redis for conversation history, status updates, chaos flags and Claim Check (Python components) |

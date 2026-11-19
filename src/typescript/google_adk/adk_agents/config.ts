@@ -4,6 +4,7 @@
  */
 import { useClaimCheck } from '../../common/data-converter';
 import { loadRedisConfig } from '../../common/redis-config';
+import { openAccountTaskQueue } from '../../common/task-queues';
 
 /** The default Gemini model. Override it with GEMINI_MODEL. */
 export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
@@ -17,7 +18,7 @@ export const DEFAULT_TASK_QUEUE = 'ADK-TS-Supervisor';
 export interface WorkerConfig {
   /** Runs the chat workflow and the tool activities (TEMPORAL_TASK_QUEUE). */
   task_queue: string;
-  /** Runs OpenInvestmentAccountWorkflow (TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT, default: task_queue). */
+  /** Runs OpenInvestmentAccountWorkflow (TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT: unset is task_queue, java is <task_queue>-open-account). */
   open_account_task_queue: string;
   /** Runs the model calls, so they can be rate limited on their own (TEMPORAL_TASK_QUEUE_LLM). */
   llm_task_queue: string;
@@ -29,7 +30,7 @@ export function loadWorkerConfig(env: NodeJS.ProcessEnv = process.env): WorkerCo
   const taskQueue = env.TEMPORAL_TASK_QUEUE || DEFAULT_TASK_QUEUE;
   return {
     task_queue: taskQueue,
-    open_account_task_queue: env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT || taskQueue,
+    open_account_task_queue: openAccountTaskQueue(taskQueue, env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT),
     llm_task_queue: env.TEMPORAL_TASK_QUEUE_LLM || `${taskQueue}-llm`,
     model: env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL,
   };

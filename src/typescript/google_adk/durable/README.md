@@ -140,15 +140,16 @@ temporal workflow list --query 'WorkflowId STARTS_WITH "OpenAccount-adk-ts-tempo
 
 ### With the Java open-account workflow
 
-Start the worker with a task queue name for the open-account workflow, and the
-[Java worker](../../../../interop/open_account/java/README.md) with the same name:
+Start the worker with the argument `java`, so account openings run on this port's own
+`ADK-TS-Supervisor-open-account` queue, and the [Java worker](../../../../interop/open_account/java/README.md)
+for this port, which polls it:
 
 ```bash
-src/typescript/google_adk/durable/startlocalworker.sh Open-Account-Java
+src/typescript/google_adk/durable/startlocalworker.sh java
 ```
 
 ```bash
-cd interop/open_account/java && TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor ./startlocalworker.sh Open-Account-Java
+cd interop/open_account/java && TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor ./startlocalworker.sh
 ```
 
 The Java workflow calls this worker's activities by name, so the chaos flags apply unchanged.
@@ -165,10 +166,10 @@ src/typescript/google_adk/durable/startlocalopenaccount.sh
 ```
 
 For scenario 3, send the approval from another terminal with the command it prints. To run the
-scenarios against the Java workflow, start the Java worker first and pass its queue:
+scenarios against the Java workflow, start the Java worker for this port first and pass `java`:
 
 ```bash
-src/typescript/google_adk/durable/startlocalopenaccount.sh Open-Account-Java
+src/typescript/google_adk/durable/startlocalopenaccount.sh java
 ```
 
 `--scenario N` runs one scenario, and `--amount X` changes the deposit (300000 shows the rollback for
@@ -276,7 +277,7 @@ Redis still runs locally. For the Java worker on Temporal Cloud, see the [Java R
 | `TEMPORAL_NAMESPACE` | `default` | Every Temporal client and worker |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | mTLS, for Temporal Cloud |
 | `TEMPORAL_TASK_QUEUE` | `ADK-TS-Supervisor` | The chat workflow, the open-account workflow and the activities |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `TEMPORAL_TASK_QUEUE` | The open-account workflow (set by the worker scripts' argument) |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `TEMPORAL_TASK_QUEUE` | `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port. The open-account workflow (set by the worker scripts' argument) |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | The model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | none | A cap on model calls per second across all workers |
 | `REDIS_HOST`, `REDIS_PORT` | `localhost`, `6379` | The event stream, the chaos flags and the claim check |

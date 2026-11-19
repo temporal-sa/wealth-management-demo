@@ -178,26 +178,26 @@ cd src/python/pyai/durable
 ./startlocalworker.sh
 ```
 
-If you want to use the Java Open Investment Account Workflow,
-you need to specify the name of the Task Queue when running the Python worker:
+If you want to use the Java Open Investment Account Workflow, start the Python worker with the argument
+`java`. Account openings then run on this port's own `PYAI-Supervisor-open-account` queue:
 
 ```bash
 cd src/python/pyai/durable
-./startlocalworker.sh Open-Account-Java
+./startlocalworker.sh java
 ```
 
-and then start the Java worker, making sure you pass in the same name as you did 
-when you started the Python worker. Set `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor` so it calls this port's activities:
+and then start the Java worker for this port (`TEMPORAL_TASK_QUEUE=PYAI-Supervisor`), so it polls that queue and
+calls this port's activities:
 
 ```bash
 cd interop/open_account/java
-TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startlocalworker.sh Open-Account-Java
+TEMPORAL_TASK_QUEUE=PYAI-Supervisor ./startlocalworker.sh
 ```
 
 ### Start the API
 
 In another terminal, start the shared REST API for this AI framework. The `pyai` argument makes it start chats on
-its task queue (`PY-AI-Supervisor`) with workflow IDs starting `pyai-temporal-agent-`:
+its task queue (`PYAI-Supervisor`) with workflow IDs starting `pyai-temporal-agent-`:
 
 ```bash
 cd src/python/api
@@ -292,11 +292,11 @@ cd src/python/pyai/durable
 ./localsendcomplianceapproval.sh testing-open-investment-account-workflow3
 ```
 
-With a task queue name, the workflow runs on that queue (`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT`), so you
-can run the same scenarios against the Java workflow (start the Java worker first: `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor interop/open_account/java/startlocalworker.sh <queue>`):
+With the argument `java`, the workflow runs on this port's `PYAI-Supervisor-open-account` queue, so you
+can run the same scenarios against the Java workflow (start the Java worker first: `TEMPORAL_TASK_QUEUE=PYAI-Supervisor interop/open_account/java/startlocalworker.sh`):
 
 ```bash
-src/python/pyai/durable/startlocalopenaccount.sh Open-Account-Java
+src/python/pyai/durable/startlocalopenaccount.sh java
 ```
 
 ## Failure scenarios (chaos panel)
@@ -314,7 +314,7 @@ failure. **Reset all** turns every flag off.
 | **Tool / API down** | Turn on *Core banking API down*, then ask to list your investments or beneficiaries (or open an account, so it fails after compliance approval). Turn it off. | The tool activity retries (1s backoff, capped at 5s) for as long as the outage lasts. The agent waits mid-turn and answers once the API is back. Nothing is lost or re-asked. |
 | **LLM down** | Turn on *LLM API down* and send a message. Turn it off. | The model call is an activity, so it retries the same way (capped at 10s). The conversation picks up exactly where it was. |
 | **LLM rate limited (reactive)** | Turn on *LLM rate limited (429)* and send a message. | The model raises an `ApplicationError` with `next_retry_delay` (15s, like a `Retry-After` header), which overrides the retry policy's backoff. Real OpenAI 429s are handled the same way (`ChaosAwareModel` in `model_config.py`). |
-| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh`, then chat in several browser tabs at once. | Model calls run on their own task queue (`TEMPORAL_TASK_QUEUE_LLM`, default `PY-AI-Supervisor-llm`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
+| **LLM rate limited (proactive)** | Start the worker with `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh`, then chat in several browser tabs at once. | Model calls run on their own task queue (`TEMPORAL_TASK_QUEUE_LLM`, default `PYAI-Supervisor-llm`). The Temporal service dispatches at most that many per second across *all* workers, so calls queue up instead of hitting the provider's limit. Tools on the main queue aren't slowed down. |
 | **Business rule (non-retryable)** | Ask to open an account with $2,000,000 (or less than $100). | `validate_new_account` raises a non-retryable `ApplicationError`: one attempt, no retries. The reason goes back to the customer before any account opening starts. Compare it with *Tool / API down* in the Temporal UI. |
 | **Saga** | Turn on *Custodian rejects new accounts* (and *Slow account-opening steps* so you can watch), then open an account through compliance approval. Without flags: as client `123`, open an account with $300,000 (the linked bank account has $250,000). | After compliance approval the child workflow creates the account record, transfers the deposit from the linked bank account, and registers with the custodian. When a step fails non-retryably, the completed steps are undone in reverse order (refund, then remove the account). Compensations are activities too, so they are retried until they succeed. Kill the worker mid-rollback and the rollback still finishes. Transfers are idempotent, so a retried debit or refund never moves money twice. |
 | **Bug in workflow code** | Turn on *Bug in workflow code*, then open an account through compliance approval. See below. | The workflow pauses at the failing line, keeping all its state, until a worker with fixed code picks it up. |
@@ -448,7 +448,7 @@ And in another terminal you can run the following commands:
 
 ```bash
 # starts a workflow execution
-temporal workflow start --workflow-id ai-chat --type WealthManagementWorkflow --task-queue PY-AI-Supervisor 
+temporal workflow start --workflow-id ai-chat --type WealthManagementWorkflow --task-queue PYAI-Supervisor 
 
 # send it a request using a signal
 temporal workflow signal --workflow-id ai-chat --name process_user_message --input '{"user_input":"Who are my beneficiaries?"}'
@@ -474,9 +474,9 @@ continue-as-new in production (see the TODO in `workflows/supervisor_workflow.py
 | Variable | Default | Used for |
 |---|---|---|
 | `OPENAI_API_KEY` | | The agents' model calls (set in `scripts/setoaikey.sh`). |
-| `TEMPORAL_TASK_QUEUE` | `PY-AI-Supervisor` (`durable/task_queues.py`) | Task queue of the chat workflow and the tools. The worker, API and Java worker must agree. Start the shared API with `./startlocalapi.sh pyai` and the Java worker with `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor` (the Java worker defaults to `Supervisor`). |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | value of `TEMPORAL_TASK_QUEUE` | Task queue of `OpenInvestmentAccountWorkflow`. The worker scripts set it from their optional argument (`./startlocalworker.sh Open-Account-Java`, via `setsplitworkflows.sh`); when it differs from `TEMPORAL_TASK_QUEUE`, the Python worker doesn't run the account opening workflow and the Java worker must. |
-| `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` (`PY-AI-Supervisor-llm`) | Task queue for the model calls. The old name `TEMPORAL_LLM_TASK_QUEUE` is still accepted. |
+| `TEMPORAL_TASK_QUEUE` | `PYAI-Supervisor` (`durable/task_queues.py`) | Task queue of the chat workflow and the tools. The worker, API and Java worker must agree. Start the shared API with `./startlocalapi.sh pyai` and the Java worker with `TEMPORAL_TASK_QUEUE=PYAI-Supervisor` (the Java worker has no default). |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | value of `TEMPORAL_TASK_QUEUE` | `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port. Task queue of `OpenInvestmentAccountWorkflow`. The worker scripts set it from their optional argument (`./startlocalworker.sh java`, via `setsplitworkflows.sh`); when it differs from `TEMPORAL_TASK_QUEUE`, the Python worker doesn't run the account opening workflow and the Java worker must. |
+| `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` (`PYAI-Supervisor-llm`) | Task queue for the model calls. The old name `TEMPORAL_LLM_TASK_QUEUE` is still accepted. |
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Most model calls per second the Temporal service dispatches from the LLM task queue, e.g. `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh`. |
 | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Conversation events, chaos flags and claim check (Python components). |
 | `USE_CLAIM_CHECK` | `False` | Enables the claim check codec (set in `scripts/setclaimcheck.sh`). |
@@ -513,22 +513,21 @@ cd src/python/pyai/durable
 ./startcloudworker.sh
 ```
 
-If you want to use the Java Open Investment Account Workflow,
-you need to specify the name of the Task Queue when running the Python worker:
+If you want to use the Java Open Investment Account Workflow, start the Python worker with the argument
+`java`. Account openings then run on this port's own `PYAI-Supervisor-open-account` queue:
 
 ```bash
 cd src/python/pyai/durable
-./startcloudworker.sh Open-Account-Java
+./startcloudworker.sh java
 ```
 
-and then start the Java worker, making sure you pass in the same name as you did 
-when you started the Python worker. See
+and then start the Java worker for this port. See
 [Running Using Temporal Cloud](../../../../interop/open_account/java/README.md#running-with-temporal-cloud) in the Java README
 for the PKCS8 key it needs.
 
 ```bash
 cd interop/open_account/java
-TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startcloudworker.sh Open-Account-Java
+TEMPORAL_TASK_QUEUE=PYAI-Supervisor ./startcloudworker.sh
 ```
 
 ### Start the API

@@ -198,7 +198,7 @@ async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal
         assert config == {
             "framework": "pyai",
             "label": "Pydantic AI",
-            "task_queue": "PY-AI-Supervisor",
+            "task_queue": "PYAI-Supervisor",
             "workflow_id_prefix": "pyai-temporal-agent-",
         }
 
@@ -206,7 +206,7 @@ async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal
         assert await post(client, "/start-workflow", workflow_id=workflow_id) == {"message": "Workflow started."}
 
     handle = temporal_env.client.get_workflow_handle(workflow_id)
-    assert (await handle.describe()).task_queue == "PY-AI-Supervisor"
+    assert (await handle.describe()).task_queue == "PYAI-Supervisor"
     await handle.terminate()
 
 
@@ -256,7 +256,7 @@ async def test_the_strands_framework_needs_nothing_extra(temporal_env, tmp_path_
         assert (await asyncio.to_thread(client.get, "/config")).json() == {
             "framework": "strands_agents",
             "label": "Strands Agents",
-            "task_queue": "wealth-management-strands",
+            "task_queue": "Strands-Supervisor",
             "workflow_id_prefix": "strands-temporal-agent-",
         }
         assert (await asyncio.to_thread(client.get, "/pending-approval", params={"workflow_id": "x"})).status_code == 404

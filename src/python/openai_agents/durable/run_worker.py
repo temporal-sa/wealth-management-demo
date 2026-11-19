@@ -12,6 +12,7 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from common.client_helper import ClientHelper
+from durable.task_queues import DEFAULT_TASK_QUEUE
 from durable.activities.clients import ClientActivities
 from durable.activities.event_stream_activities import EventStreamActivities
 from durable.activities.open_account import OpenAccount
@@ -68,7 +69,7 @@ async def main():
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s | %(levelname)s | %(filename)s:%(lineno)s | %(message)s")
 
-    client_helper = ClientHelper()
+    client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
     # Normally we would just include the OpenAIAgentsPlugin and the
     # ClaimCheckPlugin. But, when we want to just test the
     # child open account workflow, we don't need the OpenAIAgentsPlugin
