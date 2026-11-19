@@ -1,0 +1,9 @@
+/setgeminikey.sh
+/setcloudenv.sh
+/setclaimcheck.sh
+.idea
+.vscode
+.DS_Store
+dump.rdb
+/bin/
+node_modules/
