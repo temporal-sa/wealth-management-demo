@@ -15,6 +15,7 @@ from strands.types.streaming import StreamEvent
 from temporalio.exceptions import ApplicationError
 
 from common.chaos_manager import ChaosFlag
+from common.task_queues import open_account_task_queue
 from durable.chaos import inject_failure
 
 MODEL_NAME = "gemini"
@@ -22,7 +23,7 @@ MODEL_ID = "gemini-2.5-flash"
 
 # This port's default chat task queue, so its worker can run next to other ports'.
 # Start the shared API with ./startlocalapi.sh strands_agents to use it.
-DEFAULT_TASK_QUEUE = "wealth-management-strands"
+DEFAULT_TASK_QUEUE = "Strands-Supervisor"
 TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", DEFAULT_TASK_QUEUE)
 # Model calls run on their own task queue so they can be rate limited (and scaled)
 # independently of the tools. See run_worker.py. TEMPORAL_TASK_QUEUE_LLM matches the
@@ -35,9 +36,9 @@ LLM_TASK_QUEUE = (
 # Task queue the open-account child workflow runs on. Defaults to the main queue,
 # where run_worker.py registers OpenInvestmentAccountWorkflow. The worker start
 # scripts set it from their optional argument to hand the child workflow to a
-# separate worker (e.g. the Java worker in java/); run_worker.py then doesn't
-# register the Python version.
-OPEN_ACCOUNT_TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT") or TASK_QUEUE
+# separate worker: "java" gives it <task queue>-open-account, which the Java worker
+# in interop/open_account/java polls; run_worker.py then doesn't register the Python version.
+OPEN_ACCOUNT_TASK_QUEUE = open_account_task_queue(TASK_QUEUE)
 
 
 def _optional_float(name: str) -> Optional[float]:

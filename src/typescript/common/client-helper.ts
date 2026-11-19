@@ -24,7 +24,7 @@ export class ClientHelper {
    * defaultTaskQueue is the port's chat task queue when TEMPORAL_TASK_QUEUE isn't set, so each
    * port can run alongside the others.
    */
-  constructor(defaultTaskQueue = 'Supervisor') {
+  constructor(defaultTaskQueue: string) {
     const config = loadClientConnectConfig();
     this.address = config.connectionOptions.address ?? DEFAULT_ADDRESS;
     this.namespace = config.namespace ?? DEFAULT_NAMESPACE;
@@ -49,7 +49,8 @@ let sharedClient: Promise<Client> | undefined;
  */
 export function getSharedClient(): Promise<Client> {
   if (!sharedClient) {
-    sharedClient = new ClientHelper().connectClient().then(({ client }) => client);
+    // Only the connection settings are used, not the task queue
+    sharedClient = new ClientHelper('').connectClient().then(({ client }) => client);
     sharedClient.catch(() => {
       sharedClient = undefined;
     });

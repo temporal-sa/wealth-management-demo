@@ -135,7 +135,8 @@ public class OpenInvestmentAccountWorkflowTest {
         TRANSFER_IDS.clear();
         FAILURES.clear();
         env = TestWorkflowEnvironment.newInstance();
-        // Without TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT, the workflow and the activities share a task queue
+        // The test task (build.gradle) sets TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT to TEMPORAL_TASK_QUEUE, so the
+        // workflow and every activity share one task queue
         Worker worker = env.newWorker(ServerInfo.getTaskqueue());
         worker.registerWorkflowImplementationTypes(OpenInvestmentAccountWorkflowImpl.class);
         worker.registerActivitiesImplementations(new StubActivities());

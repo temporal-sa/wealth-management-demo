@@ -4,6 +4,7 @@ import { AiSdkPlugin } from '@temporalio/vercel-ai-sdk';
 import { gemini } from '../gemini';
 import * as activities from './activities/activities';
 import { clientHelper } from './task-queues';
+import { openAccountTaskQueue } from '../../common/task-queues';
 import { buildDataConverter, useClaimCheck } from '../../common/data-converter';
 import { chaosAwareProvider } from './chaos-model';
 import { workflowsModule } from './worker-workflows';
@@ -52,7 +53,7 @@ function llmMaxCallsPerSecond(): number | undefined {
 async function run() {
   logClaimCheckStatus();
   const helper = clientHelper();
-  const openAccountQueue = process.env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT;
+  const openAccountQueue = openAccountTaskQueue(helper.taskQueue, process.env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT);
   logOpenAccountTaskQueue(helper.taskQueue, openAccountQueue);
   // Without the Open Account workflow when the Java worker runs it
   const workflows = workflowsModule(helper.taskQueue, openAccountQueue);

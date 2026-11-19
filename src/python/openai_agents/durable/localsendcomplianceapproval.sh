@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")" || exit 1
 if [ -z "$1" ]; then
    echo "You must specify a workflow ID"
    exit 1

@@ -114,7 +114,7 @@ npm test
 
 `npm test` in `src/typescript` runs every TypeScript workspace's tests. The live
 tests call Gemini and are not part of the default run; see
-[Running the tests](durable/README.md#running-the-tests).
+[Running the tests](durable/README.md#tests).
 
 ## Layout
 

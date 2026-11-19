@@ -23,7 +23,7 @@ This port was imported from [temporal-sa/strands-wealth-management](https://gith
 | `prompts/` | The agents' instructions and the confirmation wording (`approval_prompts.py`) |
 | `tests/` | The port's tests |
 
-Its chat workflows run on the `wealth-management-strands` task queue by default (`DEFAULT_TASK_QUEUE` in `durable/model_config.py`), so its worker can run next to another port's, and the web app names them `strands-temporal-agent-<random>`. As in every port, the customer confirms a delete or close in the chat: the agent asks, and the customer's next message answers.
+Its chat workflows run on the `Strands-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in `durable/model_config.py`), so its worker can run next to another port's, and the web app names them `strands-temporal-agent-<random>`. As in every port, the customer confirms a delete or close in the chat: the agent asks, and the customer's next message answers.
 
 Scenarios currently implemented include:
 
@@ -50,10 +50,10 @@ Optionally, the Temporal version can also:
 
 * run the open-account child workflow in **Java** ([`interop/open_account/java`](../../../interop/open_account/java/README.md)) on its own task queue,
   calling the Python activities — see
-  [Run with the Java open-account workflow](durable/README.md#run-with-the-java-open-account-workflow-optional);
+  [Run with the Java open-account workflow](durable/README.md#java-open-account-worker-optional);
 * use the **claim check** pattern: payloads are stored in Redis and only their IDs are sent to
   Temporal, with a codec server so the Temporal UI can still show them — see
-  [Claim check](durable/README.md#claim-check-optional).
+  [Claim check](durable/README.md#claim-check-and-codec-server-optional).
 
 ## Architecture
 
@@ -125,12 +125,12 @@ The Java open-account workflow has its own tests (JDK 25): `cd interop/open_acco
 
 A separate live test of the agent routing calls the paid Gemini API and is not part
 of that run: `source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_agent_handoffs.py -s`
-(see [durable/README.md](durable/README.md#live-agent-routing-test-calls-the-paid-gemini-api)).
+(see [durable/README.md](durable/README.md#live-tests)).
 Live tests of opening an account (reopening it after a rollback, and opening the same
 account name twice, each with its own KYC) also call the paid API: `source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_account_opening.py -s`
-(see [durable/README.md](durable/README.md#live-account-opening-tests-call-the-paid-gemini-api)).
+(see [durable/README.md](durable/README.md#live-tests)).
 A live test of confirming a delete or close in the chat does too: `source ../../../scripts/setgeminikey.sh && uv run pytest tests/live_confirmations.py -s`
-(see [durable/README.md](durable/README.md#live-confirmation-test-calls-the-paid-gemini-api)).
+(see [durable/README.md](durable/README.md#live-tests)).
 
 ## Resetting the demo data
 

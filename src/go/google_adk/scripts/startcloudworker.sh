@@ -1,8 +1,10 @@
 #!/bin/bash
 # Start the worker against Temporal Cloud (settings in scripts/setcloudenv.sh).
-# Usage: startcloudworker.sh [open-account-task-queue]
-# A queue name moves the open-account workflow onto that queue: this worker then
-# doesn't run it, and another worker must poll that queue.
+# Usage: startcloudworker.sh [java | <open-account task queue>]
+# With java, the open-account workflow runs on this port's ADK-Go-Supervisor-open-account
+# (TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT) and this worker doesn't run it: start the Java worker for
+# this port too (TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor interop/open_account/java/startcloudworker.sh).
+# Another value names the queue.
 cd "$(dirname "$0")" || exit 1
 [ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
 if [ ! -f ../../../../scripts/setcloudenv.sh ]; then
@@ -13,6 +15,6 @@ fi
 source ../../../../scripts/setcloudenv.sh
 if [ -n "$1" ]; then
   export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"
-  echo "*** Using $1 as the task queue for the open-account workflow. ***"
+  echo "*** Open-account workflow on: $1 (java means this port's <task queue>-open-account, for the Java worker). ***"
 fi
 exec go run ../cmd/worker

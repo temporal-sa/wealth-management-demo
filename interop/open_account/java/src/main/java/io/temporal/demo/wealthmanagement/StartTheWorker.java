@@ -39,6 +39,9 @@ public class StartTheWorker implements CommandLineRunner {
     public void run(String... args) throws Exception {
         Logger log = Workflow.getLogger(StartTheWorker.class);
         log.info("Starting the workers...");
+        // Fails with a clear message if TEMPORAL_TASK_QUEUE isn't set
+        log.info("Open-account workflow on task queue {}; it calls the activities on task queue {}",
+                ServerInfo.getTaskqueueOpenAccount(), ServerInfo.getTaskqueue());
         // Since we're disabling the workers, we need to
         // add them here
         WorkerFactory workerFactory = WorkerFactory.newInstance(client);

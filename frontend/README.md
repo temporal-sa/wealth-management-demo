@@ -15,9 +15,9 @@ and how their workflow IDs are named:
 
 ```bash
 cd src/python/api
-./startlocalapi.sh openai_agents   # OpenAI Agents SDK: oai-temporal-agent-<random> on Supervisor
-./startlocalapi.sh pyai            # Pydantic AI: pyai-temporal-agent-<random> on PY-AI-Supervisor
-./startlocalapi.sh strands_agents  # Strands Agents: strands-temporal-agent-<random> on wealth-management-strands
+./startlocalapi.sh openai_agents   # OpenAI Agents SDK: oai-temporal-agent-<random> on OAI-Supervisor
+./startlocalapi.sh pyai            # Pydantic AI: pyai-temporal-agent-<random> on PYAI-Supervisor
+./startlocalapi.sh strands_agents  # Strands Agents: strands-temporal-agent-<random> on Strands-Supervisor
 ./startlocalapi.sh google_adk      # Google ADK: adk-temporal-agent-<random> on ADK-Supervisor
 ./startlocalapi.sh pure            # Pure Python (LiteLLM): pure-temporal-agent-<random> on Pure-Supervisor
 ./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-<random> on VAI-Supervisor
@@ -57,7 +57,7 @@ at runtime and lists the failures as they happen. See
 
 Remember, if you are opening a new investment account, in another terminal
 send the compliance approval to the Open Account child workflow. See
-[How to find the Child Workflow ID](../src/python/openai_agents/durable/README.md#send-the-compliance-reviewed-signal).
+[How to find the Child Workflow ID](../src/python/openai_agents/durable/README.md#approve-compliance).
 
 ### Send the Compliance Reviewed Signal (Local)
 ```bash
@@ -82,6 +82,8 @@ npm test
 
 ## Example
 
-Here's an example screenshot of the web application running:
+Here's the web application running against the Pydantic AI port, with the chaos panel open. The header
+shows the AI framework the API serves (from its `GET /config`), and **Chaos** opens or hides the chaos panel,
+which turns failures on and off while you chat:
 
 ![](../docs/images/webui.png)

@@ -22,7 +22,7 @@ This port was imported from [temporal-sa/pyai-wealth-management](https://github.
 | `prompts/` | The agents' instructions |
 | `tests/` | The port's tests |
 
-Its chat workflows run on the `PY-AI-Supervisor` task queue by default, so its worker can run next to another port's. Start the API with `./startlocalapi.sh pyai`, which uses that queue and names each chat workflow `pyai-temporal-agent-<random>`, and the Java worker with `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor`.
+Its chat workflows run on the `PYAI-Supervisor` task queue by default, so its worker can run next to another port's. Start the API with `./startlocalapi.sh pyai`, which uses that queue and names each chat workflow `pyai-temporal-agent-<random>`, and the Java worker with `TEMPORAL_TASK_QUEUE=PYAI-Supervisor`.
 
 Scenarios currently implemented include:
 * Add Beneficiary - add a new beneficiary to your account
@@ -93,7 +93,7 @@ uv run pytest
 ```
 
 The tests need no OpenAI API key or Redis. Some run against a local Temporal test server, which is
-downloaded automatically on the first run. See the [Temporal version](durable/README.md#running-the-tests)
+downloaded automatically on the first run. See the [Temporal version](durable/README.md#tests)
 for the Java and frontend tests, and for the live tests against the real OpenAI model
 (`source ../../../scripts/setoaikey.sh && uv run pytest tests/live_agent_handoffs.py tests/live_repeat_opening.py -s`),
 which call the paid API and are not part of the default run.

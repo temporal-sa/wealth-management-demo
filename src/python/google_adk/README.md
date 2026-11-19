@@ -39,7 +39,7 @@ rate limits, a saga rollback, a bug in workflow code) to show how Temporal handl
 [Failure Scenarios](durable/README.md#failure-scenarios-chaos-panel).
 
 You can run through the scenarios with the Temporal version using the shared web application in `frontend/`
-(see [Running the Demo](durable/README.md#running-the-demo)).
+(see [Running the Demo](durable/README.md#running-locally)).
 
 ## Prerequisites
 

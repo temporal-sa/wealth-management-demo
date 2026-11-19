@@ -9,8 +9,8 @@ signalled to the parent chat workflow.
 
 The workflow has no business logic of its own. It calls the Python activities by name (`get_client`,
 `open_investment`, `remove_investment`, `debit_linked_account`, `credit_linked_account`,
-`register_account`) on the Python worker's task queue (`TEMPORAL_TASK_QUEUE`, default `Supervisor`),
-so the Python worker must be running too, and the chaos panel's flags apply unchanged. The only Java
+`register_account`) on the port's task queue (`TEMPORAL_TASK_QUEUE`, which has no default), so the
+port's worker must be running too, and the chaos panel's flags apply unchanged. The only Java
 activity is the one that signals status changes to the parent workflow; it runs on the Open Account
 task queue with the workflow.
 
@@ -26,37 +26,43 @@ Python `update_client` activity) and completes KYC.
 
 Start Temporal (`temporal server start-dev`) and Redis (`redis-server`).
 
-The Open Account task queue name is passed as the first argument to both workers. Start the Python
-worker with it, so the supervisor starts the child workflow on that queue (and doesn't register the
-Python version of the workflow):
+Each port has its own task queue, and the Java worker serves one port at a time: set
+`TEMPORAL_TASK_QUEUE` to that port's queue. The worker then runs the open-account workflow on that
+port's own `<TEMPORAL_TASK_QUEUE>-open-account` queue, and calls the port's activities on
+`TEMPORAL_TASK_QUEUE`. Since every port has its own open-account queue, several ports can each have a
+Java worker at once. There is no default: without `TEMPORAL_TASK_QUEUE`, the worker stops and says so.
+
+Start the port's worker with the argument `java`, so its chat workflow starts the child workflow on
+that queue (and doesn't register its own version of the workflow). For the OpenAI Agents port:
 
 ```bash
-cd src/python/openai_agents/durable
-./startlocalworker.sh Open-Account-Java
+src/python/openai_agents/durable/startlocalworker.sh java
 ```
 
-Then, from the repository root, start the Java worker with the same name:
+Then start the Java worker for the same port:
 
 ```bash
 cd interop/open_account/java
-./startlocalworker.sh Open-Account-Java
+TEMPORAL_TASK_QUEUE=OAI-Supervisor ./startlocalworker.sh
 ```
 
-The Java workflow calls the port's activities (Python, TypeScript or Go) on its main task queue, `TEMPORAL_TASK_QUEUE`
-(default `Supervisor`, the OpenAI Agents port's). For another port, set it to that port's queue:
+For another port, start its worker with `java` and the Java worker with that port's queue:
 
-| Port | Start the Java worker with |
-|---|---|
-| OpenAI Agents SDK | `./startlocalworker.sh Open-Account-Java` |
-| Pydantic AI | `TEMPORAL_TASK_QUEUE=PY-AI-Supervisor ./startlocalworker.sh Open-Account-Java` |
-| Strands Agents | `TEMPORAL_TASK_QUEUE=wealth-management-strands ./startlocalworker.sh Open-Account-Java` |
-| Google ADK (Python) | `TEMPORAL_TASK_QUEUE=ADK-Supervisor ./startlocalworker.sh Open-Account-Java` |
-| Pure Python (LiteLLM) | `TEMPORAL_TASK_QUEUE=Pure-Supervisor ./startlocalworker.sh Open-Account-Java` |
-| Vercel AI SDK (TypeScript) | `TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh Open-Account-Java` |
-| Google ADK (TypeScript) | `TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor ./startlocalworker.sh Open-Account-Java` |
-| Google ADK (Go) | `TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./startlocalworker.sh Open-Account-Java` |
+| Port | Start the Java worker with | Open-account queue |
+|---|---|---|
+| OpenAI Agents SDK | `TEMPORAL_TASK_QUEUE=OAI-Supervisor ./startlocalworker.sh` | `OAI-Supervisor-open-account` |
+| Pydantic AI | `TEMPORAL_TASK_QUEUE=PYAI-Supervisor ./startlocalworker.sh` | `PYAI-Supervisor-open-account` |
+| Strands Agents | `TEMPORAL_TASK_QUEUE=Strands-Supervisor ./startlocalworker.sh` | `Strands-Supervisor-open-account` |
+| Google ADK (Python) | `TEMPORAL_TASK_QUEUE=ADK-Supervisor ./startlocalworker.sh` | `ADK-Supervisor-open-account` |
+| Pure Python (LiteLLM) | `TEMPORAL_TASK_QUEUE=Pure-Supervisor ./startlocalworker.sh` | `Pure-Supervisor-open-account` |
+| Vercel AI SDK (TypeScript) | `TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh` | `VAI-Supervisor-open-account` |
+| Google ADK (TypeScript) | `TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor ./startlocalworker.sh` | `ADK-TS-Supervisor-open-account` |
+| Google ADK (Go) | `TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./startlocalworker.sh` | `ADK-Go-Supervisor-open-account` |
 
-The script sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` from the argument, sources `scripts/setclaimcheck.sh`
+An argument to the Java script names another open-account queue (`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT`);
+pass the same name to the port's worker script instead of `java`.
+
+The script checks `TEMPORAL_TASK_QUEUE`, sources `scripts/setclaimcheck.sh`
 if it exists (claim check is optional) and runs `./gradlew runWorker`. It connects to `127.0.0.1:7233`, namespace `default`, as set
 in `src/main/resources/application.yaml`. The worker doesn't read `TEMPORAL_ADDRESS`, but the activity
 that reports each state change to the chat workflow does (default `localhost:7233`), so to use another
@@ -67,23 +73,22 @@ Start the API and the UX as described in the [Temporal README](../../../src/pyth
 and send the compliance approval with `src/python/openai_agents/durable/localsendcomplianceapproval.sh` as usual.
 
 To try the Java workflow without the chat or an OpenAI key, run the open-account scenarios against it
-(with this worker running): `src/python/openai_agents/durable/startlocalopenaccount.sh Open-Account-Java`. See
+(with this worker running for `OAI-Supervisor`): `src/python/openai_agents/durable/startlocalopenaccount.sh java`. See
 "Testing the Open Account workflow on its own" in the [Temporal README](../../../src/python/openai_agents/durable/README.md).
 
 ## Running with Temporal Cloud
 
 Create `scripts/setcloudenv.sh` (copy `scripts/setcloudenv.example`)
-as described in the [Temporal README](../../../src/python/openai_agents/durable/README.md#running-the-demo-in-temporal-cloud).
-Start the Python worker with the queue name, then the Java worker with the same name:
+as described in the [Temporal README](../../../src/python/openai_agents/durable/README.md#running-on-temporal-cloud).
+Start the port's worker with `java`, then the Java worker with the port's queue:
 
 ```bash
-cd src/python/openai_agents/durable
-./startcloudworker.sh Open-Account-Java
+src/python/openai_agents/durable/startcloudworker.sh java
 ```
 
 ```bash
 cd interop/open_account/java
-./startcloudworker.sh Open-Account-Java
+TEMPORAL_TASK_QUEUE=OAI-Supervisor ./startcloudworker.sh
 ```
 
 The Java cloud script can be run from any directory. It sources `scripts/setclaimcheck.sh` (if it exists) and `scripts/setcloudenv.sh`, maps `TEMPORAL_TLS_CLIENT_CERT_PATH` to the
@@ -125,7 +130,8 @@ See [Failure scenarios](../../../src/python/openai_agents/durable/README.md#fail
 ## Tests
 
 The saga, retry and workflow-bug tests use the Temporal Java SDK's in-memory test environment with
-stub activities, so no Temporal server, Redis or OpenAI key is needed:
+stub activities, so no Temporal server, Redis or OpenAI key is needed (the test task sets
+`TEMPORAL_TASK_QUEUE`):
 
 ```bash
 cd interop/open_account/java

@@ -91,7 +91,7 @@ async def main():
     if OPEN_ACCOUNT_TASK_QUEUE != TASK_QUEUE:
         print(
             f"Open-account child workflows run on '{OPEN_ACCOUNT_TASK_QUEUE}', not on this worker; "
-            "start the worker that polls it (e.g. java/startlocalworker.sh with the same queue name)."
+            f"start the worker that polls it (e.g. TEMPORAL_TASK_QUEUE={TASK_QUEUE} interop/open_account/java/startlocalworker.sh)."
         )
     await asyncio.gather(worker.run(), llm_worker.run())
 

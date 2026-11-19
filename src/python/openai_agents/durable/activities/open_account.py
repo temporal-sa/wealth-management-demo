@@ -8,6 +8,7 @@ from temporalio.exceptions import ActivityError, ApplicationError
 from temporalio.workflow import ParentClosePolicy
 
 from common.client_helper import ClientHelper
+from durable.task_queues import DEFAULT_TASK_QUEUE
 from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow, OpenInvestmentAccountInput
 from durable.activities.clients import WealthManagementClient
 from durable.activities.investments import Investments
@@ -20,7 +21,7 @@ with workflow.unsafe.imports_passed_through():
 
 # Don't like making this a global, but I need to get access to Task Queue name
 # in the open_new_investment_account
-client_helper = ClientHelper()
+client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
 
 @function_tool
 async def open_new_investment_account(ctx: RunContextWrapper[Any], client_id: str, account_name: str,
@@ -91,7 +92,7 @@ class OpenAccount:
 
     @staticmethod
     async def get_workflow_handle(workflow_id) -> WorkflowHandle:
-        client_helper = ClientHelper()
+        client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
         print(f"(OpenAccount.get_temporal_client) address is {client_helper.address}")
         the_client = await Client.connect(**client_helper.client_config,
                                           plugins=[

@@ -24,6 +24,7 @@
 import { randomUUID } from 'crypto';
 import type { Client, WorkflowHandle } from '@temporalio/client';
 import { ClientHelper } from '../../common/client-helper';
+import { openAccountTaskQueue } from '../../common/task-queues';
 import { claimCheckStatus, DEFAULT_TASK_QUEUE } from '../adk_agents/config';
 import type { WealthManagementClient } from '../adk_agents/data-store';
 import type { OpenInvestmentAccountInput, OpenInvestmentAccountOutput } from './shared';
@@ -212,7 +213,7 @@ async function main(): Promise<void> {
   const { scenarios, amount } = parseArgs(process.argv.slice(2));
   console.log(claimCheckStatus());
   const helper = new ClientHelper(DEFAULT_TASK_QUEUE);
-  const taskQueue = process.env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT || helper.taskQueue;
+  const taskQueue = openAccountTaskQueue(helper.taskQueue, process.env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT);
   const { connection, client } = await helper.connectClient();
   try {
     const runner = new Runner(client, randomUUID().slice(0, 8), taskQueue, amount);

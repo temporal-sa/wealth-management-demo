@@ -24,9 +24,9 @@ class Framework:
 FRAMEWORKS = {
     framework.name: framework
     for framework in [
-        Framework("openai_agents", "OpenAI Agents SDK", "Supervisor", "oai-temporal-agent-"),
-        Framework("pyai", "Pydantic AI", "PY-AI-Supervisor", "pyai-temporal-agent-"),
-        Framework("strands_agents", "Strands Agents", "wealth-management-strands", "strands-temporal-agent-"),
+        Framework("openai_agents", "OpenAI Agents SDK", "OAI-Supervisor", "oai-temporal-agent-"),
+        Framework("pyai", "Pydantic AI", "PYAI-Supervisor", "pyai-temporal-agent-"),
+        Framework("strands_agents", "Strands Agents", "Strands-Supervisor", "strands-temporal-agent-"),
         Framework("google_adk", "Google ADK", "ADK-Supervisor", "adk-temporal-agent-"),
         Framework("pure", "Pure Python (LiteLLM)", "Pure-Supervisor", "pure-temporal-agent-"),
         Framework("vercel_ai", "Vercel AI SDK (TypeScript)", "VAI-Supervisor", "vai-temporal-agent-"),

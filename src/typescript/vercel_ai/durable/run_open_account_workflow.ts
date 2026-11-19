@@ -24,6 +24,7 @@
 import { randomUUID } from 'crypto';
 import type { Client, WorkflowHandle } from '@temporalio/client';
 import { clientHelper } from './task-queues';
+import { openAccountTaskQueue } from '../../common/task-queues';
 import type { OpenInvestmentAccountInput, OpenInvestmentAccountOutput, WealthManagementClient } from '../../common/shared';
 import type { OpenInvestmentAccountWorkflow } from './workflows/open-account';
 
@@ -210,7 +211,7 @@ function parseArgs(argv: string[]): { scenarios: number[]; amount?: number } {
 async function main(): Promise<void> {
   const { scenarios, amount } = parseArgs(process.argv.slice(2));
   const helper = clientHelper();
-  const taskQueue = process.env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT || helper.taskQueue;
+  const taskQueue = openAccountTaskQueue(helper.taskQueue, process.env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT);
   const { connection, client } = await helper.connectClient();
   try {
     const runner = new Runner(client, randomUUID().slice(0, 8), taskQueue, amount);
