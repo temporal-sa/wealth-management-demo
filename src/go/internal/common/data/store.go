@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/domain"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/domain"
 )
 
 // Store reads and writes the JSON files in one data directory. Its methods are safe for

@@ -14,14 +14,14 @@ import (
 
 	"go.temporal.io/googleadk"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/activities"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/chaos"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/config"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/data"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/eventstream"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/llm"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/redisx"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/workflows"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/activities"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/config"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/llm"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/workflows"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/chaos"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/eventstream"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/redisx"
 )
 
 func main() {
@@ -87,7 +87,7 @@ func main() {
 
 	if os.Getenv("GEMINI_API_KEY") == "" && os.Getenv("GOOGLE_API_KEY") == "" {
 		log.Println("Warning: GEMINI_API_KEY is not set, so the agents can't call the model " +
-			"(see setgeminikey.example). The open-account workflow doesn't need it.")
+			"(see scripts/setgeminikey.example). The open-account workflow doesn't need it.")
 	}
 	log.Printf("Temporal %s, namespace %s", opts.HostPort, namespace(opts))
 	log.Printf("Worker on task queue %s; model calls (%s) on %s, max calls per second: %s",

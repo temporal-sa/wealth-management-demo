@@ -8,9 +8,9 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/activities"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/data"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/domain"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/activities"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/domain"
 )
 
 // Names of OpenInvestmentAccountWorkflow and its handlers (the shared Temporal contract).

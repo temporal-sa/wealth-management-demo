@@ -13,12 +13,16 @@ import (
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/contrib/envconfig"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/claimcheck"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/redisx"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/claimcheck"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/redisx"
 )
 
-// DefaultGeminiModel matches the Python ADK port's default.
+// DefaultGeminiModel is the Gemini model every agent uses unless GEMINI_MODEL is set.
 const DefaultGeminiModel = "gemini-3.8-flash"
+
+// DefaultTaskQueue is the chat workflow's task queue when TEMPORAL_TASK_QUEUE isn't set: this
+// port's own, so its worker can run alongside the other ports'.
+const DefaultTaskQueue = "ADK-Go-Supervisor"
 
 // Config holds the task queues, the model and the Temporal connection settings.
 type Config struct {
@@ -39,7 +43,7 @@ type Config struct {
 
 // Load reads the configuration from the environment.
 func Load() Config {
-	taskQueue := getenv("TEMPORAL_TASK_QUEUE", "Supervisor")
+	taskQueue := getenv("TEMPORAL_TASK_QUEUE", DefaultTaskQueue)
 	c := Config{
 		TaskQueue:            taskQueue,
 		TaskQueueOpenAccount: getenv("TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT", taskQueue),

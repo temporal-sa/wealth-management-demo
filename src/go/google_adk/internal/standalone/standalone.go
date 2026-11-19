@@ -9,10 +9,10 @@ import (
 	"google.golang.org/adk/v2/tool"
 	"google.golang.org/adk/v2/tool/functiontool"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/agents"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/data"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/domain"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/prompts"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/agents"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/prompts"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/domain"
 )
 
 // Build returns the standalone version's root agent. Every agent uses m.

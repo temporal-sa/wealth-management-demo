@@ -1,8 +1,8 @@
-# Wealth Management Agent Example using Google ADK for Go
+# Wealth Management Agent Demo: Google ADK for Go
 
-A multi-agent banking chat that shows what Temporal adds to an agent framework. It is the Go port
-of the Wealth Management demo, built with the [Google Agent Development Kit for Go](https://google.github.io/adk-docs/)
-and Temporal's [Go integration for Google ADK](https://docs.temporal.io/develop/go/integrations/google-adk)
+A multi-agent banking chat that shows what Temporal adds to an agent framework, built with the
+[Google Agent Development Kit for Go](https://google.github.io/adk-docs/) and Temporal's
+[Go integration for Google ADK](https://docs.temporal.io/develop/go/integrations/google-adk)
 (`go.temporal.io/googleadk`).
 
 A customer can:
@@ -14,34 +14,24 @@ Opening an account starts a child workflow with KYC (the customer confirms their
 human compliance approval and a saga that creates, funds and registers the account, rolling back if
 a step fails.
 
+This port was imported from [temporal-sa/adk-go-wealth-management](https://github.com/temporal-sa/adk-go-wealth-management).
+It is the first Go port: its framework-free packages are in [`src/go/internal/common`](../internal/common) for
+the Go ports to share, and it shares the [API](../../python/api/README.md) (written in Python), the
+[web application](../../../frontend/README.md), the [Java worker](../../../interop/open_account/java/README.md),
+`scripts/` and `data/` with every port. Its chat workflows keep the same Temporal contract as the other ports,
+which is what lets the Python API serve it. The Go module is [`src/go/go.mod`](../go.mod).
+
+Its chat workflows run on the `ADK-Go-Supervisor` task queue by default (`DefaultTaskQueue` in
+[internal/config](internal/config/config.go)), so its worker can run next to another port's. Start the API for
+it with the `google_adk_go` AI framework (`./startlocalapi.sh google_adk_go`); the web app then names its chats
+`adk-go-temporal-agent-<random>`.
+
 The demo comes in two versions:
 
 | Version | What it is | README |
 |---|---|---|
 | Temporal | Every model call and tool call is a durable Temporal activity. A web UI, a chaos panel that injects failures, and the account-opening workflow. | [docs/temporal.md](docs/temporal.md) |
 | Standalone | The same agents with Google ADK alone, as a command-line chat. No KYC, compliance review or saga. | [docs/standalone.md](docs/standalone.md) |
-
-It has the same chat, workflows, failure scenarios and Temporal contracts (workflow, signal, query,
-update and activity names and payloads) as the other ports:
-
-| Port | Framework | Language | Repository |
-|---|---|---|---|
-| Reference | OpenAI Agents SDK | Python | [temporal-sa/oai-temporal-wealth-management](https://github.com/temporal-sa/oai-temporal-wealth-management) |
-| Vercel | Vercel AI SDK | TypeScript | [temporal-sa/vai-wealth-management](https://github.com/temporal-sa/vai-wealth-management) |
-| ADK | Google ADK | Python | [temporal-sa/adk-wealth-management](https://github.com/temporal-sa/adk-wealth-management) |
-| Pydantic | Pydantic AI | Python | [temporal-sa/pyai-wealth-management](https://github.com/temporal-sa/pyai-wealth-management) |
-| Strands | Strands Agents | Python | [temporal-sa/strands-wealth-management](https://github.com/temporal-sa/strands-wealth-management) |
-
-## Optional components
-
-All three of the PRD's optional components are included:
-
-* the [Java open-account worker](java/README.md), shared with the other ports, which can run
-  `OpenInvestmentAccountWorkflow` in place of the Go version;
-* the [claim check and codec server](docs/temporal.md#claim-check-optional), which store payloads
-  in Redis instead of Temporal's event history;
-* the Temporal Cloud scripts: see
-  [Running the demo on Temporal Cloud](docs/temporal.md#running-the-demo-on-temporal-cloud).
 
 ## Prerequisites
 
@@ -54,54 +44,93 @@ All three of the PRD's optional components are included:
 
 ## Set up your Gemini API key
 
-The default model is **Gemini `gemini-3.8-flash`**, the same as the Python ADK port. Copy the example
-file and put your key in it:
+From the repository root, copy the shared Gemini key file (the other Gemini ports use it too) and put your key
+in it. `scripts/setgeminikey.sh` is git-ignored: never commit a real key.
 
 ```bash
-cp setgeminikey.example setgeminikey.sh
+cp scripts/setgeminikey.example scripts/setgeminikey.sh
 ```
 
-Then edit `setgeminikey.sh`. It is git-ignored: never commit a real key. To use another Gemini model,
-set `GEMINI_MODEL` in the same file, for example `export GEMINI_MODEL=gemini-3.8-pro`.
+The default model is **Gemini `gemini-3.8-flash`**. To use another Gemini model, set `GEMINI_MODEL` in the same
+file, for example `export GEMINI_MODEL=gemini-3.8-pro`.
 
-## Getting started
+## Running the demo
 
-* To run the Temporal version with the web UI, follow [docs/temporal.md](docs/temporal.md).
-* To try the agents on their own, follow [docs/standalone.md](docs/standalone.md).
+Each command runs in its own terminal, from the repository root:
+
+```bash
+temporal server start-dev
+```
+
+```bash
+redis-server
+```
+
+```bash
+./src/go/google_adk/scripts/startlocalworker.sh
+```
+
+```bash
+./src/python/api/startlocalapi.sh google_adk_go
+```
+
+```bash
+cd frontend && npm install && npm start
+```
+
+Open http://localhost:3000 and chat. To approve an account opening as the compliance officer:
+
+```bash
+./src/go/google_adk/scripts/localsendcomplianceapproval.sh "<open-account workflow ID>"
+```
+
+[docs/temporal.md](docs/temporal.md) covers the details, including the Java worker, claim check, the codec
+server and Temporal Cloud. [docs/standalone.md](docs/standalone.md) covers the command-line chat.
 
 ## Demo data
 
-The JSON files in [data/](data) (beneficiaries, clients, linked bank accounts and investments) are the
-system of record. Client `123` is Don Doe, of 123 Main Street, with Checking, Savings and 401K
-accounts and a linked bank account holding $250,000. The demo changes these files, and they are
-tracked by git, so reset them with:
+The JSON files in [data/](../../../data) (beneficiaries, clients, linked bank accounts and investments) are the
+system of record, shared by every port. The data store finds them by looking for `data/clients.json` in the
+current folder and its parents (`DATA_DIR` overrides it). Client `123` is Don Doe, of 123 Main Street, with
+Checking, Savings and 401K accounts and a linked bank account holding $250,000. The demo changes these files, and
+they are tracked by git, so reset them from the repository root with:
 
 ```bash
 git checkout data/
 ```
 
-## Repository layout
+## Tests
 
-The Go code follows Go conventions (`cmd/` for programs, `internal/` for packages) rather than the
-Python ports' `src/` layout. This table maps one to the other:
+From `src/go`:
+
+```bash
+go test ./...
+```
+
+The default tests live next to the code they test (`*_test.go`), as is usual in Go, and need no model key, Redis
+or running Temporal service. The live tests call Gemini; see [docs/temporal.md](docs/temporal.md#tests).
+
+## Layout
+
+The Go code follows Go conventions (`cmd/` for programs, `internal/` for packages) rather than the Python ports'
+`standalone/` and `durable/` folders. This table maps one to the other:
 
 | Path | Holds | Python ports |
 |---|---|---|
-| [cmd/worker](cmd/worker) | The Temporal worker | `src/temporal_supervisor/run_worker.py` |
-| [cmd/api](cmd/api), [internal/api](internal/api) | The REST API for the web UI | `src/api/` |
-| [cmd/cli](cmd/cli), [internal/standalone](internal/standalone) | The standalone command-line chat | `src/adk_supervisor/` |
-| [cmd/openaccount](cmd/openaccount) | The open-account runner | `src/temporal_supervisor/run_open_account_workflow.py` |
-| [cmd/compliance](cmd/compliance) | Sends compliance approval | `src/temporal_supervisor/run_send_compliance_approval.py` |
-| [cmd/codecserver](cmd/codecserver), [internal/claimcheck](internal/claimcheck) | The claim-check codec and its codec server | `src/temporal_supervisor/claim_check/`, `codec_server/` |
-| [internal/workflows](internal/workflows) | The chat and open-account workflows, and the agents' tools | `src/temporal_supervisor/workflows/` |
-| [internal/activities](internal/activities) | The activities | `src/temporal_supervisor/activities/` |
-| [internal/agents](internal/agents), [internal/prompts](internal/prompts) | The agent tree and prompts, shared by both versions | `src/common/agent_constants.py` |
-| [internal/chaos](internal/chaos), [internal/llm](internal/llm) | Failure injection, and the chaos-aware Gemini model | `src/temporal_supervisor/chaos.py`, `model_config.py` |
-| [internal/data](internal/data), [internal/eventstream](internal/eventstream), [internal/redisx](internal/redisx), [internal/config](internal/config), [internal/domain](internal/domain) | Data managers, Redis event stream, settings and payloads | `src/common/` |
-| [scripts](scripts) | Start scripts | the `.sh` files in `src/` |
-| [frontend](frontend) | Copy of the shared React app | `src/frontend/` |
+| [cmd/worker](cmd/worker) | The Temporal worker | `durable/run_worker.py` |
+| [cmd/cli](cmd/cli), [internal/standalone](internal/standalone) | The standalone command-line chat | `standalone/` |
+| [cmd/openaccount](cmd/openaccount) | The open-account runner | `durable/run_open_account_workflow.py` |
+| [cmd/compliance](cmd/compliance) | Sends compliance approval | `durable/run_send_compliance_approval.py` |
+| [cmd/codecserver](cmd/codecserver) | The claim-check codec server | `durable/codec_server.py` |
+| [internal/workflows](internal/workflows) | The chat and open-account workflows, and the agents' tools | `durable/workflows/` |
+| [internal/activities](internal/activities) | The activities | `durable/activities/` |
+| [internal/agents](internal/agents), [internal/prompts](internal/prompts) | The agent tree and prompts, shared by both versions | `prompts/` |
+| [internal/llm](internal/llm) | The chaos-aware Gemini model | |
+| [internal/config](internal/config) | Settings: task queues, model, Temporal client options | |
+| [scripts](scripts) | Start scripts | the `.sh` files in `durable/` |
 | [tests](tests) | Live tests | `tests/live_*` |
-| [java](java) | Optional Java open-account worker, copied unchanged from the reference | `java/` |
-| [data](data) | Demo data, unchanged from the reference | `data/` |
 
-The default tests live next to the code they test (`*_test.go`), as is usual in Go.
+The framework-free packages are in [`src/go/internal/common`](../internal/common): `chaos` (failure
+injection), `claimcheck` (the claim-check codec), `data` (the data store), `domain` (payloads), `eventstream`
+(the Redis event stream the UI reads), `redisx` (Redis settings) and `testfixtures` (the test copy of the demo
+data).

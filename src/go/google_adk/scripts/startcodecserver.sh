@@ -5,5 +5,5 @@ cd "$(dirname "$0")" || exit 1
 echo "****************************************"
 echo "* Remember to start your Redis Server! *"
 echo "****************************************"
-[ -f ../setclaimcheck.sh ] && source ../setclaimcheck.sh
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
 exec go run ../cmd/codecserver

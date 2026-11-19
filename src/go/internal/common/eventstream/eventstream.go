@@ -13,7 +13,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/domain"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/domain"
 )
 
 // TTL is how long a chat's events are kept after its last event, so abandoned chats don't

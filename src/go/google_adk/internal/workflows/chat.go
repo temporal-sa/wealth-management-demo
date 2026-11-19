@@ -20,10 +20,10 @@ import (
 
 	"go.temporal.io/googleadk"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/activities"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/agents"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/domain"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/prompts"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/activities"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/agents"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/prompts"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/domain"
 )
 
 // Names of WealthManagementWorkflow and its handlers (the shared Temporal contract).

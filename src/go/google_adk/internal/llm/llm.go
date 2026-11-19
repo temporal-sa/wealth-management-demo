@@ -23,7 +23,7 @@ import (
 
 	"go.temporal.io/googleadk"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/chaos"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/chaos"
 )
 
 // RateLimitRetryAfter stands in for the Retry-After delay of a real 429.

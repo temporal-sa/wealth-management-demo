@@ -13,11 +13,11 @@ record and nothing else. There is also no chaos panel or web UI.
 
 ## Run it
 
-Set up your Gemini API key first (see the [root README](../README.md#set-up-your-gemini-api-key)).
+Set up your Gemini API key first (see the [port's README](../README.md#set-up-your-gemini-api-key)).
 From the repository root:
 
 ```bash
-./scripts/startcli.sh
+./src/go/google_adk/scripts/startcli.sh
 ```
 
 Then chat, for example:
@@ -29,5 +29,5 @@ Enter your message: What investments do I have?
 Enter your message: Open an account called Vacation with $500
 ```
 
-Type `end`, or press Ctrl-D, to leave. The chat reads and changes the files in `data/`; reset them
+Type `end`, or press Ctrl-D, to leave. The chat reads and changes the shared files in the repository's `data/`; reset them
 with `git checkout data/`.

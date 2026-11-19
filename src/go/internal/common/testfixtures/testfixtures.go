@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/data"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
 )
 
 //go:embed data/*.json

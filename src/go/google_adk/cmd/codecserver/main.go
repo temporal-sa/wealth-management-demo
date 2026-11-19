@@ -10,9 +10,9 @@ import (
 
 	"go.temporal.io/sdk/converter"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/claimcheck"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/config"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/redisx"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/config"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/claimcheck"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/redisx"
 )
 
 var allowedOrigins = map[string]bool{

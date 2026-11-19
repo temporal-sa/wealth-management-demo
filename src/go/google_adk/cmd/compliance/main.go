@@ -12,8 +12,8 @@ import (
 
 	"go.temporal.io/sdk/client"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/config"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/workflows"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/config"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/workflows"
 )
 
 func main() {

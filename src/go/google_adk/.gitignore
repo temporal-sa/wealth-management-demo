@@ -1,9 +1,2 @@
-/setgeminikey.sh
-/setcloudenv.sh
-/setclaimcheck.sh
-.idea
-.vscode
-.DS_Store
-dump.rdb
+# Go build output (the root .gitignore covers settings, editors and OS files)
 /bin/
-node_modules/

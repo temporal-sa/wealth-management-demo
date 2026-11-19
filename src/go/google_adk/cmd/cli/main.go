@@ -16,16 +16,16 @@ import (
 	"google.golang.org/adk/v2/session"
 	"google.golang.org/genai"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/config"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/data"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/standalone"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/config"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/standalone"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
 )
 
 func main() {
 	ctx := context.Background()
 	fmt.Println(config.ClaimCheckStatus() + ". The standalone chat doesn't use Temporal, so it has no payloads to claim-check.")
 	if os.Getenv("GEMINI_API_KEY") == "" && os.Getenv("GOOGLE_API_KEY") == "" {
-		log.Fatalln("Set GEMINI_API_KEY first (see setgeminikey.example).")
+		log.Fatalln("Set GEMINI_API_KEY first (see scripts/setgeminikey.example).")
 	}
 	dataDir, err := data.FindDataDir()
 	if err != nil {

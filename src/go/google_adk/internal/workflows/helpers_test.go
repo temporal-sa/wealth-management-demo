@@ -16,12 +16,12 @@ import (
 
 	"go.temporal.io/googleadk"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/activities"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/chaos"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/data"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/domain"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/eventstream"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/testfixtures"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/activities"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/chaos"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/domain"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/eventstream"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/testfixtures"
 )
 
 const testModel = "scripted-model"

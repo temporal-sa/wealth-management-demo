@@ -13,10 +13,10 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/worker"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/chaos"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/data"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/domain"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/eventstream"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/chaos"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/domain"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/eventstream"
 )
 
 // Activity names (the shared Temporal contract).

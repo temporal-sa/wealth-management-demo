@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/data"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/domain"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/testfixtures"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/domain"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/testfixtures"
 )
 
 func TestMoney(t *testing.T) {

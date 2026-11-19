@@ -5,21 +5,21 @@ the workflow with Temporal's [Go integration for Google ADK](https://docs.tempor
 (`go.temporal.io/googleadk`), so every model call and every tool that does I/O is a durable activity.
 Each account opening is a child workflow, `OpenInvestmentAccountWorkflow`.
 
-![Web UI](../images/webui.png)
+![Web UI](../../../../docs/images/webui.png)
 
 ## Architecture
 
 ```text
- React web UI ──► API (cmd/api, :8000) ──► Temporal ◄── Worker (cmd/worker)
-      ▲                │                                  │  task queue Supervisor:
+ React web UI ──► API (Python, :8000) ──► Temporal ◄── Worker (cmd/worker)
+      ▲                │                                  │  task queue ADK-Go-Supervisor:
       │                └──► Redis ◄───────────────────────┤    WealthManagementWorkflow (chat)
       └── polls the chat's events (events:<chat ID>)      │    OpenInvestmentAccountWorkflow
           and the chaos flags (chaos:flags)               │    tool activities
-                                                          │  task queue Supervisor-llm:
+                                                          │  task queue ADK-Go-Supervisor-llm:
                                                           │    googleadk.InvokeModel ──► Gemini
 ```
 
-* The **API** starts the chat workflow, signals each customer message to it, and reads the
+* The **API** ([src/python/api](../../../python/api/README.md), the one API every port shares) starts the chat workflow, signals each customer message to it, and reads the
   conversation from the chat's Redis event stream. The UI polls the API.
 * The **chat workflow** runs the ADK agent tree for each message, one message at a time:
 
@@ -45,7 +45,7 @@ Each account opening is a child workflow, `OpenInvestmentAccountWorkflow`.
 
 ## Running the demo locally
 
-Do the setup in the [root README](../README.md) first (prerequisites and Gemini key). Each command
+Do the setup in the [port's README](../README.md) first (prerequisites and Gemini key). Each command
 below runs in its own terminal, from the repository root.
 
 ### Start Temporal and Redis
@@ -63,16 +63,17 @@ The Temporal UI is at http://localhost:8233.
 ### Start the worker
 
 ```bash
-./scripts/startlocalworker.sh
+./src/go/google_adk/scripts/startlocalworker.sh
 ```
 
 ### Start the API
 
 ```bash
-./scripts/startlocalapi.sh
+./src/python/api/startlocalapi.sh google_adk_go
 ```
 
-The API listens on http://127.0.0.1:8000.
+The API listens on http://127.0.0.1:8000. The argument is the AI framework it serves; the web app names this
+port's chats `adk-go-temporal-agent-<random>`.
 
 ### Start the web UI
 
@@ -100,7 +101,7 @@ temporal workflow list --query "WorkflowType='OpenInvestmentAccountWorkflow' AND
 Then send the approval, quoting the ID:
 
 ```bash
-./scripts/localsendcomplianceapproval.sh "OpenAccount-<chat workflow ID>-123-Vacation-1"
+./src/go/google_adk/scripts/localsendcomplianceapproval.sh "OpenAccount-<chat workflow ID>-123-Vacation-1"
 ```
 
 Ask the agent for the status: it reads it with `get_account_opening_status`, and reports
@@ -112,17 +113,17 @@ The claim check substitutes every payload sent to Temporal (workflow and activit
 signals, queries and updates) with an ID. This is the
 [Claim Check pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/StoreInLibrary.html).
 A [payload codec](https://docs.temporal.io/develop/go/converters-and-encryption#custom-payload-codec)
-([internal/claimcheck](../internal/claimcheck/claimcheck.go)) stores the original payload in Redis under
+([internal/claimcheck](../../internal/common/claimcheck/claimcheck.go)) stores the original payload in Redis under
 a new UUID, and puts only the UUID in the event history. Its format matches the other ports' Python and
 Java codecs, so the Java worker works with it too.
 
 To turn it on, from the repository root:
 
 ```bash
-cp setclaimcheck.example setclaimcheck.sh
+cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
 ```
 
-`setclaimcheck.sh` sets `USE_CLAIM_CHECK=true` and where Redis is. It is git-ignored. Every start
+`scripts/setclaimcheck.sh` sets `USE_CLAIM_CHECK=true` and where Redis is. It is git-ignored. Every start
 script sources it if it exists, so the worker, the API, the compliance and open-account scripts, the
 codec server and the Java worker all use the codec. They must: a component without it can't read the
 others' payloads. Restart anything already running after you create or delete the file. Every program prints a
@@ -139,7 +140,7 @@ With the claim check on, the Temporal UI only shows each payload's UUID. The cod
 the real data. Start it:
 
 ```bash
-./scripts/startcodecserver.sh
+./src/go/google_adk/scripts/startcodecserver.sh
 ```
 
 It listens on http://127.0.0.1:8081 (`CODEC_SERVER_ADDRESS` changes it). Open the Temporal UI at exactly
@@ -148,15 +149,15 @@ only accepts requests from those origins. Click the glasses icon at the top righ
 setting and ignore Cluster-level setting**, enter `http://127.0.0.1:8081` with no trailing spaces, turn
 off **Pass the user access token** and **Include cross-origin credentials**, and click **Apply**.
 
-![Codec server settings](../images/config-codec-server.png)
+![Codec server settings](../../../../docs/images/config-codec-server.png)
 
 The UI now shows the decoded payloads:
 
-![Decoded input](../images/decoded-input.png)
+![Decoded input](../../../../docs/images/decoded-input.png)
 
 Without the codec server, it shows only the Base64-encoded ID:
 
-![Encoded input](../images/encoded-input.png)
+![Encoded input](../../../../docs/images/encoded-input.png)
 
 ## Running the demo on Temporal Cloud
 
@@ -164,21 +165,21 @@ The worker, the API and the compliance script read the Temporal connection from 
 Copy the example file and fill in your namespace and its mTLS client certificate and key:
 
 ```bash
-cp setcloudenv.example setcloudenv.sh
+cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
-`setcloudenv.sh` sets `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_TLS_CLIENT_CERT_PATH` and
+`scripts/setcloudenv.sh` sets `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_TLS_CLIENT_CERT_PATH` and
 `TEMPORAL_TLS_CLIENT_KEY_PATH`. It is git-ignored: never commit it. (The Go SDK also reads
 `TEMPORAL_API_KEY`, if your namespace uses an API key instead of mTLS.)
 
 Start Redis, then each of these in its own terminal, from the repository root:
 
 ```bash
-./scripts/startcloudworker.sh
+./src/go/google_adk/scripts/startcloudworker.sh
 ```
 
 ```bash
-./scripts/startcloudapi.sh
+./src/python/api/startcloudapi.sh google_adk_go
 ```
 
 ```bash
@@ -188,7 +189,7 @@ cd frontend && npm install && npm start
 Send compliance approval with the Cloud script, quoting the workflow ID:
 
 ```bash
-./scripts/cloudsendcomplianceapproval.sh "OpenAccount-<chat workflow ID>-123-Vacation-1"
+./src/go/google_adk/scripts/cloudsendcomplianceapproval.sh "OpenAccount-<chat workflow ID>-123-Vacation-1"
 ```
 
 Watch the workflows in the Temporal Cloud UI, in your namespace. `startcloudworker.sh <queue>` moves the
@@ -232,19 +233,19 @@ open-account workflow onto another task queue, as `startlocalworker.sh <queue>` 
 
 ### With the Java open-account workflow
 
-The optional [Java worker](../java/README.md) runs `OpenInvestmentAccountWorkflow` on its own task
+The optional [Java worker](../../../../interop/open_account/java/README.md) runs `OpenInvestmentAccountWorkflow` on its own task
 queue and calls this port's activities by name. Start the Go worker with the queue name, then the Java
 worker with the same name:
 
 ```bash
-./scripts/startlocalworker.sh Open-Account-Java
+./src/go/google_adk/scripts/startlocalworker.sh Open-Account-Java
 ```
 
 ```bash
-cd java && ./startlocalworker.sh Open-Account-Java
+cd interop/open_account/java && TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./startlocalworker.sh Open-Account-Java
 ```
 
-The Java version has its own bug in workflow code: see the [Java README](../java/README.md).
+The Java version has its own bug in workflow code: see the [Java README](../../../../interop/open_account/java/README.md).
 
 ### Testing the open-account workflow on its own
 
@@ -253,16 +254,16 @@ for three scenarios: KYC approved, client details updated, and compliance approv
 starts its own worker and stops it on exit:
 
 ```bash
-./scripts/startlocalopenaccount.sh
+./src/go/google_adk/scripts/startlocalopenaccount.sh
 ```
 
 To run them on the Java worker instead, start it first (above), then pass its queue name:
-`./scripts/startlocalopenaccount.sh Open-Account-Java`.
+`./src/go/google_adk/scripts/startlocalopenaccount.sh Open-Account-Java`.
 
 When the third scenario waits for compliance approval, send it from another terminal:
 
 ```bash
-./scripts/localsendcomplianceapproval.sh testing-open-investment-account-workflow3
+./src/go/google_adk/scripts/localsendcomplianceapproval.sh testing-open-investment-account-workflow3
 ```
 
 Scenario 2 changes Don Doe's last name to Doenut, so reset the data afterwards with `git checkout data/`.
@@ -271,21 +272,20 @@ Scenario 2 changes Don Doe's last name to Doenut, so reset the data afterwards w
 
 | Variable | Default | Used by | What it does |
 |---|---|---|---|
-| `GEMINI_API_KEY` | none | worker, CLI | Gemini API key (or `GOOGLE_API_KEY`). Set in `setgeminikey.sh`. |
+| `GEMINI_API_KEY` | none | worker, CLI | Gemini API key (or `GOOGLE_API_KEY`). Set in `scripts/setgeminikey.sh`. |
 | `GEMINI_MODEL` | `gemini-3.8-flash` | worker, CLI | The Gemini model every agent uses |
 | `TEMPORAL_ADDRESS` | `127.0.0.1:7233` | all | Temporal service address |
 | `TEMPORAL_NAMESPACE` | `default` | all | Temporal namespace |
-| `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | all | mTLS client certificate and key, for Temporal Cloud. Set in `setcloudenv.sh`. |
-| `TEMPORAL_TASK_QUEUE` | `Supervisor` | worker, API | Task queue of the chat workflow and the tool activities |
+| `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | all | mTLS client certificate and key, for Temporal Cloud. Set in `scripts/setcloudenv.sh`. |
+| `TEMPORAL_TASK_QUEUE` | `ADK-Go-Supervisor` | worker, API | Task queue of the chat workflow and the tool activities |
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat's queue | worker, runner | Task queue of the open-account workflow. `startlocalworker.sh <queue>` sets it; the worker then doesn't run that workflow. |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | worker | Task queue of the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | worker | Rate limit the Temporal service applies to model calls, across all workers |
 | `REDIS_URL` | none | worker, API | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | worker, API | Where Redis is |
-| `USE_CLAIM_CHECK` | off | all | `true`, `yes` or `1` turns on the claim-check codec. Set in `setclaimcheck.sh`. |
+| `USE_CLAIM_CHECK` | off | all | `true`, `yes` or `1` turns on the claim-check codec. Set in `scripts/setclaimcheck.sh`. |
 | `CODEC_SERVER_ADDRESS` | `127.0.0.1:8081` | codec server | Where the codec server listens |
 | `DATA_DIR` | `data/` above the working directory | worker, CLI | Folder of the demo data files |
-| `API_ADDRESS` | `127.0.0.1:8000` | API | Where the API listens |
 | `LIVE_TEST_RUNS` | `1` | live tests | How many times each live test repeats its conversation |
 
 ## Failure scenarios
@@ -342,7 +342,7 @@ opening carries on and opens the account with the bonus. To demo it again, put t
 
 The default suite needs no API key, no Redis and no running Temporal service. It uses the Temporal Go
 SDK's test environment, stub activities and a scripted model. The bug test starts a Temporal dev
-server itself, using the `temporal` CLI on your PATH (or downloading it).
+server itself, using the `temporal` CLI on your PATH (or downloading it). From `src/go`:
 
 ```bash
 go test ./...
@@ -370,15 +370,15 @@ cd frontend && npm install && CI=true npm test
 The Java worker's own tests (JDK 25):
 
 ```bash
-cd java && ./gradlew clean build && ./gradlew test
+cd interop/open_account/java && ./gradlew clean build && ./gradlew test
 ```
 
 The live tests call the real Gemini API, so they are kept out of the default run. They run the real
 chat workflow on a dev server they start, with an in-memory event stream and the chaos flags off, and
-print each run's transcript:
+print each run's transcript. From `src/go/google_adk`:
 
 ```bash
-source setgeminikey.sh && LIVE_TEST_RUNS=3 go test -tags live ./tests/ -v
+source ../../../scripts/setgeminikey.sh && LIVE_TEST_RUNS=3 go test -tags live ./tests/ -v
 ```
 
 * `TestLiveAgentHandoffs`: "Who are my beneficiaries?", "123", "What investments do I have?". The

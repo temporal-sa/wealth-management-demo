@@ -1,4 +1,4 @@
-module github.com/temporal-sa/adk-go-wealth-management
+module github.com/temporal-sa/wealth-management-demo/src/go
 
 go 1.26.10
 

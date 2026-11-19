@@ -19,7 +19,7 @@ import (
 	"google.golang.org/adk/v2/model"
 	"google.golang.org/adk/v2/tool"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/prompts"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/prompts"
 )
 
 // Options is what a version supplies to build the tree.

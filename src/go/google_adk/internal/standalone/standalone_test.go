@@ -18,8 +18,8 @@ import (
 
 	"go.temporal.io/googleadk"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/data"
-	"github.com/temporal-sa/adk-go-wealth-management/internal/prompts"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/prompts"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
 )
 
 type recordingModel struct {

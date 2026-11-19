@@ -4,7 +4,7 @@
 # Usage: startlocalopenaccount.sh [open-account-task-queue]
 # With a queue name, the workflow runs on that queue, so a worker for it must be running.
 cd "$(dirname "$0")" || exit 1
-[ -f ../setclaimcheck.sh ] && source ../setclaimcheck.sh
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
 if [ -n "$1" ]; then
   export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"
   echo "*** Running the open-account workflow on task queue $1. ***"

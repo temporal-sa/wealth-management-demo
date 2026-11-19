@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/temporal-sa/adk-go-wealth-management/internal/prompts"
+	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/prompts"
 )
 
 // TestOffTopicPrompt: the Temporal Supervisor Agent's prompt, as the model receives it,
