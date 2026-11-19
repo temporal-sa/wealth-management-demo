@@ -24,7 +24,7 @@ src/<language>/
     tests/
 ```
 
-## Ports
+## Frameworks
 
 | Framework | Language | Folder | Original repo |
 |---|---|---|---|
@@ -64,7 +64,7 @@ src/<language>/
    - Its images in `docs/images/<folder>/`: `application-architecture.png`, the three web UI screenshots
      (`ux-waiting-kyc.png`, `ux-waiting-compliance-review.png`, `ux-open-account-complete.png`) and
      `temporal-ui-open-account.png`.
-7. **List it** in this README's [Ports](#ports) and [Task queues](#task-queues) tables, and in the API, web UI
+7. **List it** in this README's [Frameworks](#frameworks) and [Task queues](#task-queues) tables, and in the API, web UI
    (`frontend/README.md`), Java worker and `scripts/` READMEs.
 8. **Test it:** the port's unit tests, an end-to-end chat through the API and web UI that opens an account through
    KYC and compliance approval, and the same with the Java worker (`startlocalworker.sh java`).
