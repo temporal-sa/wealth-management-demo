@@ -12,6 +12,7 @@ the real chat workflow (src/python/openai_agents/tests/test_api_client.py).
 
 import asyncio
 import os
+import re
 import subprocess
 import sys
 import uuid
@@ -19,6 +20,7 @@ from contextlib import contextmanager
 from datetime import timedelta
 from pathlib import Path
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from temporalio import workflow
@@ -123,9 +125,20 @@ async def post(http, path: str, **params) -> dict:
 
 
 async def start_chat(http) -> str:
-    workflow_id = f"api-test-{uuid.uuid4()}"
-    assert await post(http, "/start-workflow", workflow_id=workflow_id) == {"message": "Workflow started."}
-    return workflow_id
+    response = await post(http, "/api/start-workflow")
+    assert response["message"] == "Workflow started."
+    return response["workflow_id"]
+
+
+@contextmanager
+def other_browser(http):
+    """The same client with an empty cookie jar, as another browser would be."""
+    saved = http.cookies
+    http.cookies = httpx.Cookies()
+    try:
+        yield http
+    finally:
+        http.cookies = saved
 
 
 async def test_start_workflow_starts_the_chat_workflow_on_the_task_queue(http, temporal_env):
@@ -140,7 +153,7 @@ async def test_start_workflow_starts_the_chat_workflow_on_the_task_queue(http, t
 async def test_send_prompt_sends_process_user_message_with_the_contract_payload(http, temporal_env):
     workflow_id = await start_chat(http)
 
-    response = await post(http, "/send-prompt", workflow_id=workflow_id, prompt="Who are my beneficiaries?")
+    response = await post(http, "/api/send-prompt", workflow_id=workflow_id, prompt="Who are my beneficiaries?")
 
     assert response == {"response": "Message sent"}
     handle = temporal_env.client.get_workflow_handle(workflow_id)
@@ -154,32 +167,78 @@ async def test_send_prompt_sends_process_user_message_with_the_contract_payload(
 async def test_end_chat_sends_end_workflow(http, temporal_env):
     workflow_id = await start_chat(http)
 
-    assert await post(http, "/end-chat", workflow_id=workflow_id) == {"message": "End chat signal sent."}
+    assert await post(http, "/api/end-chat", workflow_id=workflow_id) == {"message": "End chat signal sent."}
     handle = temporal_env.client.get_workflow_handle(workflow_id)
     assert await asyncio.wait_for(handle.result(), timeout=10) == []
 
 
-async def test_start_workflow_reuses_the_id_of_an_ended_chat(http, temporal_env):
+async def test_each_browser_gets_a_session_cookie_and_chat_ids_that_carry_it(http):
+    with other_browser(http):
+        workflow_id = await start_chat(http)
+        session = http.cookies.get("wm_session")
+        assert re.fullmatch(r"[0-9a-f]{32}", session)
+        assert re.fullmatch(rf"oai-temporal-agent-session-{session}-chat-[0-9a-f]{{16}}", workflow_id)
+        # The same browser keeps its session
+        assert session_from(await start_chat(http)) == session
+
+
+def session_from(workflow_id: str) -> str:
+    return re.search(r"session-([0-9a-f]{32})-chat-", workflow_id).group(1)
+
+
+async def test_another_browsers_chat_is_not_found(http, temporal_env):
     workflow_id = await start_chat(http)
+    with other_browser(http):
+        for method, path, params in (
+            ("get", "/api/get-chat-history", {"workflow_id": workflow_id}),
+            ("post", "/api/send-prompt", {"workflow_id": workflow_id, "prompt": "Hi"}),
+            ("post", "/api/end-chat", {"workflow_id": workflow_id}),
+            ("post", "/api/approve-compliance", {"workflow_id": workflow_id}),
+        ):
+            response = await asyncio.to_thread(getattr(http, method), path, params=params)
+            assert response.status_code == 404, path
+    # Nothing reached the chat
     handle = temporal_env.client.get_workflow_handle(workflow_id)
-    first_run = (await handle.describe()).run_id
-    await post(http, "/end-chat", workflow_id=workflow_id)
-    await asyncio.wait_for(handle.result(), timeout=10)
+    assert await handle.query("messages") == []
+    assert (await handle.describe()).status == WorkflowExecutionStatus.RUNNING
+    await handle.terminate()
 
-    assert await post(http, "/start-workflow", workflow_id=workflow_id) == {"message": "Workflow started."}
 
-    description = await temporal_env.client.get_workflow_handle(workflow_id).describe()
-    assert description.run_id != first_run
-    assert description.status == WorkflowExecutionStatus.RUNNING
+async def test_chaos_flags_are_set_for_the_callers_session(http, monkeypatch):
+    from api import main
+    sessions = []
+
+    class RecordingChaosManager:
+        def __init__(self, session_id=None):
+            sessions.append(session_id)
+
+        async def set_enabled(self, flag, enabled):
+            pass
+
+        async def close(self):
+            pass
+
+    monkeypatch.setattr(main, "ChaosManager", RecordingChaosManager)
+    await post(http, "/api/chaos", flag="tool_down", enabled=True)
+    with other_browser(http):
+        await post(http, "/api/chaos", flag="tool_down", enabled=True)
+        other = http.cookies.get("wm_session")
+    assert sessions == [http.cookies.get("wm_session"), other] and sessions[0] != sessions[1]
+
+
+async def unstarted_chat_id(http) -> str:
+    """An ID of this browser session's form that no chat was started with."""
+    await asyncio.to_thread(http.get, "/api/config")  # makes sure the browser has its session cookie
+    return f"oai-temporal-agent-session-{http.cookies.get('wm_session')}-chat-{uuid.uuid4().hex[:16]}"
 
 
 async def test_send_prompt_to_an_unknown_chat_reports_an_error(http):
-    response = await post(http, "/send-prompt", workflow_id=f"missing-{uuid.uuid4()}", prompt="Hello")
+    response = await post(http, "/api/send-prompt", workflow_id=await unstarted_chat_id(http), prompt="Hello")
     assert response["response"].startswith("Error:")
 
 
 async def test_end_chat_for_an_unknown_chat_returns_nothing(http):
-    assert await post(http, "/end-chat", workflow_id=f"missing-{uuid.uuid4()}") == {}
+    assert await post(http, "/api/end-chat", workflow_id=await unstarted_chat_id(http)) == {}
 
 
 async def _start_opening(temporal_env, workflow_id: str, state: str):
@@ -199,13 +258,13 @@ async def _wait_until_listed(temporal_env, ids: list[str]) -> None:
 
 
 async def test_approve_compliance_signals_only_this_chats_openings_waiting_for_review(http, temporal_env):
-    chat_id = f"chat-{uuid.uuid4()}"
+    chat_id = await start_chat(http)
     waiting = await _start_opening(temporal_env, f"OpenAccount-{chat_id}-123-Vacation account-1", "Waiting Compliance Review")
     in_kyc = await _start_opening(temporal_env, f"OpenAccount-{chat_id}-123-College-2", "Waiting KYC")
     other_chat = await _start_opening(temporal_env, f"OpenAccount-{chat_id}0-123-Vacation-1", "Waiting Compliance Review")
     await _wait_until_listed(temporal_env, [waiting.id, in_kyc.id, other_chat.id])
 
-    response = await asyncio.to_thread(http.post, "/approve-compliance", params={"workflow_id": chat_id})
+    response = await asyncio.to_thread(http.post, "/api/approve-compliance", params={"workflow_id": chat_id})
 
     assert response.status_code == 200
     assert response.json() == {"approved": [waiting.id]}
@@ -217,13 +276,14 @@ async def test_approve_compliance_signals_only_this_chats_openings_waiting_for_r
 
 
 async def test_approve_compliance_with_nothing_waiting_approves_nothing(http):
-    response = await asyncio.to_thread(http.post, "/approve-compliance", params={"workflow_id": f"chat-{uuid.uuid4()}"})
+    chat_id = await start_chat(http)
+    response = await asyncio.to_thread(http.post, "/api/approve-compliance", params={"workflow_id": chat_id})
     assert response.json() == {"approved": []}
 
 
-async def test_approve_compliance_rejects_a_chat_id_with_a_quote(http):
-    response = await asyncio.to_thread(http.post, "/approve-compliance", params={"workflow_id": "x' OR WorkflowId != '"})
-    assert response.status_code == 400
+async def test_approve_compliance_rejects_an_id_that_isnt_this_sessions_chat(http):
+    response = await asyncio.to_thread(http.post, "/api/approve-compliance", params={"workflow_id": "x' OR WorkflowId != '"})
+    assert response.status_code == 404
 
 
 async def test_get_chat_history_returns_the_events_from_the_index(http, monkeypatch):
@@ -237,19 +297,20 @@ async def test_get_chat_history_returns_the_events_from_the_index(http, monkeypa
     from common.event_stream_manager import EventStreamManager
     monkeypatch.setattr(EventStreamManager, "get_events_from_index", fake_get_events_from_index)
 
-    response = await asyncio.to_thread(http.get, "/get-chat-history", params={"workflow_id": "chat-1", "from_index": 3})
+    chat_id = await start_chat(http)
+    response = await asyncio.to_thread(http.get, "/api/get-chat-history", params={"workflow_id": chat_id, "from_index": 3})
 
     assert response.json() == events
-    assert calls == [("chat-1", 3)]
+    assert calls == [(chat_id, 3)]
 
 
 async def test_set_chaos_rejects_an_unknown_flag(http):
-    response = await asyncio.to_thread(http.post, "/chaos", params={"flag": "not_a_flag", "enabled": True})
+    response = await asyncio.to_thread(http.post, "/api/chaos", params={"flag": "not_a_flag", "enabled": True})
     assert response.status_code == 400
 
 
 async def test_config_reports_the_framework(http):
-    response = await asyncio.to_thread(http.get, "/config")
+    response = await asyncio.to_thread(http.get, "/api/config")
     assert response.json() == {
         "framework": "openai_agents",
         "label": "OpenAI Agents SDK",
@@ -260,7 +321,7 @@ async def test_config_reports_the_framework(http):
 
 async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal_env, tmp_path_factory):
     with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="pyai") as client:
-        config = (await asyncio.to_thread(client.get, "/config")).json()
+        config = (await asyncio.to_thread(client.get, "/api/config")).json()
         assert config == {
             "framework": "pyai",
             "label": "Pydantic AI",
@@ -268,8 +329,8 @@ async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal
             "workflow_id_prefix": "pyai-temporal-agent-",
         }
 
-        workflow_id = config["workflow_id_prefix"] + uuid.uuid4().hex[:12]
-        assert await post(client, "/start-workflow", workflow_id=workflow_id) == {"message": "Workflow started."}
+        workflow_id = await start_chat(client)
+        assert workflow_id.startswith("pyai-temporal-agent-session-")
 
     handle = temporal_env.client.get_workflow_handle(workflow_id)
     assert (await handle.describe()).task_queue == "PYAI-Supervisor"
@@ -279,7 +340,7 @@ async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal
 async def test_settings_override_the_frameworks_values(temporal_env, tmp_path_factory):
     with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="pyai", TEMPORAL_TASK_QUEUE="my-queue",
              CHAT_WORKFLOW_ID_PREFIX="demo-") as client:
-        config = (await asyncio.to_thread(client.get, "/config")).json()
+        config = (await asyncio.to_thread(client.get, "/api/config")).json()
     assert (config["task_queue"], config["workflow_id_prefix"]) == ("my-queue", "demo-")
 
 
@@ -319,10 +380,10 @@ async def test_the_strands_framework_needs_nothing_extra(temporal_env, tmp_path_
     """Like the other frameworks, the Strands Agents version confirms deletes in the chat, so the
     API serves it with the same endpoints: only its task queue and prefix differ."""
     with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="strands_agents") as client:
-        assert (await asyncio.to_thread(client.get, "/config")).json() == {
+        assert (await asyncio.to_thread(client.get, "/api/config")).json() == {
             "framework": "strands_agents",
             "label": "Strands Agents",
             "task_queue": "Strands-Supervisor",
             "workflow_id_prefix": "strands-temporal-agent-",
         }
-        assert (await asyncio.to_thread(client.get, "/pending-approval", params={"workflow_id": "x"})).status_code == 404
+        assert (await asyncio.to_thread(client.get, "/api/pending-approval", params={"workflow_id": "x"})).status_code == 404

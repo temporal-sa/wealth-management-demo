@@ -15,22 +15,22 @@ and how their workflow IDs are named:
 
 ```bash
 cd src/python/api
-./startlocalapi.sh openai_agents   # OpenAI Agents SDK: oai-temporal-agent-<random> on OAI-Supervisor
-./startlocalapi.sh pyai            # Pydantic AI: pyai-temporal-agent-<random> on PYAI-Supervisor
-./startlocalapi.sh strands_agents  # Strands Agents: strands-temporal-agent-<random> on Strands-Supervisor
-./startlocalapi.sh google_adk      # Google ADK: adk-temporal-agent-<random> on ADK-Supervisor
-./startlocalapi.sh pure            # Pure Python (LiteLLM): pure-temporal-agent-<random> on Pure-Supervisor
-./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-<random> on VAI-Supervisor
-./startlocalapi.sh google_adk_ts   # Google ADK (TypeScript): adk-ts-temporal-agent-<random> on ADK-TS-Supervisor
-./startlocalapi.sh google_adk_go   # Google ADK (Go): adk-go-temporal-agent-<random> on ADK-Go-Supervisor
+./startlocalapi.sh openai_agents   # OpenAI Agents SDK: oai-temporal-agent-session-<session>-chat-<random> on OAI-Supervisor
+./startlocalapi.sh pyai            # Pydantic AI: pyai-temporal-agent-session-<session>-chat-<random> on PYAI-Supervisor
+./startlocalapi.sh strands_agents  # Strands Agents: strands-temporal-agent-session-<session>-chat-<random> on Strands-Supervisor
+./startlocalapi.sh google_adk      # Google ADK: adk-temporal-agent-session-<session>-chat-<random> on ADK-Supervisor
+./startlocalapi.sh pure            # Pure Python (LiteLLM): pure-temporal-agent-session-<session>-chat-<random> on Pure-Supervisor
+./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-session-<session>-chat-<random> on VAI-Supervisor
+./startlocalapi.sh google_adk_ts   # Google ADK (TypeScript): adk-ts-temporal-agent-session-<session>-chat-<random> on ADK-TS-Supervisor
+./startlocalapi.sh google_adk_go   # Google ADK (Go): adk-go-temporal-agent-session-<session>-chat-<random> on ADK-Go-Supervisor
 ```
 
 Note that the web application communicates directly with the API and the API is what 
 communicates with Temporal running locally or in the cloud.
 
-The API URL is set in [`src/config.js`](src/config.js) (`API_BASE_URL`, default `http://127.0.0.1:8000`).
-The API's CORS settings allow the web application on port 3000 (`http://localhost:3000` and
-`http://127.0.0.1:3000`), so run it on that port.
+The web app calls the API at `/api` on its own origin ([`src/config.js`](src/config.js)); the dev server proxies those
+calls to the API at http://127.0.0.1:8000 (`"proxy"` in [`package.json`](package.json)). Change the proxy if the API runs
+elsewhere.
 
 ## Install Dependencies
 From the repository root:
@@ -47,9 +47,13 @@ npm start
 
 A browser window opens at http://localhost:3000. The header shows the AI framework the API serves
 (for example "AI framework: Google ADK"). Click **Start Chat** to start a conversation. Each
-chat starts a new chat workflow with a random ID named after the AI framework the API serves, for example
-`oai-temporal-agent-<random>` or `pyai-temporal-agent-<random>` (the prefix comes from the API's
-`GET /config`); **End Chat** ends it.
+chat starts a new chat workflow; the API picks its ID, named after the AI framework it serves and carrying your browser
+session, for example `oai-temporal-agent-session-<session>-chat-<random>`. **End Chat** ends it.
+
+The web app calls the API on its own origin, at `/api` (`src/config.js`): the dev server proxies those calls to the API
+at http://127.0.0.1:8000 (`"proxy"` in `package.json`). That way the browser keeps the API's session cookie, which
+keeps each browser's chats, chaos flags and (with `DEMO_DATA_STORE=redis`) sample data apart from other browsers'. See
+[Browser sessions](../src/python/api/README.md#browser-sessions).
 
 Click **Chaos** in the chat header to open the chaos panel, which turns failure scenarios on and off
 at runtime and lists the failures as they happen. See
