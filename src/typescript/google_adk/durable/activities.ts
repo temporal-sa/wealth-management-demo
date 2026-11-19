@@ -1,6 +1,6 @@
 /**
  * Every activity, registered under the snake_case names of the shared Temporal contract. The Java
- * open-account worker and the other ports' scripts call them by these names.
+ * open-account worker and the other frameworks' scripts call them by these names.
  *
  * createActivities builds them over a data store, an event stream and a Temporal client, so the
  * tests can run them over a copy of the demo data, an in-memory event stream and the test server.

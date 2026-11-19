@@ -1,4 +1,4 @@
-// The claim check writes the same payloads as the Python ports and the Java worker, so each can
+// The claim check writes the same payloads as the Python frameworks and the Java worker, so each can
 // read the others' (the Java worker only decodes payloads whose encoding is "claim-checked").
 import assert from 'assert';
 import type Redis from 'ioredis';
@@ -15,7 +15,7 @@ function fakeRedis(): Redis {
 const payload = { metadata: { encoding: Buffer.from('json/plain') }, data: Buffer.from('{"client_id":"123"}') };
 
 describe('claim check codec', () => {
-  it('writes the encoding the Python ports and the Java worker use', async () => {
+  it('writes the encoding the Python frameworks and the Java worker use', async () => {
     const [encoded] = await new ClaimCheckCodec(fakeRedis()).encode([payload]);
     assert.strictEqual(Buffer.from(encoded.metadata!.encoding!).toString(), 'claim-checked');
     assert.strictEqual(Buffer.from(encoded.metadata!['temporal.io/claim-check-codec']!).toString(), 'v1');

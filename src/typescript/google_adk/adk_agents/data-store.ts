@@ -4,7 +4,7 @@
  *
  * Every call reads the file again and every change writes it back, so a `git checkout data/` takes
  * effect without restarting anything. The files are written with 4-space indents, like the
- * reference port, so a demo run changes only the values. DATA_DIR points the store at another
+ * reference framework, so a demo run changes only the values. DATA_DIR points the store at another
  * folder; the tests use a copy of the demo data so a demo run can't break them.
  */
 import * as fs from 'fs';
@@ -94,7 +94,7 @@ export class DataStore {
 
   /**
    * Writes the file in the style it already has (its indent, and balances written as floats like
-   * 1000.0, as the reference port's Python writes them), so a demo run changes only the values.
+   * 1000.0, as the reference framework's Python writes them), so a demo run changes only the values.
    */
   private write(file: string, data: unknown): void {
     const p = path.join(this.dir, file);
@@ -179,7 +179,7 @@ export class DataStore {
     return this.read<Record<string, WealthManagementClient>>('clients.json', {})[clientId] ?? null;
   }
 
-  /** Saves the given fields. Returns the reference port's result message. */
+  /** Saves the given fields. Returns the reference framework's result message. */
   updateClient(clientId: string, fields: Partial<WealthManagementClient>): string {
     const data = this.read<Record<string, WealthManagementClient>>('clients.json', {});
     if (!data[clientId]) return `Client ${clientId} not found`;

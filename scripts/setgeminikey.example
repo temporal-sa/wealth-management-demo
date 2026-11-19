@@ -2,5 +2,5 @@
 # Get your key from https://console.cloud.google.com/apis/credentials or
 # https://aistudio.google.com/api-keys
 export GEMINI_API_KEY="Your API Key Goes Here"
-# Optional, Google ADK TypeScript and Go ports only: the Gemini model their agents use (default gemini-3.8-flash)
+# Optional, Google ADK TypeScript and Go frameworks only: the Gemini model their agents use (default gemini-3.8-flash)
 # export GEMINI_MODEL=gemini-3.8-flash

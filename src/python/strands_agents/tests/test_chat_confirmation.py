@@ -1,4 +1,4 @@
-"""Deleting a beneficiary is confirmed in the chat, as in the other ports.
+"""Deleting a beneficiary is confirmed in the chat, as in the other frameworks.
 
 Runs the real ``WealthManagementWorkflow`` in a local Temporal environment, with a
 deterministic scripted model (registered under the production model name) and

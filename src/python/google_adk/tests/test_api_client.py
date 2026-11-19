@@ -1,6 +1,6 @@
-"""The shared API's Temporal calls work against this port's real chat workflow.
+"""The shared API's Temporal calls work against this framework's real chat workflow.
 
-The API (src/python/api) connects without this port's GoogleAdkPlugin or workflow class:
+The API (src/python/api) connects without this framework's GoogleAdkPlugin or workflow class:
 it uses the contract names and Temporal's Pydantic data converter. The plugin's converter
 is Pydantic JSON too, so both sides read each other's payloads. This test makes the API's
 exact calls, from ``api.client``, to the real ``WealthManagementWorkflow`` run with the
@@ -55,7 +55,7 @@ async def test_the_api_client_starts_messages_and_ends_the_real_chat_workflow(mo
 
 
 def test_the_api_knows_this_ports_task_queue():
-    """./startlocalapi.sh google_adk starts chats where this port's worker listens by default."""
+    """./startlocalapi.sh google_adk starts chats where this framework's worker listens by default."""
     from api.frameworks import FRAMEWORKS
     from durable.task_queues import DEFAULT_TASK_QUEUE
 

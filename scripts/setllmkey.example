@@ -1,4 +1,4 @@
-# Model settings for the pure Python port (src/python/pure), which calls the model through
+# Model settings for the pure Python framework (src/python/pure), which calls the model through
 # LiteLLM. From the repository root, copy this file to scripts/setllmkey.sh (which git
 # ignores) and fill in your key:
 #   cp scripts/setllmkey.example scripts/setllmkey.sh

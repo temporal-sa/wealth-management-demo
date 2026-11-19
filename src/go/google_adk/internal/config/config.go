@@ -21,7 +21,7 @@ import (
 const DefaultGeminiModel = "gemini-3.8-flash"
 
 // DefaultTaskQueue is the chat workflow's task queue when TEMPORAL_TASK_QUEUE isn't set: this
-// port's own, so its worker can run alongside the other ports'.
+// framework's own, so its worker can run alongside the other frameworks'.
 const DefaultTaskQueue = "ADK-Go-Supervisor"
 
 // Config holds the task queues, the model and the Temporal connection settings.
@@ -42,14 +42,14 @@ type Config struct {
 }
 
 // JavaOpenAccount is the TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT value (and the worker scripts' argument)
-// that gives the open-account workflow this port's own queue, so the Java worker can run it.
+// that gives the open-account workflow this framework's own queue, so the Java worker can run it.
 const JavaOpenAccount = "java"
 
 // OpenAccountTaskQueue is the open-account workflow's task queue, from
 // TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT (value). Empty: the chat workflow's queue, so this worker runs
-// it. "java": <taskQueue>-open-account, a queue for this port alone, which the Java worker started
-// with TEMPORAL_TASK_QUEUE=<taskQueue> polls; every port gets its own, so several can use Java at
-// once. Anything else is the queue's name. The other languages' ports follow the same rule.
+// it. "java": <taskQueue>-open-account, a queue for this framework alone, which the Java worker started
+// with TEMPORAL_TASK_QUEUE=<taskQueue> polls; every framework gets its own, so several can use Java at
+// once. Anything else is the queue's name. The other languages' frameworks follow the same rule.
 func OpenAccountTaskQueue(taskQueue, value string) string {
 	value = strings.TrimSpace(value)
 	switch {

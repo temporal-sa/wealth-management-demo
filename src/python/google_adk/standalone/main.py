@@ -14,7 +14,7 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-# Add the port's folder to the path so `prompts` imports work when this file is run
+# Add the framework's folder to the path so `prompts` imports work when this file is run
 # directly. `common` comes from src/python, which the editable install puts on the path.
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))

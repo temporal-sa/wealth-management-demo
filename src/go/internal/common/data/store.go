@@ -135,7 +135,7 @@ func (s *Store) GetClient(clientID string) (*domain.WealthManagementClient, erro
 }
 
 // UpdateClient changes the given fields of a client's details and returns a message
-// saying what happened, as the other ports do.
+// saying what happened, as the other frameworks do.
 func (s *Store) UpdateClient(clientID string, fields map[string]any) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

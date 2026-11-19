@@ -10,8 +10,8 @@ import { openAccountTaskQueue } from '../../common/task-queues';
 export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
 
 /**
- * The chat workflow's task queue when TEMPORAL_TASK_QUEUE is not set: this port's own, so its worker
- * can run alongside the other ports'.
+ * The chat workflow's task queue when TEMPORAL_TASK_QUEUE is not set: this framework's own, so its worker
+ * can run alongside the other frameworks'.
  */
 export const DEFAULT_TASK_QUEUE = 'ADK-TS-Supervisor';
 

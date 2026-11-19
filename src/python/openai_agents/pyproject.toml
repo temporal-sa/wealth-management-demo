@@ -20,7 +20,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-# The port's own packages, plus src/python for the shared common/ and api/ packages.
+# The framework's own packages, plus src/python for the shared common/ and api/ packages.
 dev-mode-dirs = [".", ".."]
 
 [tool.hatch.build.targets.wheel]

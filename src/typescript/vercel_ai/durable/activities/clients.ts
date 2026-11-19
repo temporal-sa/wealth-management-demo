@@ -11,7 +11,7 @@ export async function add_client(client: WealthManagementClient): Promise<Wealth
   return mgr.addClient(client);
 }
 
-/** Saves the given fields. Returns the reference port's result message. */
+/** Saves the given fields. Returns the reference framework's result message. */
 export async function update_client(clientId: string, fields: Partial<WealthManagementClient>): Promise<string> {
   return mgr.updateClient(clientId, fields)
     ? 'Client information successfully updated'

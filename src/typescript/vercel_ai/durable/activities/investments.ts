@@ -15,7 +15,7 @@ export async function list_investments(clientId: string): Promise<InvestmentAcco
   return mgr.listInvestmentAccounts(clientId);
 }
 
-/** The new account is one object, {client_id, name, balance}, as the reference port and the Java workflow send it. */
+/** The new account is one object, {client_id, name, balance}, as the reference framework and the Java workflow send it. */
 export async function open_investment(newAccount: {
   client_id: string;
   name: string;

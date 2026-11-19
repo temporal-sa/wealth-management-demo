@@ -6,12 +6,12 @@ failure converter carries agent interrupts across the activity boundary. Plugins
 configure the client in list order.
 
 With no codec given, the plugin adds the codec only when USE_CLAIM_CHECK is on, so a
-port can always register it. With a codec given, it always adds that codec.
+framework can always register it. With a codec given, it always adds that codec.
 
 Works with both Temporal Python SDK client plugin interfaces: 1.18 chains plugins through
-init_client_plugin and self.next_plugin (the OpenAI Agents port); 1.19 and later call each
+init_client_plugin and self.next_plugin (the OpenAI Agents framework); 1.19 and later call each
 plugin's configure_client in turn and pass `next` to connect_service_client (the Pydantic
-AI and Strands Agents ports).
+AI and Strands Agents frameworks).
 """
 
 import dataclasses

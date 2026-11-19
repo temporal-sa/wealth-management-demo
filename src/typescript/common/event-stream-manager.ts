@@ -19,7 +19,7 @@ export interface StatusUpdateEvent {
 export type StreamEvent = ChatInteractionEvent | StatusUpdateEvent;
 
 /**
- * TypeScript port of Python's EventStreamManager.
+ * TypeScript framework of Python's EventStreamManager.
  * Same Redis key format and JSON event structure so the Python API can read it.
  *
  * Key: events:{workflowId}   (Redis list, RPUSH / LRANGE)

@@ -21,8 +21,8 @@ export class ClientHelper {
   readonly nativeConnectionOptions: NativeConnectionOptions;
 
   /**
-   * defaultTaskQueue is the port's chat task queue when TEMPORAL_TASK_QUEUE isn't set, so each
-   * port can run alongside the others.
+   * defaultTaskQueue is the framework's chat task queue when TEMPORAL_TASK_QUEUE isn't set, so each
+   * framework can run alongside the others.
    */
   constructor(defaultTaskQueue: string) {
     const config = loadClientConnectConfig();

@@ -1,15 +1,15 @@
 #!/bin/bash
 # Starts the Java open-account worker against a local Temporal service.
-# Usage: TEMPORAL_TASK_QUEUE=<port's task queue> ./startlocalworker.sh [open-account task queue]
-# TEMPORAL_TASK_QUEUE (required) is the task queue of the port whose account openings this worker
+# Usage: TEMPORAL_TASK_QUEUE=<framework's task queue> ./startlocalworker.sh [open-account task queue]
+# TEMPORAL_TASK_QUEUE (required) is the task queue of the framework whose account openings this worker
 # runs, for example OAI-Supervisor. The workflow then runs on <TEMPORAL_TASK_QUEUE>-open-account,
-# where that port starts it when its worker script gets the argument java. An argument names
+# where that framework starts it when its worker script gets the argument java. An argument names
 # another open-account queue instead.
 cd "$(dirname "$0")" || exit 1
 if [ -z "$TEMPORAL_TASK_QUEUE" ]; then
-  echo "**** Set TEMPORAL_TASK_QUEUE to the task queue of the port this worker serves, for example:"
+  echo "**** Set TEMPORAL_TASK_QUEUE to the task queue of the framework this worker serves, for example:"
   echo "  TEMPORAL_TASK_QUEUE=OAI-Supervisor $0"
-  echo "Each port's queue is listed in interop/open_account/java/README.md."
+  echo "Each framework's queue is listed in interop/open_account/java/README.md."
   exit 1
 fi
 [ -n "$1" ] && export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"

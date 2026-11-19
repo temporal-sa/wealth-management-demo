@@ -1,6 +1,6 @@
 """Live test of confirming a delete or close in the chat, against the real Gemini model.
 
-Like the other ports, the agent asks the customer to confirm deleting a beneficiary or
+Like the other frameworks, the agent asks the customer to confirm deleting a beneficiary or
 closing an investment account, and the customer's next message answers. Each
 conversation asks for one, then answers "Yes" or "No":
 

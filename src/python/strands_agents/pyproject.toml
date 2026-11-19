@@ -1,7 +1,7 @@
 [project]
 name = "strands-wealth-management"
 version = "0.1.0"
-description = "Wealth management demo: the Strands Agents port (with an optional Temporal durable-execution version)"
+description = "Wealth management demo: the Strands Agents framework (with an optional Temporal durable-execution version)"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -32,7 +32,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-# The port's own packages, plus src/python for the shared common/ package.
+# The framework's own packages, plus src/python for the shared common/ package.
 dev-mode-dirs = [".", ".."]
 
 [tool.hatch.build.targets.wheel]

@@ -58,7 +58,7 @@ CONFIRMATION_QUESTIONS = {
 def confirmed(asked_turn: Optional[int], turn: int) -> bool:
     """Whether the customer was asked to confirm this exact call in their previous message.
 
-    Like the other ports, deleting a beneficiary or closing an account is confirmed in
+    Like the other frameworks, deleting a beneficiary or closing an account is confirmed in
     the chat: the agent asks, and the customer's next message answers. The first call
     is refused with a request to ask (NOT_CONFIRMED); the same call in the customer's
     next turn runs. A call in the same turn as the question, or for a question asked
@@ -332,7 +332,7 @@ class WealthManagementWorkflow:
                 initial_amount=initial_amount,
                 promo_code=promo_code,
             )
-            # Same format as the other ports. The number counts the account openings
+            # Same format as the other frameworks. The number counts the account openings
             # started in this conversation (this one included), so every request to open
             # an account starts a new child workflow with its own KYC, even when an
             # opening with the same name is still running or has finished. It is kept in
@@ -342,7 +342,7 @@ class WealthManagementWorkflow:
             child_workflow_id = (
                 f"OpenAccount-{workflow.info().workflow_id}-{client_id}-{account_name}-{opening_number}"
             )
-            # TERMINATE matches the other ports: ending the conversation stops its pending
+            # TERMINATE matches the other frameworks: ending the conversation stops its pending
             # account openings.
             await workflow.start_child_workflow(
                 OpenInvestmentAccountWorkflow.run,

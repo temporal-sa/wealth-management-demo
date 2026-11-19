@@ -1,7 +1,7 @@
 [project]
 name = "adk-wealth-management"
 version = "0.1.0"
-description = "Wealth management demo: the Google ADK port for Python (with a Temporal durable-execution version)"
+description = "Wealth management demo: the Google ADK framework for Python (with a Temporal durable-execution version)"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -30,7 +30,7 @@ dev = [
 ]
 
 [tool.hatch.build]
-# The port's own packages, plus src/python for the shared common/ package.
+# The framework's own packages, plus src/python for the shared common/ package.
 dev-mode-dirs = [".", ".."]
 
 [tool.hatch.build.targets.wheel]

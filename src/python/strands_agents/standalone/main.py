@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 
-# Add the port's folder to the path so `standalone` / `prompts` imports work when this
+# Add the framework's folder to the path so `standalone` / `prompts` imports work when this
 # file is run directly (e.g. `uv run python standalone/main.py`). `common` comes from
 # src/python, which the editable install puts on the path.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

@@ -1,7 +1,7 @@
 // Package claimcheck is the optional claim-check payload codec (USE_CLAIM_CHECK).
 //
 // It stores each payload in Redis under a new UUID and puts only that key in the
-// workflow's event history. The format is the same as the other ports' Python and Java
+// workflow's event history. The format is the same as the other frameworks' Python and Java
 // codecs, so they can read each other's payloads:
 //
 //   - Redis key: the UUID, as a plain string;

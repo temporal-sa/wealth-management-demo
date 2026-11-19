@@ -1,7 +1,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
 /**
- * The Gemini API key: GEMINI_API_KEY, which the shared scripts/setgeminikey.sh sets for every port
+ * The Gemini API key: GEMINI_API_KEY, which the shared scripts/setgeminikey.sh sets for every framework
  * that uses Gemini, or the Vercel AI SDK's own GOOGLE_GENERATIVE_AI_API_KEY.
  */
 export function geminiApiKey(): string | undefined {

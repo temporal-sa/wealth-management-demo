@@ -1,7 +1,7 @@
 [project]
 name = "pure-wealth-management"
 version = "0.1.0"
-description = "Wealth management demo: the pure Python port (a hand-written agent loop on LiteLLM), with a Temporal durable-execution version"
+description = "Wealth management demo: the pure Python framework (a hand-written agent loop on LiteLLM), with a Temporal durable-execution version"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
@@ -22,8 +22,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-# The port's own packages, plus src/python for the shared common/ package (and api/, whose
-# Temporal calls tests/test_api_client.py checks against this port's chat workflow).
+# The framework's own packages, plus src/python for the shared common/ package (and api/, whose
+# Temporal calls tests/test_api_client.py checks against this framework's chat workflow).
 dev-mode-dirs = [".", ".."]
 
 [tool.hatch.build.targets.wheel]

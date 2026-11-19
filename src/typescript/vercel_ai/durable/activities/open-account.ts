@@ -36,7 +36,7 @@ export async function update_client_details(
 
 /**
  * The task queue for the OpenInvestmentAccountWorkflow child workflow, or null to run it on this
- * worker's task queue. TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java runs it on this port's
+ * worker's task queue. TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java runs it on this framework's
  * <task queue>-open-account, for the Java worker in interop/open_account/java (see
  * common/task-queues.ts). Workflow code can't read the environment, so it asks this activity.
  * Not part of the shared Temporal contract.

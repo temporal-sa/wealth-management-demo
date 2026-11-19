@@ -1,5 +1,5 @@
 // Package activities holds the demo's Temporal activities, registered under the
-// snake_case names of the shared Temporal contract (see Names). The other ports' scripts
+// snake_case names of the shared Temporal contract (see Names). The other frameworks' scripts
 // and the Java open-account worker call them by these names.
 package activities
 

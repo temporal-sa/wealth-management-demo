@@ -1,7 +1,7 @@
 /**
  * The agents' names, descriptions and instructions, shared by the Temporal and standalone versions.
  *
- * They are the reference port's prompts (src/common/agent_constants.py), with the agent and handoff
+ * They are the reference framework's prompts (src/common/agent_constants.py), with the agent and handoff
  * names adapted to Google ADK: agent names can't contain spaces, and an agent hands off by calling
  * ADK's built-in transfer_to_agent tool. The lines the PRD requires word for word are exported on
  * their own (OFF_TOPIC_LINE, STATUS_LINE, NEW_OPENING_LINE, KYC_LINE), and the tests check that each

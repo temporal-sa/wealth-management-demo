@@ -8,7 +8,7 @@ export async function list_beneficiaries(clientId: string): Promise<Beneficiary[
   return mgr.listBeneficiaries(clientId);
 }
 
-/** The new beneficiary is one object, as in the reference port. */
+/** The new beneficiary is one object, as in the reference framework. */
 export async function add_beneficiary(newBeneficiary: {
   client_id: string;
   first_name: string;
