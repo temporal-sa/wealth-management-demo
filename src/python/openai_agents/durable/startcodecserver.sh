@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")" || exit 1
 echo "****************************************"
 echo "* Remember to start your Redis Server! *"
 echo "****************************************"

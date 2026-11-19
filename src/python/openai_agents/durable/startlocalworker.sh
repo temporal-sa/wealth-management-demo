@@ -4,6 +4,7 @@
 # (TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT) and this worker doesn't run it: start the Java worker for
 # this port too (TEMPORAL_TASK_QUEUE=OAI-Supervisor interop/open_account/java/startlocalworker.sh).
 # Another value names the queue.
+cd "$(dirname "$0")" || exit 1
 source ../../../../scripts/setoaikey.sh
 [ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
 # if you pass in a parameter, use that as the task queue
