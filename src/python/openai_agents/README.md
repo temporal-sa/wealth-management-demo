@@ -8,6 +8,8 @@ wrap the agentic flow with Temporal.
 The vanilla OpenAI Agents SDK version of this example is located [here](standalone/README.md).
 The Temporal version of this example is located [here](durable/README.md).
 
+This is the reference port, imported from [temporal-sa/oai-temporal-wealth-management](https://github.com/temporal-sa/oai-temporal-wealth-management).
+
 Scenarios currently implemented include
 * Add Beneficiary - add a new beneficiary to your account
 * List Beneficiaries - shows a list of beneficiaries and their relationship to the account owner
