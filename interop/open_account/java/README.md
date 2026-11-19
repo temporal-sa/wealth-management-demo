@@ -139,7 +139,8 @@ See [Failure scenarios](../../../src/python/openai_agents/durable/README.md#fail
 ## Tests
 
 The saga, retry and workflow-bug tests use the Temporal Java SDK's in-memory test environment with
-stub activities, so no Temporal server, Redis or OpenAI key is needed (the test task sets
+stub activities, and the claim check codec's tests (the format the frameworks share, a missing payload, the
+expiry) replace Redis with a map, so no Temporal server, Redis or OpenAI key is needed (the test task sets
 `TEMPORAL_TASK_QUEUE`):
 
 ```bash

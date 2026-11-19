@@ -12,7 +12,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Nonnull;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -89,31 +88,28 @@ public class ClaimCheckCodec implements PayloadCodec {
     }
 
     private Payload decodePayload(Payload source) {
-        // make sure we're dealing with only claim-checked payloads
-        logger.info("Incoming payload is {} = {}",
-                EncodingKeys.METADATA_ENCODING_KEY,
-                source.getMetadataOrDefault(
-                        EncodingKeys.METADATA_ENCODING_KEY,
-                        ByteString.copyFrom("<missing>",  StandardCharsets.UTF_8)
-                ).toStringUtf8());
-        if (!METADATA_ENCODING.equals(source.getMetadataOrDefault(EncodingKeys.METADATA_ENCODING_KEY,null))) {
-            logger.info("bypassing source as it isn't claim-checked value is {} ", source.getMetadataOrDefault(EncodingKeys.METADATA_ENCODING_KEY,null));
+        // Payloads that weren't claim-checked pass through unchanged. A claim-checked payload has the
+        // encoding claim-checked or the codec version key (the frameworks' codecs write both).
+        boolean claimChecked = METADATA_ENCODING.equals(source.getMetadataOrDefault(EncodingKeys.METADATA_ENCODING_KEY, null))
+                || ByteString.copyFromUtf8(CLAIM_CHECK_CODEC_VERSION).equals(source.getMetadataOrDefault(CLAIM_CHECK_CODEC_KEY, null));
+        if (!claimChecked) {
             return source;
         }
-
-        String redisId;
+        // Log only the key: the claim check keeps payload data out of Temporal, so don't put it in the log
+        String key = source.getData().toStringUtf8();
+        logger.debug("Decoding claim check {}", key);
+        Payload original;
         try {
-            // get the redis id
-            redisId = source.getData().toStringUtf8();
-            logger.info("===> The redis id is {}", redisId);
-            // and retrieve the data from Redis
-            Payload decodedPayload =  redisTemplate.opsForValue().get(redisId);
-            logger.info("The data from Redis is {}", decodedPayload);
-            return decodedPayload;
-        } catch (Exception ex)
-        {
-            logger.error("Error when retrieving redis key ", ex);
+            original = redisTemplate.opsForValue().get(key);
+        } catch (Exception ex) {
+            logger.error("Error reading claim check {} from Redis", key, ex);
             throw new DataConverterException(ex);
         }
+        if (original == null) {
+            throw new DataConverterException(
+                    "Claim check " + key + " not found in Redis (it may have expired, see CLAIM_CHECK_TTL_SECONDS):"
+                            + " the payload can't be decoded", (Throwable) null);
+        }
+        return original;
     }
 }
