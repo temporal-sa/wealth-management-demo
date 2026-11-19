@@ -19,7 +19,7 @@ Prerequisites, installing the dependencies and the Gemini key are in the [framew
 
 * **The web UI and the API.** The web UI ([frontend/](../../../../frontend/README.md)) talks to the shared
   [API](../../../python/api/README.md), written in Python and started with the `vercel_ai` AI framework.
-  The API starts a chat workflow per conversation (IDs `vai-temporal-agent-<random>`), sends it the
+  The API starts a chat workflow per conversation (IDs `vai-temporal-agent-session-<session>-chat-<random>`), sends it the
   customer's messages, and serves the conversation from Redis. This framework's workflows keep the same
   Temporal contracts as the Python frameworks, which is what lets the Python API serve them.
 * **The chat workflow** `WealthManagementWorkflow`
@@ -257,8 +257,8 @@ the Java worker's `startcloudworker.sh`.
 ## Failure scenarios (chaos panel)
 
 Click **Chaos** in the web UI's chat header to open the chaos panel. Activities and the model read the
-flags from Redis (`chaos:flags`) on every attempt, so you can turn a failure on and off mid-conversation
-with no restart. If Redis can't be reached, the flags read as off. The panel lists each injected failure
+flags from Redis (`chaos:<session>:flags`, one set per browser session, found from the workflow ID) on every
+attempt, so you can turn a failure on and off mid-conversation with no restart. If Redis can't be reached, the flags read as off. The panel lists each injected failure
 (activity and attempt number); **Reset all** turns every flag off and clears the log. Open the Temporal
 UI alongside it to show the pending activity, its attempt count and the last failure.
 
@@ -387,6 +387,7 @@ The worker and scripts read these (see [common/client-helper.ts](../../common/cl
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Server-side rate limit for the model calls' task queue, across all workers |
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, the chaos flags and claim check |
+| `DEMO_DATA_STORE` | `file` | Where the sample data (`data/*.json`) lives: `file` uses the files themselves; `redis` gives each browser session its own copy in Redis (`data:<session>:<name>`, starting from the files, expiring a day after its last change), for a shared demo |
 | `USE_CLAIM_CHECK` | `false` | `true`, `1` or `yes` (any case) turns on claim check (`scripts/setclaimcheck.sh`) |
 | `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `CODEC_SERVER_HOST` / `CODEC_SERVER_PORT` | `127.0.0.1` / `8081` | Codec server bind address |

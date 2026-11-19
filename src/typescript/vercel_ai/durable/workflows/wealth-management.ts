@@ -1,7 +1,6 @@
 import {
   defineSignal,
   setHandler,
-  condition,
   proxyActivities,
   workflowInfo,
   log,

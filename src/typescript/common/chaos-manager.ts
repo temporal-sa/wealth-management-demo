@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { createRedisClient } from './redis-config';
+import { SESSION_TTL_SECONDS, currentSession } from './session-scope';
 
 export enum ChaosFlag {
   TOOL_DOWN = 'tool_down',
@@ -66,57 +67,94 @@ export const CHAOS_FLAGS: ChaosFlagInfo[] = [
   },
 ];
 
-const FLAGS_KEY = 'chaos:flags';
-const EVENTS_KEY = 'chaos:events';
 const MAX_EVENTS = 50;
+
+export function flagsKey(sessionId: string): string {
+  return `chaos:${sessionId}:flags`;
+}
+
+export function eventsKey(sessionId: string): string {
+  return `chaos:${sessionId}:events`;
+}
+
+export interface ChaosManagerOptions {
+  /** A fixed browser session (the API passes the caller's); by default the running activity's, looked up on every call. */
+  sessionId?: string;
+  /** The Redis client to use (the tests pass an in-memory one); by default a new one from the environment. */
+  redis?: Redis;
+}
 
 /**
  * Stores failure-injection flags, and a log of the failures they caused, in Redis.
  *
  * Flags are read at runtime by activities and the model wrapper, so a failure can
  * be switched on and off from the UI without restarting the worker.
+ *
+ * Each browser session has its own flags and log (session-scope.ts), expiring a day after their last
+ * change. In an activity the session comes from the running workflow's ID, so a flag only affects the
+ * chats of the browser that turned it on. Outside an activity, with no session given, it is "default".
  */
 export class ChaosManager {
   private readonly redis: Redis;
+  private readonly sessionId?: string;
 
-  constructor() {
-    // Give up quickly when Redis is down, so callers can fail open instead of hanging
-    this.redis = createRedisClient(undefined, { maxRetriesPerRequest: 1 });
-    // Without a listener ioredis reports every failed reconnect as an unhandled error
-    this.redis.on('error', () => undefined);
+  constructor(options: ChaosManagerOptions = {}) {
+    this.sessionId = options.sessionId;
+    if (options.redis) {
+      this.redis = options.redis;
+    } else {
+      // Give up quickly when Redis is down, so callers can fail open instead of hanging
+      this.redis = createRedisClient(undefined, { maxRetriesPerRequest: 1 });
+      // Without a listener ioredis reports every failed reconnect as an unhandled error
+      this.redis.on('error', () => undefined);
+    }
+  }
+
+  private session(): string {
+    return this.sessionId ?? currentSession();
   }
 
   async isEnabled(flag: ChaosFlag): Promise<boolean> {
-    return (await this.redis.hget(FLAGS_KEY, flag)) === '1';
+    return (await this.redis.hget(flagsKey(this.session()), flag)) === '1';
   }
 
   async setEnabled(flag: ChaosFlag, enabled: boolean): Promise<void> {
+    const key = flagsKey(this.session());
     if (enabled) {
-      await this.redis.hset(FLAGS_KEY, flag, '1');
+      await this.redis.hset(key, flag, '1');
+      await this.redis.expire(key, SESSION_TTL_SECONDS);
     } else {
-      await this.redis.hdel(FLAGS_KEY, flag);
+      await this.redis.hdel(key, flag);
     }
   }
 
   async getFlags(): Promise<Array<ChaosFlagInfo & { enabled: boolean }>> {
-    const enabled = await this.redis.hgetall(FLAGS_KEY);
+    const enabled = await this.redis.hgetall(flagsKey(this.session()));
     return CHAOS_FLAGS.map((info) => ({ ...info, enabled: enabled[info.flag] === '1' }));
   }
 
   async recordEvent(event: Omit<ChaosEvent, 'timestamp'>): Promise<void> {
     const entry: ChaosEvent = { timestamp: Date.now() / 1000, ...event };
-    await this.redis.lpush(EVENTS_KEY, JSON.stringify(entry));
-    await this.redis.ltrim(EVENTS_KEY, 0, MAX_EVENTS - 1);
+    const key = eventsKey(this.session());
+    await this.redis.lpush(key, JSON.stringify(entry));
+    await this.redis.ltrim(key, 0, MAX_EVENTS - 1);
+    await this.redis.expire(key, SESSION_TTL_SECONDS);
   }
 
   async getEvents(limit = 20): Promise<ChaosEvent[]> {
-    const raw = await this.redis.lrange(EVENTS_KEY, 0, limit - 1);
+    const raw = await this.redis.lrange(eventsKey(this.session()), 0, limit - 1);
     return raw.map((e) => JSON.parse(e) as ChaosEvent);
   }
 
-  // Turns every flag off and clears the failure log
+  // Clears the session's failure log
+  async clearEvents(): Promise<void> {
+    await this.redis.del(eventsKey(this.session()));
+  }
+
+  // Turns every flag of the session off and clears its failure log
   async reset(): Promise<void> {
-    await this.redis.del(FLAGS_KEY, EVENTS_KEY);
+    const session = this.session();
+    await this.redis.del(flagsKey(session), eventsKey(session));
   }
 
   async close(): Promise<void> {

@@ -2,17 +2,23 @@
  * The demo's system of record: the JSON files in data/ (beneficiaries, clients, investment accounts
  * and the linked bank accounts), shared by the Temporal and standalone versions.
  *
- * Every call reads the file again and every change writes it back, so a `git checkout data/` takes
- * effect without restarting anything. The files are written with 4-space indents, like the
- * reference framework, so a demo run changes only the values. DATA_DIR points the store at another
- * folder; the tests use a copy of the demo data so a demo run can't break them.
+ * Every call reads the data again and every change writes it back, so a `git checkout data/` takes
+ * effect without restarting anything. The files are written with 4-space indents, like the reference
+ * framework, so a demo run changes only the values. DATA_DIR points the store at another folder; the
+ * tests use a copy of the demo data so a demo run can't break them.
+ *
+ * With DEMO_DATA_STORE=redis each browser session gets its own copy of each file in Redis instead
+ * (data:<session>:<file name>), and the files are only read (common/data-store.ts).
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { formatUsd } from './money';
+import { WealthManagementClient } from './client-record';
+import { JsonDocument } from '../../common/data-store';
 
 export { formatUsd };
+export { CLIENT_FIELDS, type WealthManagementClient } from './client-record';
 
 export interface Beneficiary {
   beneficiary_id: string;
@@ -34,24 +40,6 @@ export interface InvestmentAccount {
   name: string;
   balance: number;
 }
-
-export interface WealthManagementClient {
-  first_name: string;
-  last_name: string;
-  address: string;
-  phone: string;
-  email: string;
-  marital_status: string;
-}
-
-export const CLIENT_FIELDS: Array<keyof WealthManagementClient> = [
-  'first_name',
-  'last_name',
-  'address',
-  'phone',
-  'email',
-  'marital_status',
-];
 
 export interface FundingAccount {
   name: string;
@@ -86,37 +74,47 @@ function newId(prefix: string, taken: Set<string>): string {
 export class DataStore {
   constructor(private readonly dir: string = dataDir()) {}
 
-  private read<T>(file: string, empty: T): T {
-    const p = path.join(this.dir, file);
-    if (!fs.existsSync(p)) return empty;
-    return JSON.parse(fs.readFileSync(p, 'utf-8')) as T;
+  // The file as the current browser session sees it (the session is looked up on every call)
+  private document<T>(file: string): JsonDocument<T> {
+    return new JsonDocument<T>(path.join(this.dir, file));
+  }
+
+  private async read<T>(file: string, empty: T): Promise<T> {
+    return (await this.document<T>(file).load()) ?? empty;
   }
 
   /**
    * Writes the file in the style it already has (its indent, and balances written as floats like
    * 1000.0, as the reference framework's Python writes them), so a demo run changes only the values.
    */
-  private write(file: string, data: unknown): void {
+  private async write(file: string, data: unknown): Promise<void> {
     const p = path.join(this.dir, file);
-    const existing = fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : '';
-    const indent = /\n( +)\S/.exec(existing)?.[1].length ?? 4;
-    const text = JSON.stringify(data, null, indent).replace(
-      /("(?:balance|amount|balance_after)": -?\d+)(?=[,\n])/g,
-      '$1.0',
-    );
-    fs.writeFileSync(p, existing.endsWith('\n') ? `${text}\n` : text);
+    await this.document<unknown>(file).save(data, (d) => {
+      const existing = fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : '';
+      const indent = /\n( +)\S/.exec(existing)?.[1].length ?? 4;
+      const text = JSON.stringify(d, null, indent).replace(
+        /("(?:balance|amount|balance_after)": -?\d+)(?=[,\n])/g,
+        '$1.0',
+      );
+      return existing.endsWith('\n') ? `${text}\n` : text;
+    });
   }
 
   // -------------------------------------------------------------------------
   // Beneficiaries
   // -------------------------------------------------------------------------
 
-  listBeneficiaries(clientId: string): Beneficiary[] {
-    return this.read<Record<string, Beneficiary[]>>('beneficiaries.json', {})[clientId] ?? [];
+  async listBeneficiaries(clientId: string): Promise<Beneficiary[]> {
+    return (await this.read<Record<string, Beneficiary[]>>('beneficiaries.json', {}))[clientId] ?? [];
   }
 
-  addBeneficiary(clientId: string, firstName: string, lastName: string, relationship: string): Beneficiary {
-    const data = this.read<Record<string, Beneficiary[]>>('beneficiaries.json', {});
+  async addBeneficiary(
+    clientId: string,
+    firstName: string,
+    lastName: string,
+    relationship: string,
+  ): Promise<Beneficiary> {
+    const data = await this.read<Record<string, Beneficiary[]>>('beneficiaries.json', {});
     const list = (data[clientId] ??= []);
     const beneficiary: Beneficiary = {
       beneficiary_id: newId('b', new Set(list.map((b) => b.beneficiary_id))),
@@ -125,17 +123,17 @@ export class DataStore {
       relationship,
     };
     list.push(beneficiary);
-    this.write('beneficiaries.json', data);
+    await this.write('beneficiaries.json', data);
     return beneficiary;
   }
 
-  deleteBeneficiary(clientId: string, beneficiaryId: string): boolean {
-    const data = this.read<Record<string, Beneficiary[]>>('beneficiaries.json', {});
+  async deleteBeneficiary(clientId: string, beneficiaryId: string): Promise<boolean> {
+    const data = await this.read<Record<string, Beneficiary[]>>('beneficiaries.json', {});
     const list = data[clientId] ?? [];
     const kept = list.filter((b) => b.beneficiary_id !== beneficiaryId);
     if (kept.length === list.length) return false;
     data[clientId] = kept;
-    this.write('beneficiaries.json', data);
+    await this.write('beneficiaries.json', data);
     return true;
   }
 
@@ -143,13 +141,13 @@ export class DataStore {
   // Investment accounts
   // -------------------------------------------------------------------------
 
-  listInvestments(clientId: string): InvestmentRecord[] {
-    return this.read<Record<string, InvestmentRecord[]>>('investments.json', {})[clientId] ?? [];
+  async listInvestments(clientId: string): Promise<InvestmentRecord[]> {
+    return (await this.read<Record<string, InvestmentRecord[]>>('investments.json', {}))[clientId] ?? [];
   }
 
-  addInvestment(account: InvestmentAccount): InvestmentRecord | null {
+  async addInvestment(account: InvestmentAccount): Promise<InvestmentRecord | null> {
     if (!(account.balance >= 0)) return null;
-    const data = this.read<Record<string, InvestmentRecord[]>>('investments.json', {});
+    const data = await this.read<Record<string, InvestmentRecord[]>>('investments.json', {});
     const list = (data[account.client_id] ??= []);
     const record: InvestmentRecord = {
       investment_id: newId('i', new Set(list.map((a) => a.investment_id))),
@@ -157,17 +155,17 @@ export class DataStore {
       balance: account.balance,
     };
     list.push(record);
-    this.write('investments.json', data);
+    await this.write('investments.json', data);
     return record;
   }
 
-  deleteInvestment(clientId: string, investmentId: string): boolean {
-    const data = this.read<Record<string, InvestmentRecord[]>>('investments.json', {});
+  async deleteInvestment(clientId: string, investmentId: string): Promise<boolean> {
+    const data = await this.read<Record<string, InvestmentRecord[]>>('investments.json', {});
     const list = data[clientId] ?? [];
     const kept = list.filter((a) => a.investment_id !== investmentId);
     if (kept.length === list.length) return false;
     data[clientId] = kept;
-    this.write('investments.json', data);
+    await this.write('investments.json', data);
     return true;
   }
 
@@ -175,16 +173,16 @@ export class DataStore {
   // Clients
   // -------------------------------------------------------------------------
 
-  getClient(clientId: string): WealthManagementClient | null {
-    return this.read<Record<string, WealthManagementClient>>('clients.json', {})[clientId] ?? null;
+  async getClient(clientId: string): Promise<WealthManagementClient | null> {
+    return (await this.read<Record<string, WealthManagementClient>>('clients.json', {}))[clientId] ?? null;
   }
 
   /** Saves the given fields. Returns the reference framework's result message. */
-  updateClient(clientId: string, fields: Partial<WealthManagementClient>): string {
-    const data = this.read<Record<string, WealthManagementClient>>('clients.json', {});
+  async updateClient(clientId: string, fields: Partial<WealthManagementClient>): Promise<string> {
+    const data = await this.read<Record<string, WealthManagementClient>>('clients.json', {});
     if (!data[clientId]) return `Client ${clientId} not found`;
     data[clientId] = { ...data[clientId], ...fields };
-    this.write('clients.json', data);
+    await this.write('clients.json', data);
     return 'Client information successfully updated';
   }
 
@@ -194,19 +192,19 @@ export class DataStore {
   // the money only once.
   // -------------------------------------------------------------------------
 
-  private funding(): FundingData {
-    const data = this.read<Partial<FundingData>>('funding_accounts.json', {});
+  private async funding(): Promise<FundingData> {
+    const data = await this.read<Partial<FundingData>>('funding_accounts.json', {});
     return { accounts: data.accounts ?? {}, transfers: data.transfers ?? {} };
   }
 
-  getFundingAccount(clientId: string): FundingAccount {
-    const account = this.funding().accounts[clientId];
+  async getFundingAccount(clientId: string): Promise<FundingAccount> {
+    const account = (await this.funding()).accounts[clientId];
     if (!account) throw new Error(`No linked bank account for client ${clientId}`);
     return account;
   }
 
-  debit(clientId: string, amount: number, transferId: string): Transfer {
-    const data = this.funding();
+  async debit(clientId: string, amount: number, transferId: string): Promise<Transfer> {
+    const data = await this.funding();
     const existing = data.transfers[transferId];
     if (existing) return existing;
     const account = data.accounts[clientId];
@@ -219,20 +217,20 @@ export class DataStore {
     return this.apply(data, clientId, -amount, transferId);
   }
 
-  credit(clientId: string, amount: number, transferId: string): Transfer {
-    const data = this.funding();
+  async credit(clientId: string, amount: number, transferId: string): Promise<Transfer> {
+    const data = await this.funding();
     const existing = data.transfers[transferId];
     if (existing) return existing;
     return this.apply(data, clientId, amount, transferId);
   }
 
-  private apply(data: FundingData, clientId: string, delta: number, transferId: string): Transfer {
+  private async apply(data: FundingData, clientId: string, delta: number, transferId: string): Promise<Transfer> {
     const account = data.accounts[clientId];
     if (!account) throw new Error(`No linked bank account for client ${clientId}`);
     account.balance = Math.round((account.balance + delta) * 100) / 100;
     const transfer: Transfer = { client_id: clientId, amount: delta, balance_after: account.balance };
     data.transfers[transferId] = transfer;
-    this.write('funding_accounts.json', data);
+    await this.write('funding_accounts.json', data);
     return transfer;
   }
 }

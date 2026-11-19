@@ -495,17 +495,17 @@ describe('funding transfers', () => {
     funding = new FundingManager(file);
   });
 
-  it('applies each transfer ID only once', () => {
-    funding.debit(CLIENT_ID, 300, 't-1');
-    funding.debit(CLIENT_ID, 300, 't-1');
-    funding.credit(CLIENT_ID, 300, 't-1-refund');
-    funding.credit(CLIENT_ID, 300, 't-1-refund');
-    assert.strictEqual(funding.getAccount(CLIENT_ID).balance, 1000);
+  it('applies each transfer ID only once', async () => {
+    await funding.debit(CLIENT_ID, 300, 't-1');
+    await funding.debit(CLIENT_ID, 300, 't-1');
+    await funding.credit(CLIENT_ID, 300, 't-1-refund');
+    await funding.credit(CLIENT_ID, 300, 't-1-refund');
+    assert.strictEqual((await funding.getAccount(CLIENT_ID)).balance, 1000);
   });
 
-  it('refuses to overdraw the linked account', () => {
-    assert.throws(() => funding.debit(CLIENT_ID, 5000, 't-2'), InsufficientFundsError);
-    assert.strictEqual(funding.getAccount(CLIENT_ID).balance, 1000);
+  it('refuses to overdraw the linked account', async () => {
+    await assert.rejects(() => funding.debit(CLIENT_ID, 5000, 't-2'), InsufficientFundsError);
+    assert.strictEqual((await funding.getAccount(CLIENT_ID)).balance, 1000);
   });
 });
 

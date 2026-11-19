@@ -24,7 +24,7 @@ export async function open_investment(newAccount: {
   const { client_id: clientId, name, balance } = newAccount;
   await coreBankingApi();
   await maybeSlowDown();
-  const account = mgr.addInvestmentAccount(clientId, name, balance);
+  const account = await mgr.addInvestmentAccount(clientId, name, balance);
   if (!account) {
     throw ApplicationFailure.nonRetryable(`Invalid opening balance ${formatUsd(balance)}`, 'InvalidBalance');
   }
@@ -38,7 +38,7 @@ export async function open_investment(newAccount: {
 export async function remove_investment(clientId: string, investmentId: string): Promise<boolean> {
   await maybeSlowDown();
   await coreBankingApi();
-  mgr.deleteInvestmentAccount(clientId, investmentId);
+  await mgr.deleteInvestmentAccount(clientId, investmentId);
   return true;
 }
 

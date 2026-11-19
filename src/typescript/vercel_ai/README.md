@@ -17,7 +17,7 @@ workflows keep the same Temporal contract as the Python frameworks, which is wha
 Its chat workflows run on the `VAI-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in
 [durable/task-queues.ts](durable/task-queues.ts)), so its worker can run next to another framework's. Start the API
 for it with the `vercel_ai` AI framework (`./startlocalapi.sh vercel_ai`); the web app then names its chats
-`vai-temporal-agent-<random>`.
+`vai-temporal-agent-session-<session>-chat-<random>`.
 
 The demo is implemented twice:
 
