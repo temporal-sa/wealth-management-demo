@@ -1,6 +1,6 @@
 # Wealth Management Agent Demo
 
-A multi-agent banking chat that shows what Temporal adds to an agent framework, built with eight frameworks in three languages. Each port has a standalone version (the framework alone) and a Temporal version (every model and tool call durable).
+A multi-agent banking chat that shows what Temporal adds to an agent framework, built with eight frameworks in three languages. Each framework has a standalone version (the framework alone) and a Temporal version (every model and tool call durable).
 
 ## Layout
 
@@ -11,12 +11,12 @@ docs/                 Docs; images/ holds the README images
 frontend/             The one shared React app
 contracts/            (optional) Language-neutral Temporal names, prompt lines, chaos flags
 interop/
-  open_account/java/  Java OpenInvestmentAccountWorkflow, works with every port
-scripts/              Settings files every port's scripts source (model keys, cloud env, claim check)
+  open_account/java/  Java OpenInvestmentAccountWorkflow, works with every framework
+scripts/              Settings files every framework's scripts source (model keys, cloud env, claim check)
 src/<language>/
-  common/             Code shared by that language's ports and its API (no agent framework)
-  api/                (Python only) REST API for the front end: serves every port, in any language, has its own dependency file
-  <framework>/        One port, with its own dependency file:
+  common/             Code shared by that language's frameworks and the API (no agent framework)
+  api/                (Python only) REST API for the front end: serves every framework, in any language, has its own dependency file
+  <framework>/        One framework, with its own dependency file:
     standalone/       Framework-only CLI chat (was <x>_supervisor/)
     durable/          Temporal version: workflows, activities, worker, scripts (was temporal_supervisor/)
     prompts/          The agents' prompts (framework-specific)
@@ -39,43 +39,43 @@ src/<language>/
 
 ## Adding an integration
 
-1. **Create the port's folder,** `src/<language>/<framework>/`, with `standalone/`, `durable/`, `tests/` and its
+1. **Create the framework's folder,** `src/<language>/<framework>/`, with `standalone/`, `durable/`, `tests/` and its
    own dependency file. Don't name the folder after the library's import name (for example `pydantic_ai` or
    `strands`), so it can never hide the real library on `sys.path`.
    - **TypeScript:** add the folder to `"workspaces"` in `src/typescript/package.json`. The TypeScript code is
      one set of npm workspaces with one `node_modules` and one Temporal SDK version.
-   - **Go:** the port belongs to the one Go module, `src/go/go.mod`, and keeps Go conventions inside its folder
+   - **Go:** the framework belongs to the one Go module, `src/go/go.mod`, and keeps Go conventions inside its folder
      (`cmd/`, `internal/`, `scripts/`).
 2. **Reuse the shared code:** that language's `common/` (data managers, Redis event stream, chaos flags, claim
    check, client settings), the demo data in `data/`, and the settings files in `scripts/`. Worker and approval
    scripts `cd` to their own folder and source `scripts/*.sh`, so they run from anywhere.
 3. **Keep the Temporal contracts:** the same workflow, signal, query, update and activity names and payloads as
-   the other ports (see any port's "Temporal contracts" section). The Python API, the web UI and the Java worker
+   the other frameworks (see any framework's "Temporal contracts" section). The Python API, the web UI and the Java worker
    then work unchanged.
-4. **Give the port its own task queue,** `<short name>-Supervisor`, with model calls on `<queue>-llm`, and turn a
+4. **Give the framework its own task queue,** `<short name>-Supervisor`, with model calls on `<queue>-llm`, and turn a
    worker script argument of `java` into `<queue>-open-account` using the shared rule (`common/task_queues.py`,
-   `common/task-queues.ts`, or the Go port's `internal/config`). See [Task queues](#task-queues).
-5. **Register it with the API:** add the port to `src/python/api/frameworks.py` (its name, label, task queue and
+   `common/task-queues.ts`, or the Go framework's `internal/config`). See [Task queues](#task-queues).
+5. **Register it with the API:** add the framework to `src/python/api/frameworks.py` (its name, label, task queue and
    chat workflow ID prefix) and to `EVERY_FRAMEWORK` in `src/python/api/tests/test_api.py`, so
-   `./src/python/api/startlocalapi.sh <ai-framework>` serves it. One API serves every port, whatever its language.
-6. **Document it** like the other ports:
-   - The port's `README.md`: what it is, prerequisites, setup and the model key, running the demo, tests, layout.
-   - Its Temporal README (`durable/README.md`), with the same sections as the other ports' Temporal READMEs.
+   `./src/python/api/startlocalapi.sh <ai-framework>` serves it. One API serves every framework, whatever its language.
+6. **Document it** like the other frameworks:
+   - The framework's `README.md`: what it is, prerequisites, setup and the model key, running the demo, tests, layout.
+   - Its Temporal README (`durable/README.md`), with the same sections as the other frameworks' Temporal READMEs.
    - Its images in `docs/images/<folder>/`: `application-architecture.png`, the three web UI screenshots
      (`ux-waiting-kyc.png`, `ux-waiting-compliance-review.png`, `ux-open-account-complete.png`) and
      `temporal-ui-open-account.png`.
 7. **List it** in this README's [Frameworks](#frameworks) and [Task queues](#task-queues) tables, and in the API, web UI
    (`frontend/README.md`), Java worker and `scripts/` READMEs.
-8. **Test it:** the port's unit tests, an end-to-end chat through the API and web UI that opens an account through
+8. **Test it:** the framework's unit tests, an end-to-end chat through the API and web UI that opens an account through
    KYC and compliance approval, and the same with the Java worker (`startlocalworker.sh java`).
 
 ## Task queues
 
-Every port has its own default chat task queue, `<short name>-Supervisor`, so the ports can run against one
+Every framework has its own default chat task queue, `<short name>-Supervisor`, so the frameworks can run against one
 Temporal service at once. Its model calls run on `<queue>-llm`, and with the Java worker its account openings
 run on `<queue>-open-account`.
 
-| Port | AI framework (API argument) | Task queue |
+| Framework | API argument | Task queue |
 |---|---|---|
 | OpenAI Agents SDK | `openai_agents` | `OAI-Supervisor` |
 | Pydantic AI | `pyai` | `PYAI-Supervisor` |
@@ -87,14 +87,14 @@ run on `<queue>-open-account`.
 | Google ADK (Go) | `google_adk_go` | `ADK-Go-Supervisor` |
 
 - **The API:** `./src/python/api/startlocalapi.sh <ai-framework>` starts chats on that framework's queue (see
-  `src/python/api/frameworks.py`). `TEMPORAL_TASK_QUEUE` overrides a port's queue; the worker and the API
+  `src/python/api/frameworks.py`). `TEMPORAL_TASK_QUEUE` overrides a framework's queue; the worker and the API
   must then agree.
-- **The Java worker:** start the port's worker with the argument `java` (for example
-  `src/python/pure/durable/startlocalworker.sh java`), then the Java worker with that port's queue
-  (`TEMPORAL_TASK_QUEUE=Pure-Supervisor interop/open_account/java/startlocalworker.sh`). Each port's account
-  openings go to its own `<queue>-open-account`, so several ports can each have a Java worker at once. The Java
+- **The Java worker:** start the framework's worker with the argument `java` (for example
+  `src/python/pure/durable/startlocalworker.sh java`), then the Java worker with that framework's queue
+  (`TEMPORAL_TASK_QUEUE=Pure-Supervisor interop/open_account/java/startlocalworker.sh`). Each framework's account
+  openings go to its own `<queue>-open-account`, so several frameworks can each have a Java worker at once. The Java
   worker has no default queue. The rule that turns `java` into the queue name is in `common/task_queues.py`,
-  `common/task-queues.ts`, the Go port's `internal/config` and the Java worker's `ServerInfo`.
+  `common/task-queues.ts`, the Go framework's `internal/config` and the Java worker's `ServerInfo`.
 
 ## Open decisions before migrating code
 
@@ -103,7 +103,7 @@ run on `<queue>-open-account`.
 - **One UI for every framework:** the plan is one web app where the user picks the AI framework. The task queue names
   already support it; the notes for when that work starts:
   - *Queue names are a contract.* The API's list in `src/python/api/frameworks.py` is the only thing that maps a
-    choice to a queue, so keep each port's default queue. A worker started with another `TEMPORAL_TASK_QUEUE` would
+    choice to a queue, so keep each framework's default queue. A worker started with another `TEMPORAL_TASK_QUEUE` would
     get no chats unless the API's list changes too.
   - *Only starting a chat needs the queue.* Sending a message, ending a chat and reading its history go to the
     workflow by ID. The API would take the framework on `start-workflow` instead of choosing one at startup (the
@@ -111,9 +111,9 @@ run on `<queue>-open-account`.
     frameworks (label, queue, prefix) from the API instead of hard-coding them.
   - *Only offer frameworks that are running.* A chat started for a framework with no worker hangs. With the
     predictable names, the API can ask Temporal whether `<queue>` and `<queue>-llm` have pollers and list only those.
-  - *One Java worker could serve every port.* It would poll every `<queue>-open-account` and call the activities on
-    the queue name without `-open-account`, instead of running one Java worker per port.
+  - *One Java worker could serve every framework.* It would poll every `<queue>-open-account` and call the activities on
+    the queue name without `-open-account`, instead of running one Java worker per framework.
   - *Other shared state.* The chaos flags are global in Redis (`chaos:flags`), so a flag affects every framework at
-    once, and every port reads and writes the same `data/*.json`, so openings from different frameworks at the same
+    once, and every framework reads and writes the same `data/*.json`, so openings from different frameworks at the same
     time can overwrite each other's changes (see Hosting: per-session data in Redis would fix both).
 - **History:** import each repo the way the first two were: on a branch, `git mv` its files into place in rename-only commits, remove the files the monorepo already shares, then merge with `--allow-unrelated-histories`. The ports started from the same layout, so `git log --follow` on a moved file can show commits from more than one port; `git log <path-in-the-original-repo>` on the import's second parent shows one port's history.
