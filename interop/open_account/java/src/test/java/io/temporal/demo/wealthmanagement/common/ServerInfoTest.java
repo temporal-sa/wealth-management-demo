@@ -34,4 +34,12 @@ class ServerInfoTest {
             assertFalse(ServerInfo.isTrue(value), String.valueOf(value));
         }
     }
+
+    @Test
+    void theClaimCheckRedisComesFromTheUrlWhenSetWithoutItsPassword() {
+        assertEquals("cache.example:6390", ServerInfo.redisAddress("redis://:s3cret@cache.example:6390/0", "localhost", "6379"));
+        assertEquals("cache.example:6379", ServerInfo.redisAddress("redis://cache.example", "localhost", "6379"));
+        assertEquals("localhost:16379", ServerInfo.redisAddress(null, "localhost", "16379"));
+        assertEquals("localhost:16379", ServerInfo.redisAddress(" ", "localhost", "16379"));
+    }
 }

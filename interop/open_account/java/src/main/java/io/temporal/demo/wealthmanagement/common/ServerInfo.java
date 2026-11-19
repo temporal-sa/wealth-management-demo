@@ -34,7 +34,7 @@ public class ServerInfo {
     }
 
     public static String getAddress() {
-        return getEnv("TEMPORAL_ADDRESS", "localhost:7233");
+        return getEnv("TEMPORAL_ADDRESS", "127.0.0.1:7233");
     }
 
     /**
@@ -68,6 +68,32 @@ public class ServerInfo {
             return taskQueue + "-open-account";
         }
         return value.trim();
+    }
+
+    /**
+     * For the startup message, worded like the frameworks' workers: whether claim check is on, and
+     * which Redis it uses (never the password).
+     */
+    public static String claimCheckStatus() {
+        if (!useClaimCheck()) {
+            return "Claim check: off";
+        }
+        return "Claim check: ON (payloads stored in Redis at " + redisAddress(System.getenv("REDIS_URL"),
+                getEnv("REDIS_HOST", "localhost"), getEnv("REDIS_PORT", "6379")) + ")";
+    }
+
+    /** Where Redis is: REDIS_URL's host and port when it is set, otherwise the host and port. */
+    static String redisAddress(String url, String host, String port) {
+        if (url != null && !url.isBlank()) {
+            try {
+                java.net.URI uri = java.net.URI.create(url.trim());
+                String urlHost = uri.getHost() != null ? uri.getHost() : "localhost";
+                return urlHost + ":" + (uri.getPort() > 0 ? uri.getPort() : 6379);
+            } catch (IllegalArgumentException e) {
+                return "REDIS_URL (unparseable)";
+            }
+        }
+        return host + ":" + port;
     }
 
     public static Boolean useClaimCheck() {

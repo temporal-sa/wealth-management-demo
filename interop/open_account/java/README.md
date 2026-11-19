@@ -63,10 +63,11 @@ An argument to the Java script names another open-account queue (`TEMPORAL_TASK_
 pass the same name to the framework's worker script instead of `java`.
 
 The script checks `TEMPORAL_TASK_QUEUE`, sources `scripts/setclaimcheck.sh`
-if it exists (claim check is optional) and runs `./gradlew runWorker`. It connects to `127.0.0.1:7233`, namespace `default`, as set
-in `src/main/resources/application.yaml`. The worker doesn't read `TEMPORAL_ADDRESS`, but the activity
-that reports each state change to the chat workflow does (default `localhost:7233`), so to use another
-local server set both, e.g. `SPRING_TEMPORAL_CONNECTION_TARGET=127.0.0.1:17233 TEMPORAL_ADDRESS=127.0.0.1:17233`. When claim check is enabled, the Java worker uses the Redis
+if it exists (claim check is optional) and runs `./gradlew runWorker`. It connects to `TEMPORAL_ADDRESS`, namespace
+`TEMPORAL_NAMESPACE` (default `127.0.0.1:7233` and `default`, in `src/main/resources/application.yaml`), as the frameworks
+do, and so does the activity that reports each state change to the chat workflow. For another local server, set
+`TEMPORAL_ADDRESS`, e.g. `TEMPORAL_ADDRESS=127.0.0.1:17233`. At startup the worker logs the server, its task queues and
+whether claim check is on. When claim check is enabled, the Java worker uses the Redis
 at `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` (default `localhost:6379`, no password), or at `REDIS_URL` when it is set
 (the script passes it to Spring as `SPRING_DATA_REDIS_URL`).
 
