@@ -112,7 +112,7 @@ func (a *Activities) ListBeneficiaries(ctx context.Context, clientID string) ([]
 	if err := chaos.CoreBankingAPI(ctx, a.Chaos); err != nil {
 		return nil, err
 	}
-	return a.Data.ListBeneficiaries(clientID)
+	return a.Data.ListBeneficiaries(ctx, clientID)
 }
 
 func (a *Activities) AddBeneficiary(ctx context.Context, b domain.Beneficiary) error {
@@ -120,7 +120,7 @@ func (a *Activities) AddBeneficiary(ctx context.Context, b domain.Beneficiary) e
 	if err := chaos.CoreBankingAPI(ctx, a.Chaos); err != nil {
 		return err
 	}
-	_, err := a.Data.AddBeneficiary(b)
+	_, err := a.Data.AddBeneficiary(ctx, b)
 	return err
 }
 
@@ -129,7 +129,7 @@ func (a *Activities) DeleteBeneficiary(ctx context.Context, clientID, beneficiar
 	if err := chaos.CoreBankingAPI(ctx, a.Chaos); err != nil {
 		return err
 	}
-	_, err := a.Data.DeleteBeneficiary(clientID, beneficiaryID)
+	_, err := a.Data.DeleteBeneficiary(ctx, clientID, beneficiaryID)
 	return err
 }
 
@@ -142,7 +142,7 @@ func (a *Activities) ListInvestments(ctx context.Context, clientID string) ([]do
 	if err := chaos.CoreBankingAPI(ctx, a.Chaos); err != nil {
 		return nil, err
 	}
-	return a.Data.ListInvestments(clientID)
+	return a.Data.ListInvestments(ctx, clientID)
 }
 
 func (a *Activities) CloseInvestment(ctx context.Context, clientID, investmentID string) error {
@@ -150,7 +150,7 @@ func (a *Activities) CloseInvestment(ctx context.Context, clientID, investmentID
 	if err := chaos.CoreBankingAPI(ctx, a.Chaos); err != nil {
 		return err
 	}
-	_, err := a.Data.DeleteInvestment(clientID, investmentID)
+	_, err := a.Data.DeleteInvestment(ctx, clientID, investmentID)
 	return err
 }
 
@@ -195,7 +195,7 @@ func (a *Activities) OpenInvestment(ctx context.Context, account domain.Investme
 	if err := chaos.CoreBankingAPI(ctx, a.Chaos); err != nil {
 		return domain.InvestmentRecord{}, err
 	}
-	return a.Data.AddInvestment(account)
+	return a.Data.AddInvestment(ctx, account)
 }
 
 // RemoveInvestment removes an investment account record: the saga's compensation for
@@ -207,7 +207,7 @@ func (a *Activities) RemoveInvestment(ctx context.Context, clientID, investmentI
 	if err := chaos.CoreBankingAPI(ctx, a.Chaos); err != nil {
 		return false, err
 	}
-	if _, err := a.Data.DeleteInvestment(clientID, investmentID); err != nil {
+	if _, err := a.Data.DeleteInvestment(ctx, clientID, investmentID); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -219,12 +219,12 @@ func (a *Activities) RemoveInvestment(ctx context.Context, clientID, investmentI
 
 func (a *Activities) GetClient(ctx context.Context, clientID string) (*domain.WealthManagementClient, error) {
 	activity.GetLogger(ctx).Info("get_client", "client_id", clientID)
-	return a.Data.GetClient(clientID)
+	return a.Data.GetClient(ctx, clientID)
 }
 
 func (a *Activities) UpdateClient(ctx context.Context, clientID string, fields map[string]any) (string, error) {
 	activity.GetLogger(ctx).Info("update_client", "client_id", clientID, "fields", fields)
-	return a.Data.UpdateClient(clientID, fields)
+	return a.Data.UpdateClient(ctx, clientID, fields)
 }
 
 // ---------------------------------------------------------------------------
@@ -235,7 +235,7 @@ func (a *Activities) UpdateClient(ctx context.Context, clientID string, fields m
 func (a *Activities) DebitLinkedAccount(ctx context.Context, clientID string, amount float64, transferID string) (domain.Transfer, error) {
 	activity.GetLogger(ctx).Info("debit_linked_account", "client_id", clientID, "amount", amount, "transfer_id", transferID)
 	chaos.MaybeSlowDown(ctx, a.Chaos)
-	t, err := a.Data.Debit(clientID, amount, transferID)
+	t, err := a.Data.Debit(ctx, clientID, amount, transferID)
 	if errors.Is(err, data.ErrInsufficientFunds) {
 		// A business-rule failure: retrying won't make the money appear.
 		msg := err.Error()
@@ -252,7 +252,7 @@ func (a *Activities) DebitLinkedAccount(ctx context.Context, clientID string, am
 func (a *Activities) CreditLinkedAccount(ctx context.Context, clientID string, amount float64, transferID string) (domain.Transfer, error) {
 	activity.GetLogger(ctx).Info("credit_linked_account", "client_id", clientID, "amount", amount, "transfer_id", transferID)
 	chaos.MaybeSlowDown(ctx, a.Chaos)
-	return a.Data.Credit(clientID, amount, transferID)
+	return a.Data.Credit(ctx, clientID, amount, transferID)
 }
 
 // ---------------------------------------------------------------------------

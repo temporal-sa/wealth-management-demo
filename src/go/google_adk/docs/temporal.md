@@ -36,7 +36,7 @@ Gemini key).
 * **Worker** ([`cmd/worker`](../cmd/worker/main.go)): runs both workflows and the tool activities on
   `ADK-Go-Supervisor`, and the model calls on `ADK-Go-Supervisor-llm`.
 * **Redis**: the chat's event stream (`events:<chat workflow ID>`) that the web UI reads through the API,
-  the chaos flags (`chaos:flags`, with injected failures logged to `chaos:events`), and the optional claim
+  the chaos flags (`chaos:<session>:flags`, with injected failures logged to `chaos:<session>:events`), and the optional claim
   check.
 
 ### How the agents work
@@ -99,7 +99,7 @@ cd frontend && npm install && npm start
 ```
 
 Open http://localhost:3000. **Start Chat** starts a chat workflow with the ID
-`adk-go-temporal-agent-<random>`. Then, for example:
+`adk-go-temporal-agent-session-<session>-chat-<random>`. Then, for example:
 
 1. *Who are my beneficiaries?* The supervisor hands off to the Beneficiary Agent, which asks for your client ID.
 2. *123* It lists John, Jane and Joan Doe.
@@ -121,7 +121,7 @@ Compliance approval comes from outside the chat, from a compliance officer. The 
 OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>
 ```
 
-for example `OpenAccount-adk-go-temporal-agent-<random>-123-Vacation-1`. Find it in the chat's JSON output or
+for example `OpenAccount-adk-go-temporal-agent-session-<session>-chat-<random>-123-Vacation-1`. Find it in the chat's JSON output or
 the Temporal UI, or list the running openings:
 
 ```bash
@@ -131,7 +131,7 @@ temporal workflow list --query "WorkflowType='OpenInvestmentAccountWorkflow' AND
 Then send the approval, quoting the ID:
 
 ```bash
-./src/go/google_adk/scripts/localsendcomplianceapproval.sh "OpenAccount-adk-go-temporal-agent-<random>-123-Vacation-1"
+./src/go/google_adk/scripts/localsendcomplianceapproval.sh "OpenAccount-adk-go-temporal-agent-session-<session>-chat-<random>-123-Vacation-1"
 ```
 
 Ask the agent for the status: it reads it with `get_account_opening_status`, and reports `Complete`.
@@ -247,9 +247,9 @@ The chat workflow, the tool activities and the model calls stay on the Go worker
 ## Failure scenarios (chaos panel)
 
 Open the chaos panel with the **Chaos** button in the web UI. Each switch takes effect at once, with no
-restart: activities and every model call read the flags from the Redis hash `chaos:flags` on each attempt.
+restart: activities and every model call read the flags from the Redis hash `chaos:<session>:flags` on each attempt.
 If Redis can't be reached, the flags read as off. Each injected failure is logged to the Redis list
-`chaos:events` for the panel. Watch the retries in the Temporal UI.
+`chaos:<session>:events` for the panel. Watch the retries in the Temporal UI.
 
 | Scenario | How to show it | What Temporal does |
 |---|---|---|
@@ -382,6 +382,7 @@ the [Java README](../../../../interop/open_account/java/README.md#running-with-t
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Rate limit the Temporal service applies to model calls, across all workers |
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Where Redis is, for the worker and the API |
+| `DEMO_DATA_STORE` | `file` | Where the sample data (`data/*.json`) lives: `file` uses the files themselves; `redis` gives each browser session its own copy in Redis (`data:<session>:<name>`, starting from the files, expiring a day after its last change), for a shared demo |
 | `USE_CLAIM_CHECK` | off | `true`, `yes` or `1` turns on the claim-check codec. Set in `scripts/setclaimcheck.sh` |
 | `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `CODEC_SERVER_ADDRESS` | `127.0.0.1:8081` | Where the codec server listens |
