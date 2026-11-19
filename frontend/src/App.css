@@ -65,9 +65,8 @@ body {
 }
 
 /* Markdown in the agents' replies */
-.markdown p,
-.markdown ul,
-.markdown ol {
+/* Same specificity as the gap rule below, so the gap wins */
+.markdown > * {
     margin: 0;
 }
 
