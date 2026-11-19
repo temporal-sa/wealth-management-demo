@@ -316,8 +316,10 @@ a `Claim check: ON` or `Claim check: OFF` line when it starts, so you can check 
 
 The demo uses one Redis for the chat events, the chaos flags and the claim check. A claim check adds a Redis
 call for every payload, and Redis being down then stops the workflows, so use a reliable Redis in production.
-The stored payloads have no expiry: clear them with `redis-cli flushdb` when the demo is done (this also
-clears the chat events and chaos flags).
+The stored payloads expire after `CLAIM_CHECK_TTL_SECONDS` (default 7 days; `0` keeps them forever). A workflow
+can't replay, and the Temporal UI can't show its history, once its payloads are gone, so keep the expiry well beyond
+how long a chat runs. To clear them sooner, run `redis-cli flushdb` when the demo is done (this also clears the chat
+events and chaos flags).
 
 With the claim check on, the Temporal UI only shows each payload's UUID. The codec server lets it show the
 real data:

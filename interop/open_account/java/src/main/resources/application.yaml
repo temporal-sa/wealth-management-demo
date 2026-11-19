@@ -4,11 +4,12 @@ spring:
     web-application-type: none
   application:
     name: open-account
-  # temporal specific configs (default to local development)
+  # Temporal connection: TEMPORAL_ADDRESS and TEMPORAL_NAMESPACE, as for the frameworks, defaulting to a local
+  # dev server. The cloud profiles (application-tc.yaml, application-tc-apikey.yaml) are chosen by startcloudworker.sh.
   temporal:
-    namespace: default
+    namespace: ${TEMPORAL_NAMESPACE:default}
     connection:
-      target: 127.0.0.1:7233
+      target: ${TEMPORAL_ADDRESS:127.0.0.1:7233}
   # Redis configuration (claim check storage). REDIS_URL is passed as SPRING_DATA_REDIS_URL by the
   # start scripts, and wins over these when set.
   data:

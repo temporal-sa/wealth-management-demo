@@ -1,0 +1,15 @@
+# Temporal Cloud with an API key. startcloudworker.sh chooses this profile when scripts/setcloudenv.sh
+# (at the repository root) sets TEMPORAL_API_KEY; otherwise it uses application-tc.yaml (mTLS).
+spring:
+  temporal:
+    namespace: ${TEMPORAL_NAMESPACE}
+    connection:
+      target: ${TEMPORAL_ADDRESS}
+      api-key: ${TEMPORAL_API_KEY}
+      enable-https: true
+  # Redis configuration (claim check storage, see scripts/setclaimcheck.sh at the repository root)
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}

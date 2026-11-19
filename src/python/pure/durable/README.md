@@ -301,8 +301,9 @@ Every start script sources `scripts/setclaimcheck.sh` if it exists: the workers 
 cloud), the API, the compliance approval scripts, the open-account runner and the codec server. Every
 component must agree on whether claim check is on, so restart them all after creating or deleting it.
 
-Redis now holds part of every workflow's history. If a key is lost, Temporal can't replay that workflow,
-so keys are never expired; a non-demo deployment needs durable, highly available Redis.
+Redis now holds part of every workflow's history. If a key is lost, Temporal can't replay that workflow, and the
+Temporal UI can't show its data. Keys expire after `CLAIM_CHECK_TTL_SECONDS` (default 7 days; `0` keeps them forever),
+well beyond how long a chat runs; a non-demo deployment needs durable, highly available Redis.
 
 The Temporal UI then shows only claim check IDs. To see the data, start the codec server, which decodes
 payloads for the Temporal UI by looking them up in Redis:

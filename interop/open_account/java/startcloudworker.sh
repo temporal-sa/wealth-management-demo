@@ -1,6 +1,6 @@
 #!/bin/bash
-# Starts the Java Open Account worker against Temporal Cloud, using the connection settings
-# in ../../../scripts/setcloudenv.sh (see scripts/setcloudenv.example) and the claim check
+# Starts the Java Open Account worker against Temporal Cloud, with an API key or mTLS, using the connection
+# settings in ../../../scripts/setcloudenv.sh (see scripts/setcloudenv.example) and the claim check
 # settings in ../../../scripts/setclaimcheck.sh.
 # Usage: TEMPORAL_TASK_QUEUE=<framework's task queue> ./startcloudworker.sh [open-account task queue]
 # TEMPORAL_TASK_QUEUE (required) is the task queue of the framework whose account openings this worker
@@ -23,48 +23,55 @@ fi
 [ -f ../../../scripts/setclaimcheck.sh ] && source ../../../scripts/setclaimcheck.sh
 source ../../../scripts/setcloudenv.sh
 
-# Map the settings in setcloudenv.sh to the names the Java worker reads
-# (common/ServerInfo.java for the activity client, application-tc.yaml for the worker).
-export TEMPORAL_CERT_PATH="${TEMPORAL_CERT_PATH:-$TEMPORAL_TLS_CLIENT_CERT_PATH}"
-KEY_PATH="${TEMPORAL_KEY_PKCS8_PATH:-${TEMPORAL_KEY_PATH:-$TEMPORAL_TLS_CLIENT_KEY_PATH}}"
-
-for var in TEMPORAL_ADDRESS TEMPORAL_NAMESPACE TEMPORAL_CERT_PATH; do
+for var in TEMPORAL_ADDRESS TEMPORAL_NAMESPACE; do
   if [ -z "${!var}" ]; then
     echo "**** $var is not set. Check ../../../scripts/setcloudenv.sh."
     exit 1
   fi
 done
-if [ -z "$KEY_PATH" ]; then
-  echo "**** No client key set. Set TEMPORAL_TLS_CLIENT_KEY_PATH (or TEMPORAL_KEY_PKCS8_PATH) in ../../../scripts/setcloudenv.sh."
-  exit 1
-fi
-for file in "$TEMPORAL_CERT_PATH" "$KEY_PATH"; do
-  if [ ! -r "$file" ]; then
-    echo "**** Cannot read $file. Check the paths in ../../../scripts/setcloudenv.sh."
+
+if [ -n "$TEMPORAL_API_KEY" ]; then
+  # An API key: the Spring profile tc-apikey (application-tc-apikey.yaml)
+  export SPRING_PROFILES_ACTIVE=tc-apikey
+  AUTH="API key"
+else
+  # mTLS: map the settings in setcloudenv.sh to the names the Java worker reads
+  # (common/ServerInfo.java for the activity client, application-tc.yaml for the worker).
+  export TEMPORAL_CERT_PATH="${TEMPORAL_CERT_PATH:-$TEMPORAL_TLS_CLIENT_CERT_PATH}"
+  KEY_PATH="${TEMPORAL_KEY_PKCS8_PATH:-${TEMPORAL_KEY_PATH:-$TEMPORAL_TLS_CLIENT_KEY_PATH}}"
+  if [ -z "$TEMPORAL_CERT_PATH" ] || [ -z "$KEY_PATH" ]; then
+    echo "**** Set either TEMPORAL_API_KEY, or TEMPORAL_TLS_CLIENT_CERT_PATH and TEMPORAL_TLS_CLIENT_KEY_PATH,"
+    echo "in ../../../scripts/setcloudenv.sh."
     exit 1
   fi
-done
+  for file in "$TEMPORAL_CERT_PATH" "$KEY_PATH"; do
+    if [ ! -r "$file" ]; then
+      echo "**** Cannot read $file. Check the paths in ../../../scripts/setcloudenv.sh."
+      exit 1
+    fi
+  done
 
-# Java's TLS needs the client key in unencrypted PKCS8 format (-----BEGIN PRIVATE KEY-----).
-# Keys from tcld or openssl are often PKCS1 (-----BEGIN RSA PRIVATE KEY-----) or SEC1 (EC).
-if ! grep -q -- "-----BEGIN PRIVATE KEY-----" "$KEY_PATH"; then
-  PKCS8_PATH="${KEY_PATH%.*}.pkcs8.key"
-  echo "**** The client key $KEY_PATH is not an unencrypted PKCS8 key, which the Java worker needs."
-  echo "Convert it with:"
-  echo ""
-  echo "  openssl pkcs8 -topk8 -nocrypt -in \"$KEY_PATH\" -out \"$PKCS8_PATH\""
-  echo ""
-  echo "then add this line to ../../../scripts/setcloudenv.sh (the Python worker keeps using TEMPORAL_TLS_CLIENT_KEY_PATH):"
-  echo ""
-  echo "  export TEMPORAL_KEY_PKCS8_PATH=\"$PKCS8_PATH\""
-  exit 1
+  # Java's TLS needs the client key in unencrypted PKCS8 format (-----BEGIN PRIVATE KEY-----).
+  # Keys from tcld or openssl are often PKCS1 (-----BEGIN RSA PRIVATE KEY-----) or SEC1 (EC).
+  if ! grep -q -- "-----BEGIN PRIVATE KEY-----" "$KEY_PATH"; then
+    PKCS8_PATH="${KEY_PATH%.*}.pkcs8.key"
+    echo "**** The client key $KEY_PATH is not an unencrypted PKCS8 key, which the Java worker needs."
+    echo "Convert it with:"
+    echo ""
+    echo "  openssl pkcs8 -topk8 -nocrypt -in \"$KEY_PATH\" -out \"$PKCS8_PATH\""
+    echo ""
+    echo "then add this line to ../../../scripts/setcloudenv.sh (the Python worker keeps using TEMPORAL_TLS_CLIENT_KEY_PATH):"
+    echo ""
+    echo "  export TEMPORAL_KEY_PKCS8_PATH=\"$PKCS8_PATH\""
+    exit 1
+  fi
+  export TEMPORAL_KEY_PKCS8_PATH="$KEY_PATH"
+  # The Temporal Cloud Spring profile with mTLS (application-tc.yaml)
+  export SPRING_PROFILES_ACTIVE=tc
+  AUTH="mTLS"
 fi
-export TEMPORAL_KEY_PKCS8_PATH="$KEY_PATH"
 
-# Use the Temporal Cloud Spring profile (application-tc.yaml) for the worker's client.
-export SPRING_PROFILES_ACTIVE=tc
-
-echo "*** Connecting the Open Account worker to $TEMPORAL_NAMESPACE at $TEMPORAL_ADDRESS"
+echo "*** Connecting the Open Account worker to $TEMPORAL_NAMESPACE at $TEMPORAL_ADDRESS ($AUTH)"
 echo "*** Open-account workflow on ${TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT:-$TEMPORAL_TASK_QUEUE-open-account}, calling the activities on $TEMPORAL_TASK_QUEUE"
 # Spring reads a Redis URL as SPRING_DATA_REDIS_URL; it wins over REDIS_HOST / REDIS_PORT / REDIS_PASSWORD
 [ -n "$REDIS_URL" ] && export SPRING_DATA_REDIS_URL="$REDIS_URL"
