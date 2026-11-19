@@ -30,5 +30,4 @@ def claim_check_status() -> str:
     """For startup messages: whether claim check is on, and which Redis it uses."""
     if not use_claim_check():
         return "Claim check: off"
-    redis = RedisConfig()
-    return f"Claim check: ON (payloads stored in Redis at {redis.hostname}:{redis.port})"
+    return f"Claim check: ON (payloads stored in Redis at {RedisConfig().address()})"

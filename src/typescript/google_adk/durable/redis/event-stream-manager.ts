@@ -3,7 +3,7 @@
  * {type, content}. The same key and event format as the reference framework, so the shared UI reads it.
  */
 import Redis from 'ioredis';
-import { loadRedisConfig } from '../../../common/redis-config';
+import { STREAM_TTL_SECONDS, createRedisClient } from '../../../common/redis-config';
 import type { ChatInteraction, StatusUpdate } from '../shared';
 
 export type StreamEvent =
@@ -26,12 +26,16 @@ export class RedisEventStream implements EventStream {
   private readonly redis: Redis;
 
   constructor() {
-    this.redis = new Redis({ ...loadRedisConfig(), lazyConnect: true });
+    this.redis = createRedisClient(undefined, { lazyConnect: true });
     this.redis.on('error', () => undefined);
   }
 
-  append(workflowId: string, event: StreamEvent): Promise<number> {
-    return this.redis.rpush(streamKey(workflowId), JSON.stringify(event));
+  async append(workflowId: string, event: StreamEvent): Promise<number> {
+    const key = streamKey(workflowId);
+    const length = await this.redis.rpush(key, JSON.stringify(event));
+    // Abandoned chats don't pile up: a stream expires a day after its last event
+    await this.redis.expire(key, STREAM_TTL_SECONDS);
+    return length;
   }
 
   async getEventsFromIndex(workflowId: string, fromIndex = 0): Promise<StreamEvent[]> {

@@ -27,6 +27,8 @@ The agents are built with the [Google Agent Development Kit for TypeScript](http
   integration's `adk-invokeModel` activity on the model task queue. The tools are ADK `FunctionTool`s in
   workflow code that run the tool activities. After each turn the workflow appends a `chat_interaction`
   event to the chat's Redis event stream.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat-idle.ts`), so chats abandoned without End Chat don't run forever.
 * **Open-account workflow** (`OpenInvestmentAccountWorkflow`, [`workflows/open-account.ts`](workflows/open-account.ts)):
   a child workflow per account opening. It signals every state change to the chat workflow, which records
   it for the agent's `get_account_opening_status` tool and appends a `status_update` event to the stream.
@@ -105,6 +107,11 @@ Open http://localhost:3000. **Start Chat** starts a chat workflow with the ID
 have?", then "Open Vacation with $13,000" and "Yes" when the agent shows your details.
 
 ### Approve compliance
+
+The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
+them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
+script below.
 
 Once the customer confirms their details, the opening waits for a compliance officer's approval, which comes
 from outside the chat. The open-account workflow's ID is
@@ -342,8 +349,10 @@ For the Java worker on Temporal Cloud, see the
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `TEMPORAL_TASK_QUEUE` | The open-account workflow. `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this framework (set by the worker scripts' argument) |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | The model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | none | A cap on model calls per second across all workers |
-| `REDIS_HOST`, `REDIS_PORT` | `localhost`, `6379` | The event stream, the chaos flags and the claim check |
+| `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | The event stream, the chaos flags and the claim check |
 | `USE_CLAIM_CHECK` | off | The claim check (`true`, `yes` or `1`). Set in `scripts/setclaimcheck.sh` |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `CODEC_SERVER_HOST`, `CODEC_SERVER_PORT` | `127.0.0.1`, `8081` | Where the codec server listens |
 | `DATA_DIR` | the repository's `data/` | The demo data folder |
 | `LIVE_TEST_RUNS` | `1` | How many times each live test repeats its conversation |

@@ -19,6 +19,7 @@ from prompts.client_id_memory import remember_client_id
 from durable.activities.event_stream_activities import EventStreamActivities
 
 with workflow.unsafe.imports_passed_through():
+    from common.chat_idle import CHAT_IDLE_TIMEOUT, chat_idle_timeout
     from durable.activities.beneficiaries import Beneficiaries, Beneficiary
     from durable.activities.investments import Investments
     from durable.activities.open_account import OpenAccount, open_new_investment_account
@@ -29,11 +30,11 @@ with workflow.unsafe.imports_passed_through():
     from temporalio.google_adk import TemporalModel
     from durable.activities.activity_tool import _activity_tool
     from durable.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
-    from durable.task_queues import LLM_TASK_QUEUE
+    from durable.task_queues import GEMINI_MODEL, LLM_TASK_QUEUE
     from temporalio.exceptions import is_cancelled_exception
 
 
-MODEL = "gemini-2.5-flash"
+MODEL = GEMINI_MODEL
 APP_NAME = "wealth-management"
 # Sent when the model ends a turn with no text and no tool call, which Gemini occasionally does
 EMPTY_RESPONSE_NUDGE = "Please continue, following your instructions."
@@ -369,13 +370,19 @@ class WealthManagementWorkflow:
         )
 
         while True:
-            await workflow.wait_condition(
-                lambda: (
-                    not self.pending_chat_messages.empty()
-                    or not self.pending_status_updates.empty()
-                    or self.end_workflow_flag
+            try:
+                await workflow.wait_condition(
+                    lambda: (
+                        not self.pending_chat_messages.empty()
+                        or not self.pending_status_updates.empty()
+                        or self.end_workflow_flag
+                    ),
+                    timeout=chat_idle_timeout(),
                 )
-            )
+            except asyncio.TimeoutError:
+                # Nobody has used this chat for a while (e.g. the tab was closed without End Chat)
+                workflow.logger.info(f"Ending chat: idle for {CHAT_IDLE_TIMEOUT}")
+                return
 
             if self.end_workflow_flag:
                 return

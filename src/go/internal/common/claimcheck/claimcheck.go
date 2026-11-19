@@ -11,11 +11,18 @@
 //
 // Every component that reads or writes payloads (the worker, the API, the scripts and the
 // Java worker) must use the codec, or it can't read the others' payloads.
+//
+// Stored payloads expire after CLAIM_CHECK_TTL_SECONDS (default 7 days; 0 keeps them forever),
+// so they don't pile up in Redis. A workflow needs its payloads to replay, and the Temporal UI
+// needs them to show its history, so keep the expiry well beyond how long a workflow runs.
 package claimcheck
 
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,13 +40,31 @@ const (
 	redisTimeout    = 10 * time.Second
 )
 
+// DefaultTTL is how long stored payloads are kept when CLAIM_CHECK_TTL_SECONDS isn't set.
+const DefaultTTL = 7 * 24 * time.Hour
+
+// TTL is how long stored payloads are kept: CLAIM_CHECK_TTL_SECONDS, or DefaultTTL. Zero keeps
+// them forever.
+func TTL() time.Duration {
+	value := strings.TrimSpace(os.Getenv("CLAIM_CHECK_TTL_SECONDS"))
+	if value == "" {
+		return DefaultTTL
+	}
+	seconds, err := strconv.Atoi(value)
+	if err != nil || seconds <= 0 {
+		return 0
+	}
+	return time.Duration(seconds) * time.Second
+}
+
 // Codec is the claim-check PayloadCodec.
 type Codec struct {
 	rdb *redis.Client
+	ttl time.Duration
 }
 
-// New returns a claim-check codec storing payloads in the given Redis.
-func New(rdb *redis.Client) *Codec { return &Codec{rdb: rdb} }
+// New returns a claim-check codec storing payloads in the given Redis, for TTL().
+func New(rdb *redis.Client) *Codec { return &Codec{rdb: rdb, ttl: TTL()} }
 
 // Encode stores each payload in Redis and replaces it with its key.
 func (c *Codec) Encode(payloads []*commonpb.Payload) ([]*commonpb.Payload, error) {
@@ -52,7 +77,7 @@ func (c *Codec) Encode(payloads []*commonpb.Payload) ([]*commonpb.Payload, error
 			return nil, fmt.Errorf("claim check: serializing payload: %w", err)
 		}
 		id := uuid.NewString()
-		if err := c.rdb.Set(ctx, id, value, 0).Err(); err != nil {
+		if err := c.rdb.Set(ctx, id, value, c.ttl).Err(); err != nil {
 			return nil, fmt.Errorf("claim check: storing payload in Redis: %w", err)
 		}
 		out[i] = &commonpb.Payload{

@@ -23,6 +23,8 @@ Setup (Python, dependencies and the Gemini key in `scripts/setgeminikey.sh`) is 
   agents per customer message. Agents hand the conversation to each other with ADK's `transfer_to_agent`
   (see [How the agents work](#how-the-agents-work)). Each agent's `TemporalModel` runs its model calls as
   activities on the LLM task queue; tools call activities on the main task queue.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat_idle.py`), so chats abandoned without End Chat don't run forever.
 - **Open-account workflow** (`OpenInvestmentAccountWorkflow`, `workflows/open_account_workflow.py`). A child
   workflow that runs KYC, waits for compliance approval and then runs a saga to create, fund and register
   the account. It can also run in Java.
@@ -47,7 +49,7 @@ same turn. The transfers match the OpenAI Agents SDK framework's handoffs:
 | Investment Agent | Open Account Agent, Supervisor Agent | `list_investments`, `close_investment` |
 | Open Account Agent | Investment Agent | `open_new_investment_account`, `get_account_opening_status`, `get_current_client_info`, `approve_kyc`, `update_client_details` |
 
-- **Model calls.** Each agent has its own `TemporalModel` for `gemini-2.5-flash`, which runs the call in the
+- **Model calls.** Each agent has its own `TemporalModel` for the model in `GEMINI_MODEL` (default `gemini-3.8-flash`), which runs the call in the
   plugin's `invoke_model` activity on `ADK-Supervisor-llm`, with `LLM_RETRY_POLICY` and the agent's name as
   the activity summary. The worker registers `ChaosAwareGemini` (`model_config.py`) in ADK's model
   registry, so the chaos flags apply and a real Gemini 429 becomes a rate-limit error.
@@ -110,6 +112,11 @@ The web UI opens at http://localhost:3000. Click
 **Start Chat**, then use client ID `123` or `234`.
 
 ### Approve compliance
+
+The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
+them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
+script below.
 
 Compliance approval is sent from a terminal; there is no button in the web UI. The open-account workflow's
 ID is `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, where `<n>` counts the account
@@ -364,6 +371,7 @@ For the Java open-account worker, start the worker with `startcloudworker.sh jav
 | Variable | Default | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` | required | Gemini API key for the worker (`scripts/setgeminikey.sh`) |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | The Gemini model every agent uses |
 | `TEMPORAL_ADDRESS` | `127.0.0.1:7233` | Temporal service address |
 | `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
 | `TEMPORAL_API_KEY` | none | API key authentication |
@@ -374,8 +382,10 @@ For the Java open-account worker, start the worker with `startcloudworker.sh jav
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `<TEMPORAL_TASK_QUEUE>` | Task queue for the open-account workflow. `java` means `<TEMPORAL_TASK_QUEUE>-open-account`; set by the worker scripts' argument. When it differs from the main queue, the Python worker doesn't register `OpenInvestmentAccountWorkflow` |
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Most model calls per second dispatched from the LLM queue, across all workers |
 | `SKIP_AGENTS` | `False` | `True` runs the worker without the `GoogleAdkPlugin` or the LLM queue (set by `startlocalopenaccount.sh`). The older name `SKIP_ADK_PLUGIN` still works |
-| `REDIS_HOST`, `REDIS_PORT` | `localhost`, `6379` | Redis for the event stream, chaos flags and claim check payloads |
+| `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, chaos flags and claim check payloads |
 | `USE_CLAIM_CHECK` | `false` | `true` turns on the claim check codec (`scripts/setclaimcheck.sh`) |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 
 The scripts pass the environment through, so you can prefix any of them, for example
 `LLM_MAX_CALLS_PER_SECOND=0.2 ./src/python/google_adk/durable/startlocalworker.sh`.

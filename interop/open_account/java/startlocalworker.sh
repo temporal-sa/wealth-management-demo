@@ -15,4 +15,6 @@ fi
 [ -n "$1" ] && export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"
 [ -f ../../../scripts/setclaimcheck.sh ] && source ../../../scripts/setclaimcheck.sh
 echo "*** Open-account workflow on ${TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT:-$TEMPORAL_TASK_QUEUE-open-account}, calling the activities on $TEMPORAL_TASK_QUEUE"
+# Spring reads a Redis URL as SPRING_DATA_REDIS_URL; it wins over REDIS_HOST / REDIS_PORT / REDIS_PASSWORD
+[ -n "$REDIS_URL" ] && export SPRING_DATA_REDIS_URL="$REDIS_URL"
 ./gradlew runWorker

@@ -1,8 +1,7 @@
 import Redis from 'ioredis';
+import { RedisConfig, STREAM_TTL_SECONDS, createRedisClient, loadRedisConfig } from './redis-config';
 import { ChatInteraction, StatusUpdate } from './shared';
 
-const REDIS_HOST = process.env.REDIS_HOST ?? 'localhost';
-const REDIS_PORT = parseInt(process.env.REDIS_PORT ?? '6379', 10);
 
 export type EventType = 'chat_interaction' | 'status_update';
 
@@ -27,8 +26,17 @@ export type StreamEvent = ChatInteractionEvent | StatusUpdateEvent;
 export class EventStreamManager {
   private client: Redis;
 
-  constructor(host = REDIS_HOST, port = REDIS_PORT) {
-    this.client = new Redis({ host, port, lazyConnect: true });
+  constructor(config: RedisConfig = loadRedisConfig()) {
+    this.client = createRedisClient(config, { lazyConnect: true });
+  }
+
+  private async push(workflowId: string, event: StreamEvent): Promise<number> {
+    const key = this.streamKey(workflowId);
+    const [[, length]] = (await this.client.multi().rpush(key, JSON.stringify(event)).expire(key, STREAM_TTL_SECONDS).exec()) as [
+      [Error | null, number],
+      unknown,
+    ];
+    return length;
   }
 
   private streamKey(workflowId: string): string {
@@ -37,12 +45,12 @@ export class EventStreamManager {
 
   async appendChatInteraction(workflowId: string, interaction: ChatInteraction): Promise<number> {
     const event: ChatInteractionEvent = { type: 'chat_interaction', content: interaction };
-    return this.client.rpush(this.streamKey(workflowId), JSON.stringify(event));
+    return this.push(workflowId, event);
   }
 
   async appendStatusUpdate(workflowId: string, update: StatusUpdate): Promise<number> {
     const event: StatusUpdateEvent = { type: 'status_update', content: update };
-    return this.client.rpush(this.streamKey(workflowId), JSON.stringify(event));
+    return this.push(workflowId, event);
   }
 
   async getEventsFromIndex(workflowId: string, fromIndex = 0): Promise<StreamEvent[]> {

@@ -12,8 +12,25 @@ const ENCODING_METADATA_VALUE = Buffer.from('v1');
 // Java worker only decodes payloads with this encoding.
 const CLAIM_CHECK_ENCODING = Buffer.from('claim-checked');
 
+export const DEFAULT_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+/**
+ * How long stored payloads are kept in Redis (CLAIM_CHECK_TTL_SECONDS, default 7 days), so they don't
+ * pile up; 0 (CLAIM_CHECK_TTL_SECONDS=0) keeps them forever. A workflow needs its payloads to
+ * replay, and the Temporal UI needs them to show its history, so keep this well beyond how long a
+ * workflow runs.
+ */
+export function claimCheckTtlSeconds(env: NodeJS.ProcessEnv = process.env): number {
+  const value = (env.CLAIM_CHECK_TTL_SECONDS ?? '').trim();
+  const seconds = value ? Number(value) : DEFAULT_TTL_SECONDS;
+  return Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+}
+
 export class ClaimCheckCodec implements PayloadCodec {
-  constructor(private readonly redis: Redis) {}
+  constructor(
+    private readonly redis: Redis,
+    private readonly ttlSeconds: number = claimCheckTtlSeconds(),
+  ) {}
 
   async encode(payloads: IPayload[]): Promise<IPayload[]> {
     return Promise.all(payloads.map((p) => this.encodePayload(p)));
@@ -26,7 +43,11 @@ export class ClaimCheckCodec implements PayloadCodec {
   private async encodePayload(payload: IPayload): Promise<IPayload> {
     const claimKey = randomUUID();
     const serialized = Buffer.from(Payload.encode(payload).finish());
-    await this.redis.set(claimKey, serialized);
+    if (this.ttlSeconds > 0) {
+      await this.redis.set(claimKey, serialized, 'EX', this.ttlSeconds);
+    } else {
+      await this.redis.set(claimKey, serialized);
+    }
     return {
       metadata: {
         encoding: CLAIM_CHECK_ENCODING,

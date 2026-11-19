@@ -33,9 +33,11 @@ class FakeRedis:
 
     def __init__(self):
         self.data: dict[str, bytes] = {}
+        self.expiry: dict[str, int | None] = {}
 
-    async def set(self, key: str, value: bytes):
+    async def set(self, key: str, value: bytes, ex: int | None = None):
         self.data[key] = value
+        self.expiry[key] = ex
 
     async def get(self, key: str):
         return self.data.get(key)
@@ -181,3 +183,24 @@ def test_startup_message_says_whether_claim_check_is_on(monkeypatch):
     monkeypatch.setenv("REDIS_PORT", "6380")
     assert connection.claim_check_status() == (
         "Claim check: ON (payloads stored in Redis at redis.example:6380)")
+
+    # REDIS_URL wins, and the message never shows its password
+    monkeypatch.setenv("REDIS_URL", "redis://:s3cret@cache.example:6390/0")
+    assert connection.claim_check_status() == (
+        "Claim check: ON (payloads stored in Redis at cache.example:6390)")
+
+
+async def test_stored_payloads_expire_after_seven_days_by_default(monkeypatch, redis_store):
+    monkeypatch.delenv("CLAIM_CHECK_TTL_SECONDS", raising=False)
+    [encoded] = await ClaimCheckCodec(redis_client=redis_store).encode([_payload("{}")])
+    assert redis_store.expiry[encoded.data.decode()] == 7 * 24 * 60 * 60
+
+
+async def test_claim_check_ttl_seconds_sets_the_expiry_and_zero_keeps_payloads(monkeypatch, redis_store):
+    monkeypatch.setenv("CLAIM_CHECK_TTL_SECONDS", "3600")
+    [encoded] = await ClaimCheckCodec(redis_client=redis_store).encode([_payload("{}")])
+    assert redis_store.expiry[encoded.data.decode()] == 3600
+
+    monkeypatch.setenv("CLAIM_CHECK_TTL_SECONDS", "0")
+    [encoded] = await ClaimCheckCodec(redis_client=redis_store).encode([_payload("{}")])
+    assert redis_store.expiry[encoded.data.decode()] is None

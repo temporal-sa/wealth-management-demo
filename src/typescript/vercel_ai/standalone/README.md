@@ -18,7 +18,7 @@ Scenarios currently implemented include
 ## Prerequisites
 
 - [Node.js 20+](https://nodejs.org/) and npm
-- A [Google Gemini API key](https://aistudio.google.com/app/apikey) (the model is `gemini-2.5-pro`)
+- A [Google Gemini API key](https://aistudio.google.com/app/apikey) (the model is `GEMINI_MODEL`, default `gemini-3.8-flash`)
 
 ## Install dependencies
 

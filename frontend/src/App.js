@@ -38,6 +38,8 @@ function App() {
   const [sessionId, setSessionId] = useState(null);
   const [isChatActive, setIsChatActive] = useState(false);
   const [statusContent, setStatusContent] = useState('');
+  // While an approval is on its way, until the opening's status changes
+  const [isApprovingCompliance, setIsApprovingCompliance] = useState(false);
   const chatWindowRef = useRef(null);
   const eventCountRef = useRef(0);
   // Polling calls the latest fetchChatHistory through this ref, so the interval
@@ -178,6 +180,32 @@ function App() {
     }
   };
 
+  // The status text each chat shows while an account opening waits for compliance review
+  const isWaitingComplianceReview = isChatActive && statusContent.endsWith('Waiting Compliance Review');
+
+  useEffect(() => {
+    setIsApprovingCompliance(false);
+  }, [statusContent]);
+
+  // Does what localsendcomplianceapproval.sh does: the API signals the chat's account openings
+  // that wait for compliance review
+  const handleApproveCompliance = async () => {
+    setIsApprovingCompliance(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/approve-compliance?workflow_id=${encodeURIComponent(workflow_id)}`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+      if (!response.ok || !result.approved || result.approved.length === 0) {
+        console.error('No account opening was approved:', result);
+        setIsApprovingCompliance(false);
+      }
+    } catch (error) {
+      console.error('Error approving compliance:', error);
+      setIsApprovingCompliance(false);
+    }
+  };
+
   const handleEndChat = async () => {
     console.log("Session id is ", sessionId);
     if (!sessionId) {
@@ -283,6 +311,15 @@ function App() {
         {statusContent && (
           <div className="status-area">
             {statusContent}
+            {isWaitingComplianceReview && (
+              <button
+                className="approve-compliance-button"
+                onClick={handleApproveCompliance}
+                disabled={isApprovingCompliance}
+              >
+                {isApprovingCompliance ? 'Approving…' : 'Approve compliance review'}
+              </button>
+            )}
           </div>
         )}
         <div className="chat-window" ref={chatWindowRef}>

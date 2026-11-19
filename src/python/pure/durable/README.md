@@ -26,6 +26,8 @@ dependencies and the model key are in the [framework README](../README.md).
   conversation (messages, active agent, client ID, account openings) is workflow state, so it survives
   replay. After each turn, the reply is appended to the Redis list `events:<workflow ID>` by a local
   activity.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat_idle.py`), so chats abandoned without End Chat don't run forever.
 * **The open-account workflow** `OpenInvestmentAccountWorkflow` is a child workflow, one per account
   opening: KYC, compliance approval, then a saga. It reports each state change to the chat workflow with
   the `update_account_opening_state` signal.
@@ -104,6 +106,11 @@ cd frontend && npm install && npm start
 Open http://localhost:3000 for the chat, and http://localhost:8233 for the Temporal UI.
 
 ### Approve compliance
+
+The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
+them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
+script below.
 
 Each account opening waits for compliance approval, which comes from outside the chat. The open-account
 workflow ID is `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, where `<n>` counts the
@@ -366,8 +373,10 @@ Temporal Cloud.
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat queue | Task queue of the open-account workflow. `java` means `Pure-Supervisor-open-account`, the Java worker's queue for this framework (set by `startlocalworker.sh java`) |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue of the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Dispatch rate limit for model calls, across all workers |
-| `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Redis for the event stream, the chaos flags and claim check |
+| `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, the chaos flags and claim check |
 | `USE_CLAIM_CHECK` | `false` | Store payloads in Redis and send Temporal only their IDs (`scripts/setclaimcheck.sh`) |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `LIVE_TEST_RUNS` / `LIVE_TURN_TIMEOUT` | `1` / `300` | Live tests: conversations to run, and seconds to wait for each reply |
 
 The API has its own settings; see the [API README](../../../python/api/README.md).

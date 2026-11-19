@@ -7,7 +7,8 @@ outage pauses the conversation instead of losing it, and Temporal resumes the tu
 The agents are built with the [Vercel AI SDK](https://ai-sdk.dev/) (AI SDK v7, `generateText` with tools)
 and hand off to each other with tools. Temporal's AI SDK integration,
 [`@temporalio/vercel-ai-sdk`](https://www.npmjs.com/package/@temporalio/vercel-ai-sdk) (with the Temporal
-TypeScript SDK 1.26), runs each model call as an activity. The model is Gemini (`gemini-2.5-pro`).
+TypeScript SDK 1.26), runs each model call as an activity. The model is Gemini (`GEMINI_MODEL`, default `gemini-3.8-flash`): the workflow asks
+for the model `gemini` and the worker's provider (`gemini.ts`) turns it into `GEMINI_MODEL`, since workflow code can't read the environment.
 Prerequisites, installing the dependencies and the Gemini key are in the [framework README](../README.md).
 
 ![Web UI](../../../../docs/images/vercel_ai/ux-waiting-compliance-review.png)
@@ -28,6 +29,8 @@ Prerequisites, installing the dependencies and the Gemini key are in the [framew
   `generateText` model call becomes an activity through the `TemporalProvider`, and every tool that
   touches a system calls an activity. After each turn, the reply is appended to the Redis list
   `events:<workflow ID>`.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat-idle.ts`), so chats abandoned without End Chat don't run forever.
 * **The open-account workflow** `OpenInvestmentAccountWorkflow`
   ([workflows/open-account.ts](workflows/open-account.ts)) is a child workflow, one per account opening:
   KYC, compliance approval, then a saga. It reports each state change to the chat workflow with the
@@ -105,6 +108,11 @@ cd frontend && npm install && npm start
 Open http://localhost:3000 for the chat, and http://localhost:8233 for the Temporal UI.
 
 ### Approve compliance
+
+The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
+them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
+script below.
 
 Each account opening waits for compliance approval, which comes from outside the chat. The open-account
 workflow ID is `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, with the account name as
@@ -368,6 +376,7 @@ The worker and scripts read these (see [common/client-helper.ts](../../common/cl
 | Variable | Default | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` (or `GOOGLE_GENERATIVE_AI_API_KEY`) | none | Gemini API key (`scripts/setgeminikey.sh`) |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | The Gemini model every agent uses |
 | `TEMPORAL_ADDRESS` | `localhost:7233` | Temporal service address |
 | `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
 | `TEMPORAL_API_KEY` | none | API key for Temporal Cloud (`scripts/setcloudenv.sh`) |
@@ -376,8 +385,10 @@ The worker and scripts read these (see [common/client-helper.ts](../../common/cl
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | unset (the chat queue) | Task queue of the open-account workflow. `java` means `VAI-Supervisor-open-account`, the Java worker's queue for this framework (set by `startlocalworker.sh java`). When it differs from `TEMPORAL_TASK_QUEUE`, this worker doesn't register the open-account workflow |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue of the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Server-side rate limit for the model calls' task queue, across all workers |
-| `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Redis for the event stream, the chaos flags and claim check |
+| `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, the chaos flags and claim check |
 | `USE_CLAIM_CHECK` | `false` | `true`, `1` or `yes` (any case) turns on claim check (`scripts/setclaimcheck.sh`) |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `CODEC_SERVER_HOST` / `CODEC_SERVER_PORT` | `127.0.0.1` / `8081` | Codec server bind address |
 | `LIVE_TEST_RUNS` | `1` | Live tests: how many times to repeat the conversation |
 

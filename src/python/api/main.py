@@ -105,6 +105,22 @@ async def end_chat(workflow_id: str):
         # Workflow not found; return an empty response
         return {}
 
+@app.post("/approve-compliance")
+async def approve_compliance(workflow_id: str):
+    """Approves the compliance review of this chat's account openings that wait for it.
+
+    Does what localsendcomplianceapproval.sh does, from a button in the web UI, without needing
+    the open-account workflow's ID.
+    """
+    try:
+        approved = await chat.approve_compliance(temporal_client, workflow_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except (RPCError, TemporalError) as e:
+        print(f"Error approving compliance for {workflow_id}: {e}")
+        raise HTTPException(status_code=502, detail=f"Couldn't approve compliance: {e}")
+    return {"approved": approved}
+
 UPDATE_STATUS_NAME = "update_status"
 
 @app.post("/start-workflow")

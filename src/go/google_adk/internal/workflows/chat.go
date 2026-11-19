@@ -26,6 +26,14 @@ import (
 	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/domain"
 )
 
+// A chat with no customer message and no account-opening status update for ChatIdleTimeout ends as
+// it does on End Chat, so chats abandoned without End Chat (a closed tab) don't run forever. Its
+// open-account child workflows are terminated by their parent close policy.
+const ChatIdleTimeout = time.Hour
+
+// ChatIdleTimeoutChange is the workflow.GetVersion change ID for the idle timer.
+const ChatIdleTimeoutChange = "chat-idle-timeout"
+
 // Names of WealthManagementWorkflow and its handlers (the shared Temporal contract).
 const (
 	WealthManagementWorkflowName    = "WealthManagementWorkflow"
@@ -124,10 +132,23 @@ func (c *Chat) Run(ctx workflow.Context) error {
 		return err
 	}
 
+	// The idle timer is behind a version, so chats that started before it existed replay without it
+	idleTimeout := workflow.GetVersion(ctx, ChatIdleTimeoutChange, workflow.DefaultVersion, 1) == 1
 	for {
-		if err := workflow.Await(ctx, func() bool {
+		ready := func() bool {
 			return len(s.pendingMessages) > 0 || len(s.pendingStatuses) > 0 || s.endWorkflow
-		}); err != nil {
+		}
+		if idleTimeout {
+			ok, err := workflow.AwaitWithTimeout(ctx, ChatIdleTimeout, ready)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				// Nobody has used this chat for a while (e.g. the tab was closed without End Chat)
+				workflow.GetLogger(ctx).Info("Ending chat: idle", "timeout", ChatIdleTimeout)
+				return nil
+			}
+		} else if err := workflow.Await(ctx, ready); err != nil {
 			return err
 		}
 		if s.endWorkflow {

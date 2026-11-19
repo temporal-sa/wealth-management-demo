@@ -22,6 +22,13 @@ CHAT_WORKFLOW = "WealthManagementWorkflow"
 PROCESS_USER_MESSAGE_SIGNAL = "process_user_message"
 END_WORKFLOW_SIGNAL = "end_workflow"
 
+# Temporal contract names for the open-account workflow, which every framework (and the Java
+# worker) starts as a child of the chat with an ID beginning OpenAccount-<chat workflow ID>-
+OPEN_ACCOUNT_ID_PREFIX = "OpenAccount-"
+OPEN_ACCOUNT_STATE_QUERY = "get_current_state"
+COMPLIANCE_APPROVED_SIGNAL = "compliance_approved"
+WAITING_COMPLIANCE_REVIEW = "Waiting Compliance Review"
+
 
 async def connect(**connect_config) -> Client:
     """Connect with the API's data converter and, if enabled, the claim-check codec."""
@@ -49,3 +56,22 @@ async def send_prompt(client: Client, workflow_id: str, prompt: str) -> ProcessU
 
 async def end_chat(client: Client, workflow_id: str) -> None:
     await client.get_workflow_handle(workflow_id).signal(END_WORKFLOW_SIGNAL)
+
+
+async def approve_compliance(client: Client, chat_workflow_id: str) -> list[str]:
+    """Approves the compliance review of the chat's account openings that wait for it.
+
+    Finds the chat's running open-account workflows by ID, asks each for its state and sends
+    compliance_approved to those waiting for compliance review. Returns their workflow IDs.
+    """
+    if "'" in chat_workflow_id or "\\" in chat_workflow_id:
+        raise ValueError("A chat workflow ID can't contain quotes or backslashes")
+    query = (f"WorkflowId STARTS_WITH '{OPEN_ACCOUNT_ID_PREFIX}{chat_workflow_id}-' "
+             "AND ExecutionStatus = 'Running'")
+    approved = []
+    async for execution in client.list_workflows(query):
+        handle = client.get_workflow_handle(execution.id, run_id=execution.run_id)
+        if await handle.query(OPEN_ACCOUNT_STATE_QUERY, result_type=str) == WAITING_COMPLIANCE_REVIEW:
+            await handle.signal(COMPLIANCE_APPROVED_SIGNAL)
+            approved.append(execution.id)
+    return approved

@@ -1,11 +1,12 @@
 import { NativeConnection, Worker, Runtime, DefaultLogger } from '@temporalio/worker';
 import type { LogEntry } from '@temporalio/worker';
 import { AiSdkPlugin } from '@temporalio/vercel-ai-sdk';
-import { gemini } from '../gemini';
+import { geminiModel, geminiProvider } from '../gemini';
 import * as activities from './activities/activities';
 import { clientHelper } from './task-queues';
 import { openAccountTaskQueue } from '../../common/task-queues';
 import { buildDataConverter, useClaimCheck } from '../../common/data-converter';
+import { redisAddress } from '../../common/redis-config';
 import { chaosAwareProvider } from './chaos-model';
 import { workflowsModule } from './worker-workflows';
 
@@ -28,9 +29,7 @@ Runtime.install({
 
 function logClaimCheckStatus(): void {
   if (useClaimCheck()) {
-    const host = process.env.REDIS_HOST ?? 'localhost';
-    const port = process.env.REDIS_PORT ?? '6379';
-    console.error(`Claim check enabled (redis at ${host}:${port})`);
+    console.error(`Claim check enabled (redis at ${redisAddress()})`);
   } else {
     console.error('Claim check disabled');
   }
@@ -52,6 +51,7 @@ function llmMaxCallsPerSecond(): number | undefined {
 
 async function run() {
   logClaimCheckStatus();
+  console.error(`Model: ${geminiModel()} (GEMINI_MODEL)`);
   const helper = clientHelper();
   const openAccountQueue = openAccountTaskQueue(helper.taskQueue, process.env.TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT);
   logOpenAccountTaskQueue(helper.taskQueue, openAccountQueue);
@@ -59,7 +59,7 @@ async function run() {
   const workflows = workflowsModule(helper.taskQueue, openAccountQueue);
   const connection = await NativeConnection.connect(helper.nativeConnectionOptions);
   try {
-    const plugin = new AiSdkPlugin({ modelProvider: chaosAwareProvider(gemini()) });
+    const plugin = new AiSdkPlugin({ modelProvider: chaosAwareProvider(geminiProvider()) });
     const worker = await Worker.create({
       connection,
       namespace: helper.namespace,

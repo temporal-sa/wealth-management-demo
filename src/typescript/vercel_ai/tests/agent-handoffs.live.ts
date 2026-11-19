@@ -18,7 +18,7 @@ import assert from 'assert';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 import { AiSdkPlugin } from '@temporalio/vercel-ai-sdk';
-import { gemini, geminiApiKey } from '../gemini';
+import { geminiApiKey, geminiProvider } from '../gemini';
 import * as activities from '../durable/activities/activities';
 import type { ChatInteraction } from '../../common/shared';
 import { WealthManagementWorkflow } from '../durable/workflows/wealth-management';
@@ -50,7 +50,7 @@ describe('Agent handoffs (live Gemini)', function () {
       connection: env.nativeConnection,
       taskQueue: TASK_QUEUE,
       workflowsPath: require.resolve('../durable/workflows/index'),
-      plugins: [new AiSdkPlugin({ modelProvider: gemini() })],
+      plugins: [new AiSdkPlugin({ modelProvider: geminiProvider() })],
       bundlerOptions: { ignoreModules: ['@temporalio/activity', '@temporalio/client', 'crypto'] },
       activities: {
         ...activities,

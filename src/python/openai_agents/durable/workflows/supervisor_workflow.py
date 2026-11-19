@@ -23,6 +23,7 @@ from common.account_context import UpdateAccountOpeningStateInput
 from durable.retry_policies import TOOL_RETRY_POLICY
 
 with workflow.unsafe.imports_passed_through():
+    from common.chat_idle import CHAT_IDLE_TIMEOUT, chat_idle_timeout
     from durable.activities.beneficiaries import Beneficiaries
     from durable.activities.investments import Investments
     from agents import (
@@ -247,9 +248,15 @@ class WealthManagementWorkflow:
         while True:
             workflow.logger.info("At top of loop - waiting for messages or status updates")
             # Wait for queue items or end workflow
-            await workflow.wait_condition(
-                lambda: not self.pending_chat_messages.empty() or not self.pending_status_updates.empty() or self.end_workflow
-            )
+            try:
+                await workflow.wait_condition(
+                    lambda: not self.pending_chat_messages.empty() or not self.pending_status_updates.empty() or self.end_workflow,
+                    timeout=chat_idle_timeout(),
+                )
+            except asyncio.TimeoutError:
+                # Nobody has used this chat for a while (e.g. the tab was closed without End Chat)
+                workflow.logger.info(f"Ending chat: idle for {CHAT_IDLE_TIMEOUT}")
+                return
 
             if self.end_workflow:
                 workflow.logger.info("Ending workflow.")

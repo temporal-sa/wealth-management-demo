@@ -20,6 +20,7 @@ from durable.activities.event_stream_activities import EventStreamActivities
 from durable.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
 
 with workflow.unsafe.imports_passed_through():
+    from common.chat_idle import CHAT_IDLE_TIMEOUT, chat_idle_timeout
     from strands import tool
     from strands.hooks import HookProvider, HookRegistry, BeforeToolCallEvent
     from temporalio.contrib.strands import TemporalAgent
@@ -489,13 +490,19 @@ class WealthManagementWorkflow:
         )
 
         while True:
-            await workflow.wait_condition(
-                lambda: (
-                    not self.pending_chat_messages.empty()
-                    or not self.pending_status_updates.empty()
-                    or self.end_workflow_flag
+            try:
+                await workflow.wait_condition(
+                    lambda: (
+                        not self.pending_chat_messages.empty()
+                        or not self.pending_status_updates.empty()
+                        or self.end_workflow_flag
+                    ),
+                    timeout=chat_idle_timeout(),
                 )
-            )
+            except asyncio.TimeoutError:
+                # Nobody has used this chat for a while (e.g. the tab was closed without End Chat)
+                workflow.logger.info(f"Ending chat: idle for {CHAT_IDLE_TIMEOUT}")
+                return
 
             if self.end_workflow_flag:
                 return

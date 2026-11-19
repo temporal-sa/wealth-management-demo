@@ -22,6 +22,8 @@ Setup (prerequisites, `uv sync`, the OpenAI key in `scripts/setoaikey.sh`) is in
   per chat (`oai-temporal-agent-<random>`). Each customer message runs the current agent with
   `Runner.run`, handoffs included. Model and tool calls run as activities. The conversation stays in
   one workflow run (production would use continue-as-new; see the TODO in the workflow).
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat_idle.py`), so chats abandoned without End Chat don't run forever.
 - **Open-account workflow** (`OpenInvestmentAccountWorkflow`, `workflows/open_account_workflow.py`).
   A child workflow per account opening: KYC, compliance approval, then a saga that opens the
   account. It runs in Python by default, or in [Java](#java-open-account-worker-optional).
@@ -98,6 +100,11 @@ cd frontend && npm install && npm start
 Click **Start Chat** in the browser window that opens. Client ID `123` has demo data.
 
 ### Approve compliance
+
+The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
+them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
+script below.
 
 An account opening waits for a compliance officer's approval after KYC. Its child workflow ID has the
 format `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, where `<n>` numbers the account
@@ -347,8 +354,10 @@ environment configuration.
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | value of `TEMPORAL_TASK_QUEUE` | Task queue of the open-account workflow. `java` means `<TEMPORAL_TASK_QUEUE>-open-account`. Set from the worker scripts' argument (through `scripts/setsplitworkflows.sh`) and by `startlocalopenaccount.sh`; when it differs from `TEMPORAL_TASK_QUEUE`, the Python worker doesn't run the open-account workflow. |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue of the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Most model calls per second the Temporal service dispatches, across all workers |
-| `REDIS_HOST`, `REDIS_PORT` | `localhost`, `6379` | Redis for the event stream, chaos flags and claim check (Python components) |
+| `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, chaos flags and claim check (Python components) |
 | `USE_CLAIM_CHECK` | `false` | Turns on the claim check codec (`scripts/setclaimcheck.sh`) |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `SKIP_OPENAI_PLUGIN` | `False` | Runs the worker without the `OpenAIAgentsPlugin` (set by `startlocalopenaccount.sh`) |
 
 ## Tests

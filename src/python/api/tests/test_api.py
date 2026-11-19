@@ -55,13 +55,35 @@ class StubChatWorkflow:
         return self.messages
 
 
+@workflow.defn(name="OpenInvestmentAccountWorkflow")
+class StubOpenAccountWorkflow:
+    """An account opening that stays in the state it is started with until compliance approves it."""
+
+    def __init__(self) -> None:
+        self.state = ""
+
+    @workflow.run
+    async def run(self, state: str) -> str:
+        self.state = state
+        await workflow.wait_condition(lambda: self.state == "Approved")
+        return self.state
+
+    @workflow.query(name="get_current_state")
+    def get_current_state(self) -> str:
+        return self.state
+
+    @workflow.signal(name="compliance_approved")
+    async def compliance_approved(self) -> None:
+        self.state = "Approved"
+
+
 @pytest.fixture(scope="module")
 async def temporal_env():
     async with await WorkflowEnvironment.start_local() as env:
         async with Worker(
             env.client,
             task_queue=TASK_QUEUE,
-            workflows=[StubChatWorkflow],
+            workflows=[StubChatWorkflow, StubOpenAccountWorkflow],
             workflow_runner=UnsandboxedWorkflowRunner(),
         ):
             yield env
@@ -158,6 +180,50 @@ async def test_send_prompt_to_an_unknown_chat_reports_an_error(http):
 
 async def test_end_chat_for_an_unknown_chat_returns_nothing(http):
     assert await post(http, "/end-chat", workflow_id=f"missing-{uuid.uuid4()}") == {}
+
+
+async def _start_opening(temporal_env, workflow_id: str, state: str):
+    return await temporal_env.client.start_workflow(
+        "OpenInvestmentAccountWorkflow", state, id=workflow_id, task_queue=TASK_QUEUE)
+
+
+async def _wait_until_listed(temporal_env, ids: list[str]) -> None:
+    """Visibility is eventually consistent: wait until the search finds these workflows."""
+    quoted = ", ".join(f"'{i}'" for i in ids)
+    for _ in range(50):
+        found = [w.id async for w in temporal_env.client.list_workflows(f"WorkflowId IN ({quoted})")]
+        if len(found) == len(ids):
+            return
+        await asyncio.sleep(0.1)
+    raise AssertionError(f"Not listed: {ids}")
+
+
+async def test_approve_compliance_signals_only_this_chats_openings_waiting_for_review(http, temporal_env):
+    chat_id = f"chat-{uuid.uuid4()}"
+    waiting = await _start_opening(temporal_env, f"OpenAccount-{chat_id}-123-Vacation account-1", "Waiting Compliance Review")
+    in_kyc = await _start_opening(temporal_env, f"OpenAccount-{chat_id}-123-College-2", "Waiting KYC")
+    other_chat = await _start_opening(temporal_env, f"OpenAccount-{chat_id}0-123-Vacation-1", "Waiting Compliance Review")
+    await _wait_until_listed(temporal_env, [waiting.id, in_kyc.id, other_chat.id])
+
+    response = await asyncio.to_thread(http.post, "/approve-compliance", params={"workflow_id": chat_id})
+
+    assert response.status_code == 200
+    assert response.json() == {"approved": [waiting.id]}
+    assert await waiting.result() == "Approved"
+    assert await in_kyc.query("get_current_state") == "Waiting KYC"
+    assert await other_chat.query("get_current_state") == "Waiting Compliance Review"
+    for handle in (in_kyc, other_chat):
+        await handle.terminate()
+
+
+async def test_approve_compliance_with_nothing_waiting_approves_nothing(http):
+    response = await asyncio.to_thread(http.post, "/approve-compliance", params={"workflow_id": f"chat-{uuid.uuid4()}"})
+    assert response.json() == {"approved": []}
+
+
+async def test_approve_compliance_rejects_a_chat_id_with_a_quote(http):
+    response = await asyncio.to_thread(http.post, "/approve-compliance", params={"workflow_id": "x' OR WorkflowId != '"})
+    assert response.status_code == 400
 
 
 async def test_get_chat_history_returns_the_events_from_the_index(http, monkeypatch):

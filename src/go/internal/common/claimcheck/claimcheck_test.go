@@ -2,6 +2,7 @@ package claimcheck
 
 import (
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
@@ -81,4 +82,19 @@ func TestDataConverterRoundTrip(t *testing.T) {
 	var out input
 	require.NoError(t, dc.FromPayloads(payloads, &out))
 	assert.Equal(t, input{"123", 13000}, out)
+}
+
+// TestExpiry: stored payloads expire after seven days by default, after
+// CLAIM_CHECK_TTL_SECONDS when it is set, and never when it is 0.
+func TestExpiry(t *testing.T) {
+	for _, tc := range []struct {
+		setting string
+		want    time.Duration
+	}{{"", 7 * 24 * time.Hour}, {"3600", time.Hour}, {"0", 0}} {
+		t.Setenv("CLAIM_CHECK_TTL_SECONDS", tc.setting)
+		c, mr := newCodec(t)
+		encoded, err := c.Encode([]*commonpb.Payload{{Data: []byte("{}")}})
+		require.NoError(t, err)
+		assert.Equal(t, tc.want, mr.TTL(string(encoded[0].Data)), "CLAIM_CHECK_TTL_SECONDS=%q", tc.setting)
+	}
 }

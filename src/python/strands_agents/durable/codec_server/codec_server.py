@@ -3,7 +3,7 @@
 Exposes POST /encode and POST /decode endpoints that the Temporal Web UI (open
 it at exactly http://localhost:8233 locally) or the Temporal Cloud UI can use
 to show the real payloads behind the claim-check IDs. The payloads are read
-from the same Redis as the workers (REDIS_HOST / REDIS_PORT).
+from the same Redis as the workers (REDIS_URL, or REDIS_HOST / REDIS_PORT / REDIS_PASSWORD).
 
 Usage: src/python/strands_agents/durable/startcodecserver.sh
 """
@@ -70,5 +70,5 @@ def build_codec_server(codec: ClaimCheckCodec | None = None) -> web.Application:
 
 
 if __name__ == "__main__":
-    print(f"Codec server on http://{HOST}:{PORT} (Redis {RedisConfig().hostname}:{RedisConfig().port})")
+    print(f"Codec server on http://{HOST}:{PORT} (Redis {RedisConfig().address()})")
     web.run_app(build_codec_server(), host=HOST, port=PORT)

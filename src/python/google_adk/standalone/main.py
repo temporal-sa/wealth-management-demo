@@ -27,11 +27,12 @@ from prompts.agent_constants import (
 )
 from prompts.client_id_memory import remember_client_id
 from common.beneficiaries_manager import BeneficiariesManager
+from common.gemini_model import gemini_model
 from common.investment_manager import InvestmentManager, InvestmentAccount
 
 load_dotenv()
 
-MODEL = "gemini-2.5-flash"
+MODEL = gemini_model()
 APP_NAME = "wealth-management"
 USER_ID = "default-user"
 

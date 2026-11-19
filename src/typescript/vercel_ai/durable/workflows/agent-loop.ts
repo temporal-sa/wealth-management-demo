@@ -2,6 +2,7 @@
 // `TransformStream`, `Headers`, and `structuredClone` polyfills that
 // `ai`'s transitive `eventsource-parser` references at evaluation time.
 import { TemporalProvider } from '@temporalio/vercel-ai-sdk';
+import { GEMINI_MODEL_ALIAS } from '../../model-alias';
 import {
   proxyActivities,
   log,
@@ -413,7 +414,7 @@ async function runAgentLoop(
     log.info(`[${def.name}] generating response`);
 
     const result = await generateText({
-      model: provider.languageModel('gemini-2.5-pro'),
+      model: provider.languageModel(GEMINI_MODEL_ALIAS),
       system: HANDOFF_PROMPT_PREFIX + def.instructions(ctx),
       messages: currentMessages,
       tools: def.tools as any,

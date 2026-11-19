@@ -27,6 +27,8 @@ Gemini key).
   task queue. The tools run in the workflow and call the activities listed under
   [Temporal contracts](#temporal-contracts). After each turn the workflow appends a `chat_interaction` event
   to Redis.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`ChatIdleTimeout` in `chat.go`), so chats abandoned without End Chat don't run forever.
 * **Open-account workflow** (`OpenInvestmentAccountWorkflow`,
   [`internal/workflows/openaccount.go`](../internal/workflows/openaccount.go)): reads the client's details,
   waits for KYC and then for compliance approval, and runs the saga. It signals every state change to the
@@ -107,6 +109,11 @@ Open http://localhost:3000. **Start Chat** starts a chat workflow with the ID
 5. *Yes* KYC is approved and the opening waits for compliance approval.
 
 ### Approve compliance
+
+The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
+them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
+script below.
 
 Compliance approval comes from outside the chat, from a compliance officer. The open-account workflow's ID is
 
@@ -374,6 +381,7 @@ the [Java README](../../../../interop/open_account/java/README.md#running-with-t
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Where Redis is, for the worker and the API |
 | `USE_CLAIM_CHECK` | off | `true`, `yes` or `1` turns on the claim-check codec. Set in `scripts/setclaimcheck.sh` |
+| `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `CODEC_SERVER_ADDRESS` | `127.0.0.1:8081` | Where the codec server listens |
 | `DATA_DIR` | `data/` above the working directory | Folder of the demo data files, for the worker and CLI |
 | `LIVE_TEST_RUNS` | `1` | How many times each live test repeats its conversation |
