@@ -8,7 +8,7 @@ an Investment Agent and an Open Account Agent. The Temporal integration is the T
 activity and lets activities be used as agent tools.
 
 Setup (prerequisites, `uv sync`, the OpenAI key in `scripts/setoaikey.sh`) is in the
-[port's README](../README.md).
+[framework's README](../README.md).
 
 ![Web UI](../../../../docs/images/openai_agents/ux-waiting-compliance-review.png)
 
@@ -80,8 +80,8 @@ redis-server
 ```
 
 The worker polls `OAI-Supervisor` (the chat workflow, the open-account workflow and the tools) and
-`OAI-Supervisor-llm` (the model calls). The queues are this port's own, so the worker can run next to
-other ports' workers on the same Temporal service.
+`OAI-Supervisor-llm` (the model calls). The queues are this framework's own, so the worker can run next to
+other frameworks' workers on the same Temporal service.
 
 ### Start the API
 
@@ -206,14 +206,14 @@ workflow (start the [Java worker](#java-open-account-worker-optional) first):
 ## Java open-account worker (optional)
 
 The open-account workflow also exists in Java ([interop/open_account/java](../../../../interop/open_account/java/README.md)).
-Start this port's worker with the argument `java`:
+Start this framework's worker with the argument `java`:
 
 ```bash
 ./src/python/openai_agents/durable/startlocalworker.sh java
 ```
 
 The chat workflow then starts account openings on `OAI-Supervisor-open-account`, and the Python worker
-no longer runs the open-account workflow. Start the Java worker for this port:
+no longer runs the open-account workflow. Start the Java worker for this framework:
 
 ```bash
 TEMPORAL_TASK_QUEUE=OAI-Supervisor ./interop/open_account/java/startlocalworker.sh
@@ -432,7 +432,7 @@ optional). Result `OpenInvestmentAccountOutput`: `{account_created, message}`.
   `delete_conversation`.
 - Model calls: the `OpenAIAgentsPlugin`'s model activity, on `OAI-Supervisor-llm`.
 
-## Port notes
+## Framework notes
 
 - Locally, without the claim check, you can also approve compliance with the Temporal CLI:
 

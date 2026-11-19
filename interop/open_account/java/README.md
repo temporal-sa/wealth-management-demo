@@ -9,8 +9,8 @@ signalled to the parent chat workflow.
 
 The workflow has no business logic of its own. It calls the Python activities by name (`get_client`,
 `open_investment`, `remove_investment`, `debit_linked_account`, `credit_linked_account`,
-`register_account`) on the port's task queue (`TEMPORAL_TASK_QUEUE`, which has no default), so the
-port's worker must be running too, and the chaos panel's flags apply unchanged. The only Java
+`register_account`) on the framework's task queue (`TEMPORAL_TASK_QUEUE`, which has no default), so the
+framework's worker must be running too, and the chaos panel's flags apply unchanged. The only Java
 activity is the one that signals status changes to the parent workflow; it runs on the Open Account
 task queue with the workflow.
 
@@ -26,29 +26,29 @@ Python `update_client` activity) and completes KYC.
 
 Start Temporal (`temporal server start-dev`) and Redis (`redis-server`).
 
-Each port has its own task queue, and the Java worker serves one port at a time: set
-`TEMPORAL_TASK_QUEUE` to that port's queue. The worker then runs the open-account workflow on that
-port's own `<TEMPORAL_TASK_QUEUE>-open-account` queue, and calls the port's activities on
-`TEMPORAL_TASK_QUEUE`. Since every port has its own open-account queue, several ports can each have a
+Each framework has its own task queue, and the Java worker serves one framework at a time: set
+`TEMPORAL_TASK_QUEUE` to that framework's queue. The worker then runs the open-account workflow on that
+framework's own `<TEMPORAL_TASK_QUEUE>-open-account` queue, and calls the framework's activities on
+`TEMPORAL_TASK_QUEUE`. Since every framework has its own open-account queue, several frameworks can each have a
 Java worker at once. There is no default: without `TEMPORAL_TASK_QUEUE`, the worker stops and says so.
 
-Start the port's worker with the argument `java`, so its chat workflow starts the child workflow on
-that queue (and doesn't register its own version of the workflow). For the OpenAI Agents port:
+Start the framework's worker with the argument `java`, so its chat workflow starts the child workflow on
+that queue (and doesn't register its own version of the workflow). For the OpenAI Agents framework:
 
 ```bash
 src/python/openai_agents/durable/startlocalworker.sh java
 ```
 
-Then start the Java worker for the same port:
+Then start the Java worker for the same framework:
 
 ```bash
 cd interop/open_account/java
 TEMPORAL_TASK_QUEUE=OAI-Supervisor ./startlocalworker.sh
 ```
 
-For another port, start its worker with `java` and the Java worker with that port's queue:
+For another framework, start its worker with `java` and the Java worker with that framework's queue:
 
-| Port | Start the Java worker with | Open-account queue |
+| Framework | Start the Java worker with | Open-account queue |
 |---|---|---|
 | OpenAI Agents SDK | `TEMPORAL_TASK_QUEUE=OAI-Supervisor ./startlocalworker.sh` | `OAI-Supervisor-open-account` |
 | Pydantic AI | `TEMPORAL_TASK_QUEUE=PYAI-Supervisor ./startlocalworker.sh` | `PYAI-Supervisor-open-account` |
@@ -60,7 +60,7 @@ For another port, start its worker with `java` and the Java worker with that por
 | Google ADK (Go) | `TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./startlocalworker.sh` | `ADK-Go-Supervisor-open-account` |
 
 An argument to the Java script names another open-account queue (`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT`);
-pass the same name to the port's worker script instead of `java`.
+pass the same name to the framework's worker script instead of `java`.
 
 The script checks `TEMPORAL_TASK_QUEUE`, sources `scripts/setclaimcheck.sh`
 if it exists (claim check is optional) and runs `./gradlew runWorker`. It connects to `127.0.0.1:7233`, namespace `default`, as set
@@ -80,7 +80,7 @@ To try the Java workflow without the chat or an OpenAI key, run the open-account
 
 Create `scripts/setcloudenv.sh` (copy `scripts/setcloudenv.example`)
 as described in the [Temporal README](../../../src/python/openai_agents/durable/README.md#running-on-temporal-cloud).
-Start the port's worker with `java`, then the Java worker with the port's queue:
+Start the framework's worker with `java`, then the Java worker with the framework's queue:
 
 ```bash
 src/python/openai_agents/durable/startcloudworker.sh java

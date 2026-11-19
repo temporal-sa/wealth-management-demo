@@ -13,7 +13,7 @@ record and nothing else. There is also no chaos panel or web UI.
 
 ## Run it
 
-Set up your Gemini API key first (see the [port's README](../README.md#set-up-your-gemini-api-key)).
+Set up your Gemini API key first (see the [framework's README](../README.md#set-up-your-gemini-api-key)).
 From the repository root:
 
 ```bash

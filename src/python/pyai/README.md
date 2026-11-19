@@ -12,7 +12,7 @@ The vanilla Pydantic AI framework version of this example is located [here](stan
 
 The Temporal version of this example is located [here](durable/README.md)
 
-This port was imported from [temporal-sa/pyai-wealth-management](https://github.com/temporal-sa/pyai-wealth-management). It shares `src/python/common`, the [API](../api/README.md), the [web application](../../../frontend/README.md), the [Java worker](../../../interop/open_account/java/README.md) and `data/` with the other ports. Its own code:
+This framework was imported from [temporal-sa/pyai-wealth-management](https://github.com/temporal-sa/pyai-wealth-management). It shares `src/python/common`, the [API](../api/README.md), the [web application](../../../frontend/README.md), the [Java worker](../../../interop/open_account/java/README.md) and `data/` with the other frameworks. Its own code:
 
 | Folder | What it is |
 |---|---|
@@ -20,9 +20,9 @@ This port was imported from [temporal-sa/pyai-wealth-management](https://github.
 | `durable/` | The Temporal version: workflows, activities, worker and scripts |
 | `pyai_agents/` | The agents and their tools, used by both versions |
 | `prompts/` | The agents' instructions |
-| `tests/` | The port's tests |
+| `tests/` | The framework's tests |
 
-Its chat workflows run on the `PYAI-Supervisor` task queue by default, so its worker can run next to another port's. Start the API with `./startlocalapi.sh pyai`, which uses that queue and names each chat workflow `pyai-temporal-agent-<random>`, and the Java worker with `TEMPORAL_TASK_QUEUE=PYAI-Supervisor`.
+Its chat workflows run on the `PYAI-Supervisor` task queue by default, so its worker can run next to another framework's. Start the API with `./startlocalapi.sh pyai`, which uses that queue and names each chat workflow `pyai-temporal-agent-<random>`, and the Java worker with `TEMPORAL_TASK_QUEUE=PYAI-Supervisor`.
 
 Scenarios currently implemented include:
 * Add Beneficiary - add a new beneficiary to your account
@@ -69,7 +69,7 @@ It should look something like this:
 export OPENAI_API_KEY=sk-proj-....
 ```
 
-The start scripts source `scripts/setoaikey.sh`. Every port that uses OpenAI shares it.
+The start scripts source `scripts/setoaikey.sh`. Every framework that uses OpenAI shares it.
 
 ## Getting Started
 

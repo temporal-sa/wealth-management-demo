@@ -8,7 +8,7 @@ The agents are built with the [Vercel AI SDK](https://ai-sdk.dev/) (AI SDK v7, `
 and hand off to each other with tools. Temporal's AI SDK integration,
 [`@temporalio/vercel-ai-sdk`](https://www.npmjs.com/package/@temporalio/vercel-ai-sdk) (with the Temporal
 TypeScript SDK 1.26), runs each model call as an activity. The model is Gemini (`gemini-2.5-pro`).
-Prerequisites, installing the dependencies and the Gemini key are in the [port README](../README.md).
+Prerequisites, installing the dependencies and the Gemini key are in the [framework README](../README.md).
 
 ![Web UI](../../../../docs/images/vercel_ai/ux-waiting-compliance-review.png)
 
@@ -19,8 +19,8 @@ Prerequisites, installing the dependencies and the Gemini key are in the [port R
 * **The web UI and the API.** The web UI ([frontend/](../../../../frontend/README.md)) talks to the shared
   [API](../../../python/api/README.md), written in Python and started with the `vercel_ai` AI framework.
   The API starts a chat workflow per conversation (IDs `vai-temporal-agent-<random>`), sends it the
-  customer's messages, and serves the conversation from Redis. This port's workflows keep the same
-  Temporal contracts as the Python ports, which is what lets the Python API serve them.
+  customer's messages, and serves the conversation from Redis. This framework's workflows keep the same
+  Temporal contracts as the Python frameworks, which is what lets the Python API serve them.
 * **The chat workflow** `WealthManagementWorkflow`
   ([workflows/wealth-management.ts](workflows/wealth-management.ts)) runs for the whole conversation.
   Customer messages arrive as the `process_user_message` signal and are processed one at a time by the
@@ -85,7 +85,7 @@ redis-server
 ```
 
 The worker polls `VAI-Supervisor` (`DEFAULT_TASK_QUEUE` in [task-queues.ts](task-queues.ts)) for the
-workflows and tools, and `VAI-Supervisor-llm` for the model calls, so it can run next to other ports'
+workflows and tools, and `VAI-Supervisor-llm` for the model calls, so it can run next to other frameworks'
 workers. It needs `scripts/setgeminikey.sh` and sources `scripts/setclaimcheck.sh` if it exists.
 
 ### Start the API
@@ -147,7 +147,7 @@ The open-account workflow in the Temporal UI:
 ### Resetting the demo data
 
 Opening and closing accounts, changing client details during KYC, and adding or deleting beneficiaries
-change the JSON files in [data/](../../../../data), which every port shares and git tracks. The linked bank
+change the JSON files in [data/](../../../../data), which every framework shares and git tracks. The linked bank
 balances and the transfer ledger are in `data/funding_accounts.json`. To reset them:
 
 ```bash
@@ -224,18 +224,18 @@ with `git checkout data/`.
 ## Java open-account worker (optional)
 
 The open-account workflow can run on the shared
-[Java worker](../../../../interop/open_account/java/README.md) instead. Start this port's worker with the
+[Java worker](../../../../interop/open_account/java/README.md) instead. Start this framework's worker with the
 argument `java`:
 
 ```bash
 ./src/typescript/vercel_ai/durable/startlocalworker.sh java
 ```
 
-The argument sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java`, which the worker turns into this port's own
+The argument sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java`, which the worker turns into this framework's own
 `VAI-Supervisor-open-account` queue ([common/task-queues.ts](../../common/task-queues.ts)). The worker
 then registers only the chat workflow ([workflows/supervisor-only.ts](workflows/supervisor-only.ts))
-instead of both ([workflows/index.ts](workflows/index.ts)). Start the Java worker for this port, so it
-polls that queue and calls this port's activities:
+instead of both ([workflows/index.ts](workflows/index.ts)). Start the Java worker for this framework, so it
+polls that queue and calls this framework's activities:
 
 ```bash
 TEMPORAL_TASK_QUEUE=VAI-Supervisor ./interop/open_account/java/startlocalworker.sh
@@ -296,7 +296,7 @@ ID, and Temporal stores only the ID. This is the
 [Claim Check pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/StoreInLibrary.html),
 implemented as a [payload codec](https://docs.temporal.io/develop/typescript/converters-and-encryption) in
 [common/claim-check-codec.ts](../../common/claim-check-codec.ts). The payloads use the same format as the
-Python ports and the Java worker (encoding `claim-checked`), so they read each other's.
+Python frameworks and the Java worker (encoding `claim-checked`), so they read each other's.
 
 To turn it on, make sure Redis is running and copy the example file:
 
@@ -373,7 +373,7 @@ The worker and scripts read these (see [common/client-helper.ts](../../common/cl
 | `TEMPORAL_API_KEY` | none | API key for Temporal Cloud (`scripts/setcloudenv.sh`) |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | mTLS client certificate and key for Temporal Cloud (`scripts/setcloudenv.sh`) |
 | `TEMPORAL_TASK_QUEUE` | `VAI-Supervisor` | Task queue of the chat workflow, the activities and, by default, the open-account workflow |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | unset (the chat queue) | Task queue of the open-account workflow. `java` means `VAI-Supervisor-open-account`, the Java worker's queue for this port (set by `startlocalworker.sh java`). When it differs from `TEMPORAL_TASK_QUEUE`, this worker doesn't register the open-account workflow |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | unset (the chat queue) | Task queue of the open-account workflow. `java` means `VAI-Supervisor-open-account`, the Java worker's queue for this framework (set by `startlocalworker.sh java`). When it differs from `TEMPORAL_TASK_QUEUE`, this worker doesn't register the open-account workflow |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue of the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Server-side rate limit for the model calls' task queue, across all workers |
 | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Redis for the event stream, the chaos flags and claim check |
@@ -401,7 +401,7 @@ cd src/typescript/vercel_ai && npm test
 | `kyc-guard.test.ts` | `approve_kyc` refuses until this opening's details were shown in an earlier turn, also in the real chat workflow; `get_account_opening_status`; a second "Vacation" opening needs its own KYC |
 | `agent-instructions.test.ts` | The agents' prompts: off-topic questions declined, handoffs, the status tool, no guardrail code |
 | `task-queues.test.ts` | The open-account task queue rules, including `java` |
-| `claim-check.test.ts` | The claim check payload format shared with the Python ports and the Java worker |
+| `claim-check.test.ts` | The claim check payload format shared with the Python frameworks and the Java worker |
 | `example.test.ts` | A workflow retries one failed activity |
 
 The web UI (`cd frontend && CI=true npm test`) and the Java worker
@@ -460,9 +460,9 @@ the Redis list `events:<chat workflow ID>`, which the API serves to the web UI.
 `append_chat_interaction`, `append_status_update` and `delete_conversation` on `VAI-Supervisor`, and the
 plugin's `invokeModel` on `VAI-Supervisor-llm`. The Java open-account workflow calls the client and saga
 activities by these names. `get_open_account_task_queue` and `get_llm_task_queue` (workflow code can't read
-the environment) are this port's own, not part of the shared contracts.
+the environment) are this framework's own, not part of the shared contracts.
 
-## Port notes
+## Framework notes
 
 * The chat workflow has no `get_chat_history` query; the API reads the conversation from Redis.
 * The chat workflow deletes its conversation from Redis when it starts and again when it ends. The delete

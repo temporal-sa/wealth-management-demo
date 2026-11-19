@@ -9,7 +9,7 @@ The agents are built with the [Google Agent Development Kit for TypeScript](http
 (`@google/adk`) and run with Temporal's
 [Google ADK integration](https://docs.temporal.io/develop/typescript/integrations/google-adk-agents)
 (`@temporalio/google-adk`). Install the dependencies and set up your Gemini key as described in the
-[port's README](../README.md).
+[framework's README](../README.md).
 
 ![Web UI](../../../../docs/images/google_adk_ts/ux-waiting-compliance-review.png)
 
@@ -18,8 +18,8 @@ The agents are built with the [Google Agent Development Kit for TypeScript](http
 ![Architecture](../../../../docs/images/google_adk_ts/application-architecture.png)
 
 * **Web UI and API**: the web UI ([`frontend/`](../../../../frontend/README.md)) talks only to the API
-  ([`src/python/api`](../../../python/api/README.md), the one API every port shares), and the API only to
-  Temporal and Redis. The API starts this port's chat workflows with `google_adk_ts` as its AI framework.
+  ([`src/python/api`](../../../python/api/README.md), the one API every framework shares), and the API only to
+  Temporal and Redis. The API starts this framework's chat workflows with `google_adk_ts` as its AI framework.
 * **Chat workflow** (`WealthManagementWorkflow`, [`workflows/wealth-management.ts`](workflows/wealth-management.ts)):
   one long-lived workflow per chat. It builds the ADK agent tree ([`adk_agents/agents.ts`](../adk_agents/agents.ts))
   and runs ADK's `InMemoryRunner` on each customer message, one at a time. Agents hand off with ADK's
@@ -47,7 +47,7 @@ Supervisor_Agent
                                    get_current_client_info, approve_kyc, update_client_details
 ```
 
-What the integration does, and what this port adds:
+What the integration does, and what this framework adds:
 
 | Concern | How |
 | --- | --- |
@@ -82,7 +82,7 @@ The Temporal UI is at http://localhost:8233.
 ```
 
 It sources `scripts/setgeminikey.sh` and, if it exists, `scripts/setclaimcheck.sh`. It polls the
-`ADK-TS-Supervisor` and `ADK-TS-Supervisor-llm` task queues, so it can run next to other ports' workers, and
+`ADK-TS-Supervisor` and `ADK-TS-Supervisor-llm` task queues, so it can run next to other frameworks' workers, and
 prints the claim-check state, the task queues and the model at startup.
 
 ### Start the API
@@ -207,7 +207,7 @@ For scenario 3, send the approval from another terminal with the command it prin
 scenario, and `--amount X` changes the deposit (300000 shows the rollback for client 123). The scenarios
 change `data/`; reset it afterwards.
 
-To run the scenarios on the Java worker, start the Java worker for this port first (below) and pass `java`:
+To run the scenarios on the Java worker, start the Java worker for this framework first (below) and pass `java`:
 
 ```bash
 ./src/typescript/google_adk/durable/startlocalopenaccount.sh java
@@ -216,7 +216,7 @@ To run the scenarios on the Java worker, start the Java worker for this port fir
 ## Java open-account worker (optional)
 
 The [Java worker](../../../../interop/open_account/java/README.md) runs `OpenInvestmentAccountWorkflow` in
-Java and calls this worker's activities by name, so the chaos flags apply unchanged. Start this port's worker
+Java and calls this worker's activities by name, so the chaos flags apply unchanged. Start this framework's worker
 with the argument `java`, so the open-account workflow runs on `ADK-TS-Supervisor-open-account` and this
 worker doesn't run it:
 
@@ -224,13 +224,13 @@ worker doesn't run it:
 ./src/typescript/google_adk/durable/startlocalworker.sh java
 ```
 
-Then start the Java worker for this port:
+Then start the Java worker for this framework:
 
 ```bash
 TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor ./interop/open_account/java/startlocalworker.sh
 ```
 
-The chat workflow, the tool activities and the model calls stay on this port's worker. On Temporal Cloud,
+The chat workflow, the tool activities and the model calls stay on this framework's worker. On Temporal Cloud,
 use `startcloudworker.sh java` and the Java worker's `startcloudworker.sh`.
 
 ## Failure scenarios (chaos panel)
@@ -251,7 +251,7 @@ reached, the flags read as off. Each injected failure is logged to `chaos:events
 | Insufficient funds | Client 123 opens an account with $300,000 (the linked bank account holds $250,000) | The debit fails with a non-retryable `InsufficientFunds`, and the saga rolls back |
 | Proactive rate limiting | Set `LLM_MAX_CALLS_PER_SECOND` for the worker | Model calls run on their own task queue, so the Temporal service caps their rate across all workers |
 
-The 429's retry delay needs no interceptor in this port: the chaos wrapper throws an `ApplicationFailure`
+The 429's retry delay needs no interceptor in this framework: the chaos wrapper throws an `ApplicationFailure`
 with the delay, and the integration passes it to Temporal unchanged.
 
 ### Bug in workflow code
@@ -339,7 +339,7 @@ For the Java worker on Temporal Cloud, see the
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | mTLS, for Temporal Cloud. Set in `scripts/setcloudenv.sh` |
 | `TEMPORAL_API_KEY` | none | An API key, for Temporal Cloud, in place of mTLS |
 | `TEMPORAL_TASK_QUEUE` | `ADK-TS-Supervisor` | The chat workflow, the open-account workflow and the tool activities |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `TEMPORAL_TASK_QUEUE` | The open-account workflow. `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port (set by the worker scripts' argument) |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `TEMPORAL_TASK_QUEUE` | The open-account workflow. `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this framework (set by the worker scripts' argument) |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | The model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | none | A cap on model calls per second across all workers |
 | `REDIS_HOST`, `REDIS_PORT` | `localhost`, `6379` | The event stream, the chaos flags and the claim check |
@@ -389,8 +389,8 @@ cd src/typescript/google_adk && source ../../../scripts/setgeminikey.sh && LIVE_
 
 ## Temporal contracts
 
-The names and payloads match the other ports, in snake_case, so the scripts, the API, the web UI and the Java
-worker work with every port. They are defined in [`shared.ts`](shared.ts) and [`activities.ts`](activities.ts).
+The names and payloads match the other frameworks, in snake_case, so the scripts, the API, the web UI and the Java
+worker work with every framework. They are defined in [`shared.ts`](shared.ts) and [`activities.ts`](activities.ts).
 
 * `WealthManagementWorkflow`: signals `process_user_message` (`{user_input}`), `end_workflow`,
   `update_account_opening_state` (`{account_name, state, workflow_id}`); query `get_chat_history`.

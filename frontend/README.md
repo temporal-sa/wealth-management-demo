@@ -9,8 +9,8 @@ It uses the [API](../src/python/api/README.md) to interact with Temporal.
 
 The web application relies on the API to communicate with Temporal. 
 Be sure to follow the instructions to run the API, which can be found [here](../src/python/api/README.md).
-The one API serves every port, including the TypeScript and Go ones.
-Start it for the port whose worker you're running, because that decides which task queue chats start on
+The one API serves every framework, including the TypeScript and Go ones.
+Start it for the framework whose worker you're running, because that decides which task queue chats start on
 and how their workflow IDs are named:
 
 ```bash
@@ -82,7 +82,7 @@ npm test
 
 ## Example
 
-Here's the web application running against the Pydantic AI port, with the chaos panel open. The header
+Here's the web application running against the Pydantic AI framework, with the chaos panel open. The header
 shows the AI framework the API serves (from its `GET /config`), and **Chaos** opens or hides the chaos panel,
 which turns failures on and off while you chat:
 

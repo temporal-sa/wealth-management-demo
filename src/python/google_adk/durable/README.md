@@ -7,7 +7,7 @@ outages. The integration is Temporal's Google ADK plugin (`temporalio.google_adk
 the client and worker, and a `TemporalModel` for each agent that runs its model calls as activities.
 
 Setup (Python, dependencies and the Gemini key in `scripts/setgeminikey.sh`) is in the
-[port's README](../README.md). The version without Temporal is in [standalone/](../standalone/README.md).
+[framework's README](../README.md). The version without Temporal is in [standalone/](../standalone/README.md).
 
 ![Web UI](../../../../docs/images/google_adk/ux-waiting-compliance-review.png)
 
@@ -38,7 +38,7 @@ continue-as-new for long conversations (see the TODO in `workflows/supervisor_wo
 
 The agents are ADK `LlmAgent`s arranged as sub-agents (`init_agents` in `workflows/supervisor_workflow.py`).
 An agent hands off by calling ADK's `transfer_to_agent` tool, and the agent it transfers to answers in the
-same turn. The transfers match the OpenAI Agents SDK port's handoffs:
+same turn. The transfers match the OpenAI Agents SDK framework's handoffs:
 
 | Agent | Can transfer to | Tools |
 |---|---|---|
@@ -65,7 +65,7 @@ same turn. The transfers match the OpenAI Agents SDK port's handoffs:
 - **Prompts.** Every agent's instructions start with `HANDOFF_PROMPT_PREFIX`. Off-topic questions are
   declined by the supervisor's instructions (`prompts/agent_constants.py`); there is no guardrail code.
 - **Confirming a delete or close.** The agent confirms which beneficiary or account, asks the customer to
-  confirm, and calls `delete_beneficiary` or `close_investment` only after the customer agrees. In this port
+  confirm, and calls `delete_beneficiary` or `close_investment` only after the customer agrees. In this framework
   that is done by the agents' instructions; there is no confirmation guard in code.
 
 ## Running locally
@@ -88,7 +88,7 @@ redis-server
 ./src/python/google_adk/durable/startlocalworker.sh
 ```
 
-The worker polls `ADK-Supervisor` and `ADK-Supervisor-llm`, so it can run next to other ports' workers on
+The worker polls `ADK-Supervisor` and `ADK-Supervisor-llm`, so it can run next to other frameworks' workers on
 the same Temporal service. The script stops if `scripts/setgeminikey.sh` doesn't exist, and sources
 `scripts/setclaimcheck.sh` if it exists.
 
@@ -230,7 +230,7 @@ connection and claim check settings as the worker. Like the demo, the scenarios 
 
 [interop/open_account/java](../../../../interop/open_account/java/README.md) has a Java version of
 `OpenInvestmentAccountWorkflow` with the same states, updates, signals, saga and status updates. It calls
-the Python activities by name on `ADK-Supervisor`. Start this port's worker with the argument `java`:
+the Python activities by name on `ADK-Supervisor`. Start this framework's worker with the argument `java`:
 
 ```bash
 ./src/python/google_adk/durable/startlocalworker.sh java
@@ -238,7 +238,7 @@ the Python activities by name on `ADK-Supervisor`. Start this port's worker with
 
 The chat workflow then starts the open-account workflow on `ADK-Supervisor-open-account`, and the Python
 worker doesn't register its own version (it still runs all the activities). Start the Java worker for this
-port (JDK 25):
+framework (JDK 25):
 
 ```bash
 TEMPORAL_TASK_QUEUE=ADK-Supervisor ./interop/open_account/java/startlocalworker.sh
@@ -254,7 +254,7 @@ activities and the model read the flags from Redis on every attempt, so you can 
 mid-conversation without restarting anything. The panel lists each injected failure as it happens. Open
 the [Temporal UI](http://localhost:8233) alongside it to show the pending activity, its attempt count and
 the last failure. **Reset all** turns every flag off. The flags (Redis keys `chaos:flags` and
-`chaos:events`) are shared by every port using the same Redis.
+`chaos:events`) are shared by every framework using the same Redis.
 
 | Scenario | How to show it | What Temporal does |
 |---|---|---|
@@ -395,7 +395,7 @@ is needed. The Temporal dev server is downloaded on the first run.
 |---|---|
 | `tests/test_chat_turns.py` | The client ID is asked for once and shared with every agent, empty replies are nudged then replaced, the status tool reports what the open-account workflow signalled, and every request to open an account starts a new opening with its own KYC |
 | `tests/test_kyc_guard.py` | The KYC guard: approved only after the details were shown in a reply and the customer answered; one opening's confirmation doesn't approve another |
-| `tests/test_tool_errors_and_handoffs.py` | A failing tool's error goes to the model and the chat carries on; the allowed transfers match the OpenAI Agents SDK port's handoffs |
+| `tests/test_tool_errors_and_handoffs.py` | A failing tool's error goes to the model and the chat carries on; the allowed transfers match the OpenAI Agents SDK framework's handoffs |
 | `tests/test_failure_scenarios.py` | Saga rollback, a new transfer ID per run, idempotent transfers, business rules, tool and LLM outages, rate limits (chaos and real 429s), the workflow bug |
 | `tests/test_api_client.py` | The shared API's calls against the real chat workflow |
 | `tests/test_off_topic_prompt.py` | Off-topic questions are declined by the supervisor's instructions; every agent starts with the handoff prefix |

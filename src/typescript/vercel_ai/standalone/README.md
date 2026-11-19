@@ -1,4 +1,4 @@
-# Vercel AI SDK port: standalone version (CLI)
+# Vercel AI SDK: standalone version (CLI)
 
 Demonstrates how to use the [Vercel AI SDK](https://ai-sdk.dev/) using tools to hand off to other agents.
 
@@ -83,7 +83,7 @@ Enter your message: end
 
 You can also add and delete beneficiaries and open and close investment accounts.
 
-These changes are saved to the JSON files in [data/](../../../../data) (shared by every port and tracked by
+These changes are saved to the JSON files in [data/](../../../../data) (shared by every framework and tracked by
 git). To reset the demo data, from the repository root:
 
 ```bash

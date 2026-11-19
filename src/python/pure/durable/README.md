@@ -8,7 +8,7 @@ There is no agent framework and no Temporal AI integration: the agent loop
 ([pure_agents/agent_loop.py](../pure_agents/agent_loop.py)) is ordinary workflow code, the model call is
 the `invoke_model` activity, and the model is called through [LiteLLM](https://docs.litellm.ai/), so you can
 switch between Anthropic, OpenAI and Gemini with one environment variable. Prerequisites, installing the
-dependencies and the model key are in the [port README](../README.md).
+dependencies and the model key are in the [framework README](../README.md).
 
 ![Web UI](../../../../docs/images/pure/ux-waiting-compliance-review.png)
 
@@ -58,7 +58,7 @@ The agents, tools and handoffs are a small agent loop in plain Python, shared wi
   tools are passed in. The Temporal version passes functions that run activities, which makes the same
   loop deterministic workflow code.
 * **Model calls** go through LiteLLM with its own retries off, so Temporal's retry policy decides when a
-  failed call is retried. `LLM_MODEL` picks the provider and model (see the [port README](../README.md)).
+  failed call is retried. `LLM_MODEL` picks the provider and model (see the [framework README](../README.md)).
 * Once a tool has used the client ID, every agent is told it on every model call, so an agent that is
   handed the conversation doesn't ask for it again. Every agent is also told each account opening started
   in the chat and its current state.
@@ -84,7 +84,7 @@ redis-server
 ```
 
 The worker polls `Pure-Supervisor` (`DEFAULT_TASK_QUEUE` in [task_queues.py](task_queues.py)) for the
-workflows and tools, and `Pure-Supervisor-llm` for the model calls, so it can run next to other ports'
+workflows and tools, and `Pure-Supervisor-llm` for the model calls, so it can run next to other frameworks'
 workers. It sources `scripts/setllmkey.sh` and, if it exists, `scripts/setclaimcheck.sh`.
 
 ### Start the API
@@ -142,7 +142,7 @@ The open-account workflow in the Temporal UI:
 ### Resetting the demo data
 
 Opening and closing accounts, changing client details during KYC, and adding or deleting beneficiaries
-change the JSON files in [data/](../../../../data), which every port shares and git tracks. To reset them:
+change the JSON files in [data/](../../../../data), which every framework shares and git tracks. To reset them:
 
 ```bash
 git checkout data/
@@ -212,7 +212,7 @@ These scenarios change the demo data; reset it with `git checkout data/`.
 ## Java open-account worker (optional)
 
 The open-account workflow can run on the shared
-[Java worker](../../../../interop/open_account/java/README.md) instead. Start this port's worker with the
+[Java worker](../../../../interop/open_account/java/README.md) instead. Start this framework's worker with the
 argument `java`:
 
 ```bash
@@ -220,7 +220,7 @@ argument `java`:
 ```
 
 The open-account workflow then runs on `Pure-Supervisor-open-account`, and this worker doesn't register
-it. Start the Java worker for this port, so it polls that queue and calls this port's activities:
+it. Start the Java worker for this framework, so it polls that queue and calls this framework's activities:
 
 ```bash
 TEMPORAL_TASK_QUEUE=Pure-Supervisor ./interop/open_account/java/startlocalworker.sh
@@ -281,7 +281,7 @@ results, signals, updates and queries, including the model calls) is stored in R
 Temporal stores only the UUID. This is the
 [Claim Check pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/StoreInLibrary.html),
 implemented as a [payload codec](https://docs.temporal.io/payload-codec) in the shared
-[common/claim_check](../../common/claim_check) package. The other ports and the Java worker use the same
+[common/claim_check](../../common/claim_check) package. The other frameworks and the Java worker use the same
 format, so they read each other's payloads.
 
 To turn it on, make sure Redis is running and copy the example file:
@@ -349,7 +349,7 @@ Each script prints the address and namespace it connects to, and stops with inst
 `setcloudenv.sh` is missing. `startcloudworker.sh` takes the same optional `java` argument as
 `startlocalworker.sh`. The connection uses Temporal's
 [environment configuration](https://docs.temporal.io/develop/environment-configuration). The connection
-settings were checked to load for both mTLS and an API key, but this port hasn't been run end to end on
+settings were checked to load for both mTLS and an API key, but this framework hasn't been run end to end on
 Temporal Cloud.
 
 ## Environment variables
@@ -363,7 +363,7 @@ Temporal Cloud.
 | `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | mTLS client certificate and key for Temporal Cloud (`scripts/setcloudenv.sh`) |
 | `TEMPORAL_API_KEY` | none | API key for Temporal Cloud, instead of mTLS (`scripts/setcloudenv.sh`) |
 | `TEMPORAL_TASK_QUEUE` | `Pure-Supervisor` | Task queue of the chat workflow, its tools and, by default, the open-account workflow |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat queue | Task queue of the open-account workflow. `java` means `Pure-Supervisor-open-account`, the Java worker's queue for this port (set by `startlocalworker.sh java`) |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | the chat queue | Task queue of the open-account workflow. `java` means `Pure-Supervisor-open-account`, the Java worker's queue for this framework (set by `startlocalworker.sh java`) |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue of the model calls |
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Dispatch rate limit for model calls, across all workers |
 | `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Redis for the event stream, the chaos flags and claim check |
@@ -393,9 +393,9 @@ cd src/python/pure && uv run pytest
 | `test_opening_status_notes.py` | Every agent is told each account opening's request and current state |
 | `test_off_topic.py` | The Supervisor Agent's prompt, in both versions, declines off-topic questions |
 | `test_agents.py` | The agents, tools and handoffs match the PRD in both versions, and the open-account prompt has the PRD's lines |
-| `test_claim_check.py` | The shared claim check codec, the port's connection (Pydantic JSON, plus the codec only when claim check is on), a workflow whose history holds only claim checks, and the codec server's decoding and CORS |
+| `test_claim_check.py` | The shared claim check codec, the framework's connection (Pydantic JSON, plus the codec only when claim check is on), a workflow whose history holds only claim checks, and the codec server's decoding and CORS |
 | `test_agent_loop.py` | The agent loop on its own: same-turn handoffs, tool schemas, tool errors, the client ID |
-| `test_api_client.py` | The shared API's Temporal calls start, message and end the real chat workflow, and the API knows this port's task queue |
+| `test_api_client.py` | The shared API's Temporal calls start, message and end the real chat workflow, and the API knows this framework's task queue |
 
 The web UI (`cd frontend && CI=true npm test`) and the Java worker
 (`cd interop/open_account/java && ./gradlew test`) have their own tests.
@@ -457,7 +457,7 @@ are appended to the Redis list `events:<chat workflow ID>`, which the API serves
 `invoke_model` on `Pure-Supervisor-llm`. The Java open-account workflow calls the client and saga
 activities by these names.
 
-## Port notes
+## Framework notes
 
 * The chat workflow deletes any earlier conversation stored in Redis under its ID when it starts, since
   the web UI can reuse chat IDs.

@@ -5,20 +5,20 @@ wrap the agentic flow with Temporal and make it durable.
 
 ![](../../../docs/images/google_adk/architecture.png)
 
-This port was imported from [temporal-sa/adk-wealth-management](https://github.com/temporal-sa/adk-wealth-management)
+This framework was imported from [temporal-sa/adk-wealth-management](https://github.com/temporal-sa/adk-wealth-management)
 (up to its parity round 2, before it was adapted for hosting). It shares `src/python/common`, the
 [API](../api/README.md), the [web application](../../../frontend/README.md), the
-[Java worker](../../../interop/open_account/java/README.md) and `data/` with the other ports. Its own code:
+[Java worker](../../../interop/open_account/java/README.md) and `data/` with the other frameworks. Its own code:
 
 | Folder | What it is |
 |---|---|
 | `standalone/` | The Google ADK version without Temporal |
 | `durable/` | The Temporal version: workflows, activities, worker and scripts |
 | `prompts/` | The agents' instructions, and the callback that remembers the client ID (`client_id_memory.py`) |
-| `tests/` | The port's tests |
+| `tests/` | The framework's tests |
 
 Its chat workflows run on the `ADK-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in
-`durable/task_queues.py`), so its worker can run next to another port's. Start the API for it with
+`durable/task_queues.py`), so its worker can run next to another framework's. Start the API for it with
 `./startlocalapi.sh google_adk`; the web app then names its chats `adk-temporal-agent-<random>`.
 
 Scenarios currently implemented include

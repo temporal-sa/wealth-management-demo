@@ -8,7 +8,7 @@ execution support (`pydantic_ai.durable_exec.temporal`): each agent is wrapped i
 which runs its model calls and tools as activities, and the worker uses the `PydanticAIPlugin`.
 
 Setup (prerequisites, `uv sync`, the OpenAI key in `scripts/setoaikey.sh`) is in the
-[port's README](../README.md).
+[framework's README](../README.md).
 
 ![Web UI](../../../../docs/images/pyai/ux-waiting-compliance-review.png)
 
@@ -82,8 +82,8 @@ redis-server
 ```
 
 The worker polls `PYAI-Supervisor` (the chat workflow, the open-account workflow and the tools) and
-`PYAI-Supervisor-llm` (the model calls). The queues are this port's own, so the worker can run next to
-other ports' workers on the same Temporal service.
+`PYAI-Supervisor-llm` (the model calls). The queues are this framework's own, so the worker can run next to
+other frameworks' workers on the same Temporal service.
 
 ### Start the API
 
@@ -214,14 +214,14 @@ workflow (start the [Java worker](#java-open-account-worker-optional) first):
 ## Java open-account worker (optional)
 
 The open-account workflow also exists in Java ([interop/open_account/java](../../../../interop/open_account/java/README.md)).
-Start this port's worker with the argument `java`:
+Start this framework's worker with the argument `java`:
 
 ```bash
 ./src/python/pyai/durable/startlocalworker.sh java
 ```
 
 The chat workflow then starts account openings on `PYAI-Supervisor-open-account`, and the Python
-worker no longer runs the open-account workflow. Start the Java worker for this port:
+worker no longer runs the open-account workflow. Start the Java worker for this framework:
 
 ```bash
 TEMPORAL_TASK_QUEUE=PYAI-Supervisor ./interop/open_account/java/startlocalworker.sh
@@ -443,7 +443,7 @@ optional). Result `OpenInvestmentAccountOutput`: `{account_created, message}`.
   queue from the environment.
 - Model calls: `TemporalAgent`'s model activities, on `PYAI-Supervisor-llm`.
 
-## Port notes
+## Framework notes
 
 You can drive the chat workflow with the Temporal CLI instead of the web UI. With the worker running
 (no API or web UI needed), start a chat:

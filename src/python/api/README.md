@@ -3,9 +3,9 @@
 Exposes the Temporal chat workflow (`WealthManagementWorkflow`) with an easy to use API. The
 [web application](../../../frontend/README.md) uses it; you can also call it with curl.
 
-It is the one API in this repository: it serves every AI framework, Python, TypeScript (the Vercel AI SDK and Google ADK TypeScript ports) or Go (the Google ADK Go port), because their chat workflows keep the same contract. It uses only the Temporal contracts (the workflow and signal
+It is the one API in this repository: it serves every AI framework, Python, TypeScript (the Vercel AI SDK and Google ADK TypeScript frameworks) or Go (the Google ADK Go framework), because their chat workflows keep the same contract. It uses only the Temporal contracts (the workflow and signal
 names as strings, plain JSON payloads through the Pydantic data converter, and the claim-check codec
-when enabled), never a port's workflow class or framework plugin. The start scripts' required argument
+when enabled), never a framework's workflow class or framework plugin. The start scripts' required argument
 (`AI_FRAMEWORK`) picks the AI framework: it sets the task queue that framework's worker listens on and the
 prefix of its chat workflow IDs (see [`frameworks.py`](frameworks.py)). The Temporal calls are in
 [`client.py`](client.py); [`main.py`](main.py) is the HTTP layer.
@@ -16,7 +16,7 @@ Operations (all parameters are query parameters)
 |---|---|---|---|
 | GET | `/` | | Health check |
 | GET | `/config` | | The AI framework the API serves: `framework`, `label`, `task_queue` and `workflow_id_prefix`. The web application names each chat workflow `<workflow_id_prefix><random>` |
-| POST | `/start-workflow` | `workflow_id` | Starts a chat workflow with that ID on the port's task queue |
+| POST | `/start-workflow` | `workflow_id` | Starts a chat workflow with that ID on the framework's task queue |
 | POST | `/send-prompt` | `workflow_id`, `prompt` | Sends the customer's message to the workflow (`process_user_message` signal) |
 | GET | `/get-chat-history` | `workflow_id`, `from_index` (default `0`) | Returns the conversation events (chat messages and account-opening status updates) stored in Redis, starting at `from_index` |
 | POST | `/end-chat` | `workflow_id` | Sends the `end_workflow` signal |

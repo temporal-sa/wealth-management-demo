@@ -1,14 +1,14 @@
 # Shared scripts
 
-Settings files that every port's start scripts source, plus scripts that work with any language. Create the `.sh` files from the `.example` files here; only the `.example` files are committed.
+Settings files that every framework's start scripts source, plus scripts that work with any language. Create the `.sh` files from the `.example` files here; only the `.example` files are committed.
 
 | File | Purpose |
 |---|---|
-| `setoaikey.example` → `setoaikey.sh` | OpenAI API key (`OPENAI_API_KEY`): OpenAI Agents and Pydantic AI ports |
-| `setgeminikey.example` → `setgeminikey.sh` | Gemini API key (`GEMINI_API_KEY`): Strands Agents, Google ADK (Python, TypeScript and Go) and Vercel AI SDK ports. The Google ADK TypeScript and Go ports also read an optional `GEMINI_MODEL` |
-| `setllmkey.example` → `setllmkey.sh` | Pure Python port: `LLM_MODEL` (a LiteLLM `<provider>/<model>` name) and that provider's key (Anthropic by default; OpenAI or Gemini also work) |
+| `setoaikey.example` → `setoaikey.sh` | OpenAI API key (`OPENAI_API_KEY`): OpenAI Agents and Pydantic AI frameworks |
+| `setgeminikey.example` → `setgeminikey.sh` | Gemini API key (`GEMINI_API_KEY`): Strands Agents, Google ADK (Python, TypeScript and Go) and Vercel AI SDK frameworks. The Google ADK TypeScript and Go frameworks also read an optional `GEMINI_MODEL` |
+| `setllmkey.example` → `setllmkey.sh` | Pure Python framework: `LLM_MODEL` (a LiteLLM `<provider>/<model>` name) and that provider's key (Anthropic by default; OpenAI or Gemini also work) |
 | `setclaimcheck.example` → `setclaimcheck.sh` | Optional claim check: `USE_CLAIM_CHECK`, Redis host and port |
 | `setcloudenv.example` → `setcloudenv.sh` | Temporal Cloud address, namespace, and either an mTLS cert and key or an API key |
 | `setsplitworkflows.sh` | Sourced by worker scripts: a queue argument moves the open-account workflow onto that queue (e.g. for the Java worker) |
 
-Other ports add their key files here too, so ports that use the same provider share one key file.
+Other frameworks add their key files here too, so frameworks that use the same provider share one key file.

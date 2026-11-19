@@ -14,15 +14,15 @@ Opening an account starts a child workflow with KYC (the customer confirms their
 human compliance approval and a saga that creates, funds and registers the account, rolling back if
 a step fails.
 
-This port was imported from [temporal-sa/adk-go-wealth-management](https://github.com/temporal-sa/adk-go-wealth-management).
-It is the first Go port: its framework-free packages are in [`src/go/internal/common`](../internal/common) for
-the Go ports to share, and it shares the [API](../../python/api/README.md) (written in Python), the
+This framework was imported from [temporal-sa/adk-go-wealth-management](https://github.com/temporal-sa/adk-go-wealth-management).
+It is the first Go framework: its framework-free packages are in [`src/go/internal/common`](../internal/common) for
+the Go frameworks to share, and it shares the [API](../../python/api/README.md) (written in Python), the
 [web application](../../../frontend/README.md), the [Java worker](../../../interop/open_account/java/README.md),
-`scripts/` and `data/` with every port. Its chat workflows keep the same Temporal contract as the other ports,
+`scripts/` and `data/` with every framework. Its chat workflows keep the same Temporal contract as the other frameworks,
 which is what lets the Python API serve it. The Go module is [`src/go/go.mod`](../go.mod).
 
 Its chat workflows run on the `ADK-Go-Supervisor` task queue by default (`DefaultTaskQueue` in
-[internal/config](internal/config/config.go)), so its worker can run next to another port's. Start the API for
+[internal/config](internal/config/config.go)), so its worker can run next to another framework's. Start the API for
 it with the `google_adk_go` AI framework (`./startlocalapi.sh google_adk_go`); the web app then names its chats
 `adk-go-temporal-agent-<random>`.
 
@@ -44,7 +44,7 @@ The demo comes in two versions:
 
 ## Set up your Gemini API key
 
-From the repository root, copy the shared Gemini key file (the other Gemini ports use it too) and put your key
+From the repository root, copy the shared Gemini key file (the other Gemini frameworks use it too) and put your key
 in it. `scripts/setgeminikey.sh` is git-ignored: never commit a real key.
 
 ```bash
@@ -90,7 +90,7 @@ server and Temporal Cloud. [docs/standalone.md](docs/standalone.md) covers the c
 ## Demo data
 
 The JSON files in [data/](../../../data) (beneficiaries, clients, linked bank accounts and investments) are the
-system of record, shared by every port. The data store finds them by looking for `data/clients.json` in the
+system of record, shared by every framework. The data store finds them by looking for `data/clients.json` in the
 current folder and its parents (`DATA_DIR` overrides it). Client `123` is Don Doe, of 123 Main Street, with
 Checking, Savings and 401K accounts and a linked bank account holding $250,000. The demo changes these files, and
 they are tracked by git, so reset them from the repository root with:
@@ -112,10 +112,10 @@ or running Temporal service. The live tests call Gemini; see [docs/temporal.md](
 
 ## Layout
 
-The Go code follows Go conventions (`cmd/` for programs, `internal/` for packages) rather than the Python ports'
+The Go code follows Go conventions (`cmd/` for programs, `internal/` for packages) rather than the Python frameworks'
 `standalone/` and `durable/` folders. This table maps one to the other:
 
-| Path | Holds | Python ports |
+| Path | Holds | Python frameworks |
 |---|---|---|
 | [cmd/worker](cmd/worker) | The Temporal worker | `durable/run_worker.py` |
 | [cmd/cli](cmd/cli), [internal/standalone](internal/standalone) | The standalone command-line chat | `standalone/` |
