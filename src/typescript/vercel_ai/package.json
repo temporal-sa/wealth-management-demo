@@ -25,18 +25,19 @@
     ]
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.63",
-    "@temporalio/activity": "^1.16.0",
-    "@temporalio/ai-sdk": "^1.18.0",
-    "@temporalio/client": "^1.16.0",
-    "@temporalio/common": "^1.16.0",
-    "@temporalio/worker": "^1.16.0",
-    "@temporalio/workflow": "^1.16.0",
-    "ai": "^6.0.159",
+    "@ai-sdk/google": "^4.0.0",
+    "@ai-sdk/provider": "^4.0.21",
+    "@temporalio/activity": "^1.26.0",
+    "@temporalio/client": "^1.26.0",
+    "@temporalio/common": "^1.26.0",
+    "@temporalio/vercel-ai-sdk": "^1.0.0",
+    "@temporalio/worker": "^1.26.0",
+    "@temporalio/workflow": "^1.26.0",
+    "ai": "^7.0.127",
     "nanoid": "3.x",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@temporalio/testing": "^1.16.0"
+    "@temporalio/testing": "^1.26.0"
   }
 }

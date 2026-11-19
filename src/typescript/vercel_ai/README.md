@@ -6,7 +6,7 @@ account starts a child workflow with KYC, a human compliance approval and a saga
 
 A supervisor agent routes requests to specialist agents (beneficiaries, investments, open account), which hand
 off to each other with tools. The model is Gemini (`gemini-2.5-pro`). In the Temporal version, every model call
-runs as an activity through Temporal's AI SDK plugin (`@temporalio/ai-sdk`).
+runs as an activity through Temporal's AI SDK plugin (`@temporalio/vercel-ai-sdk`).
 
 This port was imported from [temporal-sa/vai-wealth-management](https://github.com/temporal-sa/vai-wealth-management).
 It is the first TypeScript port: it shares [`src/typescript/common`](../common) with the TypeScript ports to

@@ -217,7 +217,7 @@ async def test_settings_override_the_frameworks_values(temporal_env, tmp_path_fa
     assert (config["task_queue"], config["workflow_id_prefix"]) == ("my-queue", "demo-")
 
 
-EVERY_FRAMEWORK = ("openai_agents", "pyai", "strands_agents", "google_adk", "pure", "vercel_ai")
+EVERY_FRAMEWORK = ("openai_agents", "pyai", "strands_agents", "google_adk", "pure", "vercel_ai", "google_adk_ts")
 
 
 @pytest.mark.parametrize("ai_framework", [None, "", "nope"])

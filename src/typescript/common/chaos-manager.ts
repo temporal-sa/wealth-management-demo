@@ -82,6 +82,8 @@ export class ChaosManager {
   constructor() {
     // Give up quickly when Redis is down, so callers can fail open instead of hanging
     this.redis = new Redis({ ...loadRedisConfig(), maxRetriesPerRequest: 1 });
+    // Without a listener ioredis reports every failed reconnect as an unhandled error
+    this.redis.on('error', () => undefined);
   }
 
   async isEnabled(flag: ChaosFlag): Promise<boolean> {

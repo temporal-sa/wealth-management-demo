@@ -21,6 +21,7 @@ cd src/python/api
 ./startlocalapi.sh google_adk      # Google ADK: adk-temporal-agent-<random> on ADK-Supervisor
 ./startlocalapi.sh pure            # Pure Python (LiteLLM): pure-temporal-agent-<random> on Pure-Supervisor
 ./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-<random> on VAI-Supervisor
+./startlocalapi.sh google_adk_ts   # Google ADK (TypeScript): adk-ts-temporal-agent-<random> on ADK-TS-Supervisor
 ```
 
 Note that the web application communicates directly with the API and the API is what 

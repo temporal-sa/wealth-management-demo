@@ -30,6 +30,7 @@ FRAMEWORKS = {
         Framework("google_adk", "Google ADK", "ADK-Supervisor", "adk-temporal-agent-"),
         Framework("pure", "Pure Python (LiteLLM)", "Pure-Supervisor", "pure-temporal-agent-"),
         Framework("vercel_ai", "Vercel AI SDK (TypeScript)", "VAI-Supervisor", "vai-temporal-agent-"),
+        Framework("google_adk_ts", "Google ADK (TypeScript)", "ADK-TS-Supervisor", "adk-ts-temporal-agent-"),
     ]
 }
 

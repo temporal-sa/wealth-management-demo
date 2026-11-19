@@ -1,0 +1,36 @@
+{
+  "name": "@wealth-management/google-adk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Google ADK for TypeScript port of the wealth management agent",
+  "scripts": {
+    "adk": "ts-node standalone/main.ts",
+    "temporal:worker": "ts-node durable/worker.ts",
+    "start": "ts-node durable/worker.ts",
+    "codec-server": "ts-node durable/codec_server.ts",
+    "test": "mocha --exit --require ts-node/register --require source-map-support/register 'tests/*.test.ts'",
+    "test:live": "mocha --exit --require ts-node/register --require source-map-support/register 'tests/*.live.ts'",
+    "compliance.approval": "ts-node durable/run_send_compliance_approval.ts",
+    "open-account.scenarios": "ts-node durable/run_open_account_workflow.ts"
+  },
+  "dependencies": {
+    "@google/adk": ">=2.0.0 <2.1.0",
+    "@google/genai": "^2.32.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@temporalio/activity": "^1.26.0",
+    "@temporalio/client": "^1.26.0",
+    "@temporalio/common": "^1.26.0",
+    "@temporalio/envconfig": "^1.26.0",
+    "@temporalio/google-adk": "^0.1.0",
+    "@temporalio/worker": "^1.26.0",
+    "@temporalio/workflow": "^1.26.0",
+    "ioredis": "^5.10.1",
+    "long": "^5.3.2",
+    "nanoid": "3.x",
+    "protobufjs": "^8.8.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@temporalio/testing": "^1.26.0"
+  }
+}

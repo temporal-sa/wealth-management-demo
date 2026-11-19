@@ -251,7 +251,8 @@ async function runAgent(
     });
 
     // Extend history with the new response messages (assistant + any tool results)
-    const newMessages = result.response.messages as Array<AssistantModelMessage | ToolModelMessage>;
+    // Every step's messages (tool calls, tool results and text); result.response.messages has only the last step's
+    const newMessages = result.responseMessages as Array<AssistantModelMessage | ToolModelMessage>;
     currentMessages = [...currentMessages, ...newMessages];
 
     // Detect handoff

@@ -9,10 +9,15 @@
     "declarationMap": true,
     "sourceMap": true,
     "rootDir": ".",
-    "outDir": "./lib"
+    "outDir": "./lib",
+    "types": [
+      "node",
+      "mocha"
+    ]
   },
   "include": [
     "common/**/*.ts",
-    "vercel_ai/**/*.ts"
+    "vercel_ai/**/*.ts",
+    "google_adk/**/*.ts"
   ]
 }
