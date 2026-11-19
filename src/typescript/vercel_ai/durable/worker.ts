@@ -6,6 +6,7 @@ import * as activities from './activities/activities';
 import { clientHelper } from './task-queues';
 import { openAccountTaskQueue } from '../../common/task-queues';
 import { buildDataConverter, useClaimCheck } from '../../common/data-converter';
+import { redisAddress } from '../../common/redis-config';
 import { chaosAwareProvider } from './chaos-model';
 import { workflowsModule } from './worker-workflows';
 
@@ -28,9 +29,7 @@ Runtime.install({
 
 function logClaimCheckStatus(): void {
   if (useClaimCheck()) {
-    const host = process.env.REDIS_HOST ?? 'localhost';
-    const port = process.env.REDIS_PORT ?? '6379';
-    console.error(`Claim check enabled (redis at ${host}:${port})`);
+    console.error(`Claim check enabled (redis at ${redisAddress()})`);
   } else {
     console.error('Claim check disabled');
   }

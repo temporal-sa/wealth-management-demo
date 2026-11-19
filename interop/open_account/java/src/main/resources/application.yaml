@@ -9,8 +9,10 @@ spring:
     namespace: default
     connection:
       target: 127.0.0.1:7233
-  # Redis configuration
+  # Redis configuration (claim check storage). REDIS_URL is passed as SPRING_DATA_REDIS_URL by the
+  # start scripts, and wins over these when set.
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}

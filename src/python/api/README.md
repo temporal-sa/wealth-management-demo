@@ -30,7 +30,7 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 
 * [uv](https://docs.astral.sh/uv/) - Python Dependency Management
 * Temporal running (`temporal server start-dev` locally, or Temporal Cloud)
-* [Redis](https://redis.io/downloads/) running (`REDIS_HOST` / `REDIS_PORT`, default `localhost:6379`)
+* [Redis](https://redis.io/downloads/) running (`REDIS_URL`, or `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`; default `localhost:6379` without a password)
 * An AI framework's worker running, for example the OpenAI Agents SDK's (`src/python/openai_agents/durable/startlocalworker.sh`
   or `startcloudworker.sh`). Start the API for the same framework:
 

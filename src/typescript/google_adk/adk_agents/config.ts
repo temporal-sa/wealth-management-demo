@@ -3,7 +3,7 @@
  * reads it here and the chat workflow gets what it needs from the get_worker_config local activity.
  */
 import { useClaimCheck } from '../../common/data-converter';
-import { loadRedisConfig } from '../../common/redis-config';
+import { redisAddress } from '../../common/redis-config';
 import { openAccountTaskQueue } from '../../common/task-queues';
 
 /** The default Gemini model. Override it with GEMINI_MODEL. */
@@ -50,8 +50,7 @@ export function claimCheckStatus(env: NodeJS.ProcessEnv = process.env): string {
   const value = env.USE_CLAIM_CHECK;
   const setting = value === undefined || value === '' ? 'USE_CLAIM_CHECK is not set' : `USE_CLAIM_CHECK=${value}`;
   if (useClaimCheck(value)) {
-    const { host, port } = loadRedisConfig();
-    return `Claim check: ON (${setting}; payloads stored in Redis at ${host}:${port})`;
+    return `Claim check: ON (${setting}; payloads stored in Redis at ${redisAddress()})`;
   }
   return `Claim check: OFF (${setting})`;
 }

@@ -181,3 +181,8 @@ def test_startup_message_says_whether_claim_check_is_on(monkeypatch):
     monkeypatch.setenv("REDIS_PORT", "6380")
     assert connection.claim_check_status() == (
         "Claim check: ON (payloads stored in Redis at redis.example:6380)")
+
+    # REDIS_URL wins, and the message never shows its password
+    monkeypatch.setenv("REDIS_URL", "redis://:s3cret@cache.example:6390/0")
+    assert connection.claim_check_status() == (
+        "Claim check: ON (payloads stored in Redis at cache.example:6390)")

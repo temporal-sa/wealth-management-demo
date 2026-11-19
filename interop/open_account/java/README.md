@@ -66,8 +66,9 @@ The script checks `TEMPORAL_TASK_QUEUE`, sources `scripts/setclaimcheck.sh`
 if it exists (claim check is optional) and runs `./gradlew runWorker`. It connects to `127.0.0.1:7233`, namespace `default`, as set
 in `src/main/resources/application.yaml`. The worker doesn't read `TEMPORAL_ADDRESS`, but the activity
 that reports each state change to the chat workflow does (default `localhost:7233`), so to use another
-local server set both, e.g. `SPRING_TEMPORAL_CONNECTION_TARGET=127.0.0.1:17233 TEMPORAL_ADDRESS=127.0.0.1:17233`. When claim check is enabled, the Java worker uses the Redis at
-`spring.data.redis` in `application.yaml` (`localhost:6379`), not `REDIS_HOST` / `REDIS_PORT`.
+local server set both, e.g. `SPRING_TEMPORAL_CONNECTION_TARGET=127.0.0.1:17233 TEMPORAL_ADDRESS=127.0.0.1:17233`. When claim check is enabled, the Java worker uses the Redis
+at `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` (default `localhost:6379`, no password), or at `REDIS_URL` when it is set
+(the script passes it to Spring as `SPRING_DATA_REDIS_URL`).
 
 Start the API and the UX as described in the [Temporal README](../../../src/python/openai_agents/durable/README.md),
 and send the compliance approval with `src/python/openai_agents/durable/localsendcomplianceapproval.sh` as usual.
@@ -94,7 +95,8 @@ TEMPORAL_TASK_QUEUE=OAI-Supervisor ./startcloudworker.sh
 The Java cloud script can be run from any directory. It sources `scripts/setclaimcheck.sh` (if it exists) and `scripts/setcloudenv.sh`, maps `TEMPORAL_TLS_CLIENT_CERT_PATH` to the
 `TEMPORAL_CERT_PATH` the Java worker reads, uses the Spring profile `tc`
 (`src/main/resources/application-tc.yaml`), and runs `./gradlew runWorker`. With this profile, the
-claim check Redis comes from `REDIS_HOST` / `REDIS_PORT` (default `localhost:6379`).
+claim check Redis comes from `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` (default `localhost:6379`, no password), or
+`REDIS_URL` when it is set.
 
 Java's TLS needs the client key as an unencrypted PKCS8 key (`-----BEGIN PRIVATE KEY-----`). If
 `TEMPORAL_TLS_CLIENT_KEY_PATH` points to a different format, the script stops and prints the command

@@ -2,7 +2,7 @@
 
 With claim check on (USE_CLAIM_CHECK=true), the event history in the Temporal UI holds only
 claim check IDs. Point the UI's codec server setting at this server, and the UI sends the
-payloads here to be decoded, looking each one up in Redis (REDIS_HOST / REDIS_PORT).
+payloads here to be decoded, looking each one up in Redis (REDIS_URL, or REDIS_HOST / REDIS_PORT / REDIS_PASSWORD).
 
 It accepts requests from the local Temporal UI (http://localhost:8233) and Temporal Cloud
 (https://cloud.temporal.io) only. Start it with startcodecserver.sh; it listens on

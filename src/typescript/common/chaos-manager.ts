@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { loadRedisConfig } from './redis-config';
+import { createRedisClient } from './redis-config';
 
 export enum ChaosFlag {
   TOOL_DOWN = 'tool_down',
@@ -81,7 +81,7 @@ export class ChaosManager {
 
   constructor() {
     // Give up quickly when Redis is down, so callers can fail open instead of hanging
-    this.redis = new Redis({ ...loadRedisConfig(), maxRetriesPerRequest: 1 });
+    this.redis = createRedisClient(undefined, { maxRetriesPerRequest: 1 });
     // Without a listener ioredis reports every failed reconnect as an unhandled error
     this.redis.on('error', () => undefined);
   }

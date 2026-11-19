@@ -13,7 +13,6 @@ side can decode the other's payloads.
 import uuid
 from typing import Any, Iterable, List, Optional
 
-import redis.asyncio as redis
 from temporalio.api.common.v1 import Payload
 from temporalio.converter import PayloadCodec
 
@@ -26,14 +25,14 @@ CODEC_VERSION = b"v1"
 
 class ClaimCheckCodec(PayloadCodec):
     def __init__(self, config: Optional[RedisConfig] = None, redis_client: Any = None):
-        """Store payloads in the Redis at ``config`` (REDIS_HOST / REDIS_PORT by default).
+        """Store payloads in the Redis at ``config`` (REDIS_URL, or REDIS_HOST / REDIS_PORT / REDIS_PASSWORD).
 
         ``redis_client`` replaces the Redis connection with any object that has
         async ``get(key)`` and ``set(key, value)`` methods (used by the tests).
         """
         if redis_client is None:
             config = config or RedisConfig()
-            redis_client = redis.Redis(host=config.hostname, port=config.port)
+            redis_client = config.async_client(decode_responses=False)
         self.redis_client = redis_client
 
     async def encode(self, payloads: Iterable[Payload]) -> List[Payload]:

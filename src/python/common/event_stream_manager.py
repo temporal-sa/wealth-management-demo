@@ -1,14 +1,15 @@
 import json
 import time
-import os
 from typing import List, Dict, Any, Union
 from enum import Enum
 from dataclasses import asdict
 
-import redis.asyncio as redis
-
+from .redis_config import RedisConfig
 from .user_message import ChatInteraction
 from .status_update import StatusUpdate
+
+# How long a chat's event stream is kept after its last event
+STREAM_TTL_SECONDS = 24 * 60 * 60
 
 class EventType(str, Enum):
     """Event types for the chat event stream"""
@@ -23,14 +24,8 @@ class EventStreamManager:
     Each event has an implicit sequence number based on its position in the list.
     """
     
-    def __init__(self, redis_host: str = None, redis_port: int = None):
-        self.redis_host = redis_host or os.getenv("REDIS_HOST", "localhost")
-        self.redis_port = redis_port or int(os.getenv("REDIS_PORT", "6379"))
-        self.redis_client = redis.Redis(
-            host=self.redis_host, 
-            port=self.redis_port,
-            decode_responses=True
-        )
+    def __init__(self, config: RedisConfig = None):
+        self.redis_client = (config or RedisConfig()).async_client()
     
     def _get_stream_key(self, workflow_id: str) -> str:
         """Get the Redis key for the event stream"""
@@ -99,7 +94,9 @@ class EventStreamManager:
         # Use RPUSH to add to the end (chronological order)
         # RPUSH returns the new length of the list after insertion
         new_length = await self.redis_client.rpush(stream_key, event_json)
-        
+        # Abandoned chats don't pile up: a stream expires a day after its last event
+        await self.redis_client.expire(stream_key, STREAM_TTL_SECONDS)
+
         return new_length
     
     async def get_events_from_index(

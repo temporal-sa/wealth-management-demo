@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-import redis.asyncio as redis
 
 from common.redis_config import RedisConfig
 
@@ -75,7 +74,7 @@ class ChaosManager:
 
     def __init__(self, config: RedisConfig = None):
         config = config or RedisConfig()
-        self.redis_client = redis.Redis(host=config.hostname, port=config.port, decode_responses=True)
+        self.redis_client = config.async_client()
 
     async def is_enabled(self, flag: ChaosFlag) -> bool:
         return await self.redis_client.hget(_FLAGS_KEY, flag.value) == "1"
