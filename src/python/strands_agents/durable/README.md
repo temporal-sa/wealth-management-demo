@@ -261,8 +261,8 @@ Click **Chaos** in the chat header to open the chaos panel. Its switches inject 
 activities and the model read the flags from Redis on every attempt, so you can turn a failure on and off
 mid-conversation without restarting anything. The panel lists each injected failure as it happens. Open
 the [Temporal UI](http://localhost:8233) alongside it to show the pending activity, its attempt count and
-the last failure. **Reset all** turns every flag off. The flags are shared by every framework using the same
-Redis.
+the last failure. **Reset all** turns every flag off. Flags belong to your browser session: they fail only that browser's chats, in any framework (see
+[Sharing one demo](../../../../README.md#sharing-one-demo)).
 
 | Scenario | How to show it | What Temporal does |
 |---|---|---|

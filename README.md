@@ -96,6 +96,34 @@ run on `<queue>-open-account`.
   worker has no default queue. The rule that turns `java` into the queue name is in `common/task_queues.py`,
   `common/task-queues.ts`, the Go framework's `internal/config` and the Java worker's `ServerInfo`.
 
+## Sharing one demo
+
+Several people can use one running copy of the demo at once, each in their own browser. The API gives every browser a
+session (a cookie) and starts its chats with workflow IDs that carry it, so every activity knows whose chat it is
+working for. See [Browser sessions](src/python/api/README.md#browser-sessions) in the API README for the details.
+
+**Always separate per browser:**
+
+- **Chats.** Another browser can't read, send to, approve or end your chat: the API answers 404.
+- **Chaos flags.** A flag you turn on in the chaos panel fails only your browser's chats, in any framework, and the
+  panel lists only your failures.
+
+**The sample bank data** (client 123's details, accounts, beneficiaries and funding) depends on `DEMO_DATA_STORE`:
+
+| `DEMO_DATA_STORE` | Two browsers using client 123 | `data/*.json` | Reset |
+|---|---|---|---|
+| `file` (default) | Share the same client: an account opened in one shows up in the other, and their changes can overwrite each other | Changed by every demo run | `git checkout data/` |
+| `redis` | Each gets its own copy, starting from the files: an account opened in one never shows up in the other | Never changed | A new browser session starts from the files again; a copy expires a day after its last change |
+
+`file` suits one presenter. For a shared demo, set `DEMO_DATA_STORE=redis` where the **workers** run, before starting
+them, for example `export DEMO_DATA_STORE=redis` in each worker's terminal. The workers read and write the data; the
+API doesn't, so it needs no setting.
+
+**What counts as one browser:** the session lives in the browser's cookie. Tabs and windows of the same browser
+profile share a session, and so the same copy of the data. Another browser, a private window or another profile gets
+a new session; so does clearing cookies. Restarting the API or the workers doesn't change anyone's session. Workflows
+started without the web UI (the scripts, the CLI, the tests) use a shared `default` session.
+
 ## Open decisions before migrating code
 
 - **Hosting:** the Python ADK repo's latest commit (temporal-sa/adk-wealth-management#11) made it hostable for many
@@ -108,8 +136,14 @@ run on `<queue>-open-account`.
     Fixing the code and restarting the worker stays the point of that scenario.
   - *Also brought in, multi-user:* the API gives each browser a session cookie and picks chat workflow IDs that carry
     it (its routes are under `/api`, proxied by the web UI's dev server), chaos flags are per browser session, and
-    `DEMO_DATA_STORE=redis` gives each session its own copy of the sample data. See the
-    [API's Browser sessions](src/python/api/README.md#browser-sessions).
+    `DEMO_DATA_STORE=redis` gives each session its own copy of the sample data. See
+    [Sharing one demo](#sharing-one-demo). It differs from that commit in three ways:
+    - Chat IDs keep the framework's prefix (`<prefix>session-<id>-chat-<id>`) instead of starting with the task queue.
+    - Redis keys are scoped by session only (`chaos:<session>:…`, `data:<session>:<name>`), not by task queue too.
+      So a browser's chaos flags and data follow it across frameworks, but two separate deployments sharing one Redis
+      would share the `default` session that scripts and tests use.
+    - The approve button's endpoint finds a chat's waiting openings by workflow ID instead of through a new query on
+      the chat workflow.
   - *Still to decide:* deployment (a Docker build, claim check payloads in S3, and a `/codec` endpoint on the API).
 - **Java worker:** brought in from the Pure Python repo's copy of the Java worker (temporal-sa/pure-wealth-management
   at 8470bdc): a Temporal Cloud API-key profile (`application-tc-apikey.yaml`, chosen by `startcloudworker.sh` when
