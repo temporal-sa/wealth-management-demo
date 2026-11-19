@@ -1,4 +1,10 @@
 #!/bin/bash
 export USE_CLAIM_CHECK=true
+# Redis, for the claim check and also the chat event streams and chaos flags.
+# The default is an unauthenticated Redis on localhost:6379.
 export REDIS_HOST=localhost
 export REDIS_PORT=6379
+# Optional: the password of a Redis that needs one
+# export REDIS_PASSWORD="Your Redis Password Goes Here"
+# Optional: the whole connection as a URL, which wins over REDIS_HOST, REDIS_PORT and REDIS_PASSWORD
+# export REDIS_URL="redis://:<password>@<host>:<port>/<db>"
