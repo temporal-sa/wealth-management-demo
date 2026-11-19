@@ -3,7 +3,7 @@
 Exposes the Temporal chat workflow (`WealthManagementWorkflow`) with an easy to use API. The
 [web application](../../../frontend/README.md) uses it; you can also call it with curl.
 
-It is the one API in this repository: it serves every AI framework, Python or TypeScript (the Vercel AI SDK and Google ADK TypeScript ports), because their chat workflows keep the same contract. It uses only the Temporal contracts (the workflow and signal
+It is the one API in this repository: it serves every AI framework, Python, TypeScript (the Vercel AI SDK and Google ADK TypeScript ports) or Go (the Google ADK Go port), because their chat workflows keep the same contract. It uses only the Temporal contracts (the workflow and signal
 names as strings, plain JSON payloads through the Pydantic data converter, and the claim-check codec
 when enabled), never a port's workflow class or framework plugin. The start scripts' required argument
 (`AI_FRAMEWORK`) picks the AI framework: it sets the task queue that framework's worker listens on and the
@@ -43,6 +43,7 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 | [Pure Python (LiteLLM)](../pure/durable/README.md) | `./startlocalapi.sh pure` | `Pure-Supervisor` | `pure-temporal-agent-<random>` |
 | [Vercel AI SDK (TypeScript)](../../typescript/vercel_ai/durable/README.md) | `./startlocalapi.sh vercel_ai` | `VAI-Supervisor` | `vai-temporal-agent-<random>` |
 | [Google ADK (TypeScript)](../../typescript/google_adk/durable/README.md) | `./startlocalapi.sh google_adk_ts` | `ADK-TS-Supervisor` | `adk-ts-temporal-agent-<random>` |
+| [Google ADK (Go)](../../go/google_adk/docs/temporal.md) | `./startlocalapi.sh google_adk_go` | `ADK-Go-Supervisor` | `adk-go-temporal-agent-<random>` |
 
 There is no default framework: without a valid one, the scripts stop and list every framework.
 `TEMPORAL_TASK_QUEUE` and `CHAT_WORKFLOW_ID_PREFIX` override the framework's values. The API prints the
@@ -75,7 +76,7 @@ cd src/python/api
 Be sure to have created scripts/setcloudenv.sh. See the [Temporal README](../openai_agents/durable/README.md#running-the-demo-in-temporal-cloud) for more details.
 ```bash
 cd src/python/api
-./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk, pure, vercel_ai, google_adk_ts
+./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk, pure, vercel_ai, google_adk_ts, google_adk_go
 ```
 
 Test that the API is running:

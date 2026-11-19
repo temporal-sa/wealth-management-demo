@@ -1,0 +1,2 @@
+# Go build output (the root .gitignore covers settings, editors and OS files)
+/bin/
