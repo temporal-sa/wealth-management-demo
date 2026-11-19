@@ -24,20 +24,18 @@ src/<language>/
     tests/
 ```
 
-## Ports
+## Frameworks
 
-All eight ports have been imported.
-
-| Port | Language | Folder | Original repo |
+| Framework | Language | Folder | Original repo |
 |---|---|---|---|
-| OpenAI Agents SDK (reference, imported) | Python | `src/python/openai_agents` | temporal-sa/oai-temporal-wealth-management |
-| Google ADK (imported) | Python | `src/python/google_adk` | temporal-sa/adk-wealth-management |
-| Pydantic AI (imported) | Python | `src/python/pyai` | temporal-sa/pyai-wealth-management |
-| Strands Agents (imported) | Python | `src/python/strands_agents` | temporal-sa/strands-wealth-management |
-| Pure Python (LiteLLM) (imported) | Python | `src/python/pure` | temporal-sa/pure-wealth-management |
-| Vercel AI SDK (imported) | TypeScript | `src/typescript/vercel_ai` | temporal-sa/vai-wealth-management |
-| Google ADK (imported) | TypeScript | `src/typescript/google_adk` | temporal-sa/adk-ts-wealth-management |
-| Google ADK (imported) | Go | `src/go/google_adk` | temporal-sa/adk-go-wealth-management |
+| OpenAI Agents SDK (reference) | Python | `src/python/openai_agents` | temporal-sa/oai-temporal-wealth-management |
+| Google ADK | Python | `src/python/google_adk` | temporal-sa/adk-wealth-management |
+| Pydantic AI | Python | `src/python/pyai` | temporal-sa/pyai-wealth-management |
+| Strands Agents | Python | `src/python/strands_agents` | temporal-sa/strands-wealth-management |
+| Pure Python (LiteLLM) | Python | `src/python/pure` | temporal-sa/pure-wealth-management |
+| Vercel AI SDK | TypeScript | `src/typescript/vercel_ai` | temporal-sa/vai-wealth-management |
+| Google ADK | TypeScript | `src/typescript/google_adk` | temporal-sa/adk-ts-wealth-management |
+| Google ADK | Go | `src/go/google_adk` | temporal-sa/adk-go-wealth-management |
 
 ## Adding an integration
 
@@ -66,7 +64,7 @@ All eight ports have been imported.
    - Its images in `docs/images/<folder>/`: `application-architecture.png`, the three web UI screenshots
      (`ux-waiting-kyc.png`, `ux-waiting-compliance-review.png`, `ux-open-account-complete.png`) and
      `temporal-ui-open-account.png`.
-7. **List it** in this README's [Ports](#ports) and [Task queues](#task-queues) tables, and in the API, web UI
+7. **List it** in this README's [Frameworks](#frameworks) and [Task queues](#task-queues) tables, and in the API, web UI
    (`frontend/README.md`), Java worker and `scripts/` READMEs.
 8. **Test it:** the port's unit tests, an end-to-end chat through the API and web UI that opens an account through
    KYC and compliance approval, and the same with the Java worker (`startlocalworker.sh java`).
