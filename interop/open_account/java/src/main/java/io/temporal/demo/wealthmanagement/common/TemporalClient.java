@@ -1,12 +1,9 @@
 package io.temporal.demo.wealthmanagement.common;
 
-import io.temporal.api.cloud.cloudservice.v1.CloudServiceGrpc;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowClientOptions;
 import io.temporal.common.converter.CodecDataConverter;
-import io.temporal.common.converter.DataConverter;
 import io.temporal.common.converter.DefaultDataConverter;
-import io.temporal.common.converter.GlobalDataConverter;
 import io.temporal.demo.wealthmanagement.claimcheck.ClaimCheckCodec;
 import io.temporal.payload.codec.PayloadCodec;
 import io.temporal.serviceclient.SimpleSslContextBuilder;
@@ -16,12 +13,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
-import javax.net.ssl.SSLException;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 
+/**
+ * The client the status activity uses to signal the parent chat workflow. The worker itself uses the
+ * Spring-configured client (application*.yaml); this one is built from the same environment variables:
+ * TEMPORAL_ADDRESS and TEMPORAL_NAMESPACE, with TEMPORAL_API_KEY or an mTLS certificate and key when they
+ * are set, and the same data converter as the worker's client (the claim check codec, when it is on).
+ */
 @Component
 public class TemporalClient {
 
@@ -29,10 +31,10 @@ public class TemporalClient {
     private ClaimCheckCodec claimCheckCodec;
 
     private static TemporalClient instance; // Not ideal
+    private static volatile WorkflowClient client;
 
-    @PostConstruct()
+    @PostConstruct
     public void init() {
-        System.out.println("TemporalClient Initialization complete.");
         instance = this;
     }
 
@@ -40,41 +42,38 @@ public class TemporalClient {
         return instance != null ? instance.claimCheckCodec : null;
     }
 
-    public static WorkflowServiceStubs getWorkflowServiceStubs() throws FileNotFoundException, SSLException {
-        WorkflowServiceStubsOptions.Builder workflowServiceStubsOptionsBuilder =
-                WorkflowServiceStubsOptions.newBuilder();
-
-        if (!ServerInfo.getCertPath().equals("") && !"".equals(ServerInfo.getKeyPath())) {
-            // Handle mTLS certificates
-            InputStream clientCert = new FileInputStream(ServerInfo.getCertPath());
-            InputStream clientKey = new FileInputStream(ServerInfo.getKeyPath());
-            workflowServiceStubsOptionsBuilder.setSslContext(
-                    SimpleSslContextBuilder.forPKCS8(clientCert, clientKey).build()
-            );
+    /** One client for the process, created on first use and reused for every status update. */
+    public static WorkflowClient get() throws IOException {
+        if (client == null) {
+            synchronized (TemporalClient.class) {
+                if (client == null) {
+                    System.out.println("Temporal client for status updates: " + ServerInfo.getServerInfo());
+                    WorkflowServiceStubs service = WorkflowServiceStubs.newServiceStubs(serviceStubsOptions(
+                            ServerInfo.getAddress(), ServerInfo.getApiKey(), ServerInfo.getCertPath(),
+                            ServerInfo.getKeyPath()));
+                    client = WorkflowClient.newInstance(service,
+                            clientOptions(ServerInfo.getNamespace(), ServerInfo.useClaimCheck(), getClaimCheckCodec()));
+                }
+            }
         }
-
-        String targetEndpoint = ServerInfo.getAddress();
-        workflowServiceStubsOptionsBuilder.setTarget(targetEndpoint);
-        WorkflowServiceStubs service = null;
-
-        if (!ServerInfo.getAddress().equals("localhost:7233")) {
-            // if not local server, then use the workflowServiceStubsOptionsBuilder
-            service = WorkflowServiceStubs.newServiceStubs(workflowServiceStubsOptionsBuilder.build());
-        } else {
-            service = WorkflowServiceStubs.newLocalServiceStubs();
-        }
-
-        return service;
+        return client;
     }
 
     /**
-     * A client for the namespace in TEMPORAL_NAMESPACE. WorkflowClient.newInstance(service)
-     * on its own always uses the "default" namespace, which does not exist on Temporal Cloud.
+     * How to reach Temporal: with the API key when there is one (Temporal Cloud, over TLS), otherwise
+     * with the mTLS certificate and key when both are set, otherwise plainly (a local server).
      */
-    public static WorkflowClient newWorkflowClient(WorkflowServiceStubs service) {
-        ClaimCheckCodec codec = instance != null ? instance.claimCheckCodec : null;
-        return WorkflowClient.newInstance(service,
-                clientOptions(ServerInfo.getNamespace(), ServerInfo.useClaimCheck(), codec));
+    static WorkflowServiceStubsOptions serviceStubsOptions(String address, String apiKey, String certPath,
+            String keyPath) throws IOException {
+        WorkflowServiceStubsOptions.Builder builder = WorkflowServiceStubsOptions.newBuilder().setTarget(address);
+        if (!apiKey.isEmpty()) {
+            builder.addApiKey(() -> apiKey).setEnableHttps(true);
+        } else if (!certPath.isEmpty() && !keyPath.isEmpty()) {
+            try (InputStream cert = new FileInputStream(certPath); InputStream key = new FileInputStream(keyPath)) {
+                builder.setSslContext(SimpleSslContextBuilder.forPKCS8(cert, key).build());
+            }
+        }
+        return builder.build();
     }
 
     /**
@@ -94,11 +93,4 @@ public class TemporalClient {
         }
         return builder.build();
     }
-
-    public static WorkflowClient get() throws FileNotFoundException, SSLException {
-        System.out.println("<<<<SERVER INFO>>>>:\n " + ServerInfo.getServerInfo());
-        WorkflowServiceStubs service = getWorkflowServiceStubs();
-        return newWorkflowClient(service);
-    }
-
 }

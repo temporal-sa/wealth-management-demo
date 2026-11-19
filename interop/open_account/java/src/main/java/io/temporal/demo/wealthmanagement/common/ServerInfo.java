@@ -16,6 +16,19 @@ public class ServerInfo {
         return keyPath != null && !keyPath.isEmpty() ? keyPath : getEnv("TEMPORAL_KEY_PATH", "");
     }
 
+    /** A Temporal Cloud API key; when set, it is used instead of the mTLS certificate and key. */
+    public static String getApiKey() {
+        return getEnv("TEMPORAL_API_KEY", "");
+    }
+
+    /** How the status client authenticates, for startup messages (never the key itself). */
+    public static String getAuth() {
+        if (!getApiKey().isEmpty()) {
+            return "API key";
+        }
+        return !getCertPath().isEmpty() && !getKeyPath().isEmpty() ? "mTLS" : "none";
+    }
+
     public static String getNamespace() {
         return getEnv("TEMPORAL_NAMESPACE", "default");
     }
@@ -83,6 +96,7 @@ public class ServerInfo {
         info.put("keyPath", getKeyPath());
         info.put("namespace", getNamespace());
         info.put("address", getAddress());
+        info.put("auth", getAuth());
         info.put("taskQueue", getTaskqueue());
         info.put("useClaimCheck", useClaimCheck().toString());
         return info;

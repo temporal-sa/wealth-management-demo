@@ -1,20 +1,16 @@
 package io.temporal.demo.wealthmanagement.activities;
 
-import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowStub;
 import io.temporal.demo.wealthmanagement.common.ServerInfo;
 import io.temporal.demo.wealthmanagement.common.TemporalClient;
 import io.temporal.demo.wealthmanagement.data.UpdateAccountOpeningStateInput;
-import io.temporal.serviceclient.WorkflowServiceStubs;
 
 public class UpdateParentWorkflowImpl implements UpdateParentWorkflow {
 
     @Override
     public void changeState(String parentWorkflowId, String accountName, String state, String workflowId) {
         try {
-            WorkflowServiceStubs service = TemporalClient.getWorkflowServiceStubs();
-            WorkflowClient client = TemporalClient.newWorkflowClient(service);
-            WorkflowStub parent = client.newUntypedWorkflowStub(parentWorkflowId);
+            WorkflowStub parent = TemporalClient.get().newUntypedWorkflowStub(parentWorkflowId);
             // Build parameter
             UpdateAccountOpeningStateInput parameter = new UpdateAccountOpeningStateInput();
             parameter.setAccountName(accountName);

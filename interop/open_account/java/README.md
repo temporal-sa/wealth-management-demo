@@ -92,14 +92,20 @@ cd interop/open_account/java
 TEMPORAL_TASK_QUEUE=OAI-Supervisor ./startcloudworker.sh
 ```
 
-The Java cloud script can be run from any directory. It sources `scripts/setclaimcheck.sh` (if it exists) and `scripts/setcloudenv.sh`, maps `TEMPORAL_TLS_CLIENT_CERT_PATH` to the
-`TEMPORAL_CERT_PATH` the Java worker reads, uses the Spring profile `tc`
-(`src/main/resources/application-tc.yaml`), and runs `./gradlew runWorker`. With this profile, the
-claim check Redis comes from `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` (default `localhost:6379`, no password), or
-`REDIS_URL` when it is set. With either profile, stored payloads expire after `CLAIM_CHECK_TTL_SECONDS` (default 7 days; `0`
+The Java cloud script can be run from any directory. It sources `scripts/setclaimcheck.sh` (if it exists) and
+`scripts/setcloudenv.sh`, then connects one of two ways, as the frameworks do:
+
+- **API key:** when `setcloudenv.sh` sets `TEMPORAL_API_KEY`, the script uses the Spring profile `tc-apikey`
+  (`src/main/resources/application-tc-apikey.yaml`). Use the API-key address that `setcloudenv.example` describes.
+- **mTLS:** otherwise it maps `TEMPORAL_TLS_CLIENT_CERT_PATH` to the `TEMPORAL_CERT_PATH` the Java worker reads and uses
+  the Spring profile `tc` (`src/main/resources/application-tc.yaml`). It stops if neither is set.
+
+The client that sends each state change to the chat workflow connects the same way (`common/TemporalClient.java`).
+Then the script runs `./gradlew runWorker`. With either profile, the claim check Redis comes from `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` (default `localhost:6379`, no password), or
+`REDIS_URL` when it is set. Stored payloads expire after `CLAIM_CHECK_TTL_SECONDS` (default 7 days; `0`
 keeps them forever), as in the frameworks.
 
-Java's TLS needs the client key as an unencrypted PKCS8 key (`-----BEGIN PRIVATE KEY-----`). If
+With mTLS, Java's TLS needs the client key as an unencrypted PKCS8 key (`-----BEGIN PRIVATE KEY-----`). If
 `TEMPORAL_TLS_CLIENT_KEY_PATH` points to a different format, the script stops and prints the command
 to convert it, for example:
 
