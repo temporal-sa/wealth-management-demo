@@ -41,7 +41,35 @@ All eight ports have been imported.
 
 ## Adding an integration
 
-Create `src/<language>/<framework>/` with `standalone/`, `durable/`, `tests/` and its own dependency file. Don't name the folder after the library's import name (for example `pydantic_ai` or `strands`), so it can never hide the real library on `sys.path`. Reuse that language's `common/`, and match the Temporal contracts so the Python API, the Java worker and shared scripts work unchanged. One API, `src/python/api`, serves every port, whatever its language: add the port to `src/python/api/frameworks.py` (its task queue and chat workflow ID prefix) so `./startlocalapi.sh <ai-framework>` serves it. For a TypeScript port, also add it to `"workspaces"` in `src/typescript/package.json` (the TypeScript code is one set of npm workspaces with one `node_modules`). A Go port belongs to the one Go module, `src/go/go.mod`, and keeps Go conventions inside its folder (`cmd/`, `internal/`, `scripts/`).
+1. **Create the port's folder,** `src/<language>/<framework>/`, with `standalone/`, `durable/`, `tests/` and its
+   own dependency file. Don't name the folder after the library's import name (for example `pydantic_ai` or
+   `strands`), so it can never hide the real library on `sys.path`.
+   - **TypeScript:** add the folder to `"workspaces"` in `src/typescript/package.json`. The TypeScript code is
+     one set of npm workspaces with one `node_modules` and one Temporal SDK version.
+   - **Go:** the port belongs to the one Go module, `src/go/go.mod`, and keeps Go conventions inside its folder
+     (`cmd/`, `internal/`, `scripts/`).
+2. **Reuse the shared code:** that language's `common/` (data managers, Redis event stream, chaos flags, claim
+   check, client settings), the demo data in `data/`, and the settings files in `scripts/`. Worker and approval
+   scripts `cd` to their own folder and source `scripts/*.sh`, so they run from anywhere.
+3. **Keep the Temporal contracts:** the same workflow, signal, query, update and activity names and payloads as
+   the other ports (see any port's "Temporal contracts" section). The Python API, the web UI and the Java worker
+   then work unchanged.
+4. **Give the port its own task queue,** `<short name>-Supervisor`, with model calls on `<queue>-llm`, and turn a
+   worker script argument of `java` into `<queue>-open-account` using the shared rule (`common/task_queues.py`,
+   `common/task-queues.ts`, or the Go port's `internal/config`). See [Task queues](#task-queues).
+5. **Register it with the API:** add the port to `src/python/api/frameworks.py` (its name, label, task queue and
+   chat workflow ID prefix) and to `EVERY_FRAMEWORK` in `src/python/api/tests/test_api.py`, so
+   `./src/python/api/startlocalapi.sh <ai-framework>` serves it. One API serves every port, whatever its language.
+6. **Document it** like the other ports:
+   - The port's `README.md`: what it is, prerequisites, setup and the model key, running the demo, tests, layout.
+   - Its Temporal README (`durable/README.md`), with the same sections as the other ports' Temporal READMEs.
+   - Its images in `docs/images/<folder>/`: `application-architecture.png`, the three web UI screenshots
+     (`ux-waiting-kyc.png`, `ux-waiting-compliance-review.png`, `ux-open-account-complete.png`) and
+     `temporal-ui-open-account.png`.
+7. **List it** in this README's [Ports](#ports) and [Task queues](#task-queues) tables, and in the API, web UI
+   (`frontend/README.md`), Java worker and `scripts/` READMEs.
+8. **Test it:** the port's unit tests, an end-to-end chat through the API and web UI that opens an account through
+   KYC and compliance approval, and the same with the Java worker (`startlocalworker.sh java`).
 
 ## Task queues
 
