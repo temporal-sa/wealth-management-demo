@@ -55,7 +55,7 @@ pattern, nested two levels deep. Each specialist is itself a `TemporalAgent`, wr
   remembers the question it asked, like a handoff in the other frameworks. The open-account agent holds the
   open-account workflow ID while it walks the customer through KYC, and it is given the current status of
   every account opening at the start of each turn.
-- **Model calls.** Every agent uses the model `gemini` (`gemini-2.5-flash`, `model_config.py`), called in an
+- **Model calls.** Every agent uses the model `gemini` (`GEMINI_MODEL`, default `gemini-3.8-flash`; `model_config.py`), called in an
   activity on `Strands-Supervisor-llm` with `LLM_RETRY_POLICY`. `ChaosAwareGeminiModel` adds the chaos flags
   and turns Gemini throttling into a rate-limit error.
 - **Tools.** Activity tools are wrapped with `activity_as_tool` and `TOOL_RETRY_POLICY`. The open-account
@@ -366,6 +366,7 @@ For the Java open-account worker, start the worker with `startcloudworker.sh jav
 | Variable | Default | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | none | Gemini API key for the worker (`scripts/setgeminikey.sh`) |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | The Gemini model every agent uses |
 | `TEMPORAL_ADDRESS` | `localhost:7233` | Temporal service address |
 | `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | mTLS certificate and key for Temporal Cloud (both must be set) |

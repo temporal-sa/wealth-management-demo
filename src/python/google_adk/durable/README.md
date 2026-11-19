@@ -47,7 +47,7 @@ same turn. The transfers match the OpenAI Agents SDK framework's handoffs:
 | Investment Agent | Open Account Agent, Supervisor Agent | `list_investments`, `close_investment` |
 | Open Account Agent | Investment Agent | `open_new_investment_account`, `get_account_opening_status`, `get_current_client_info`, `approve_kyc`, `update_client_details` |
 
-- **Model calls.** Each agent has its own `TemporalModel` for `gemini-2.5-flash`, which runs the call in the
+- **Model calls.** Each agent has its own `TemporalModel` for the model in `GEMINI_MODEL` (default `gemini-3.8-flash`), which runs the call in the
   plugin's `invoke_model` activity on `ADK-Supervisor-llm`, with `LLM_RETRY_POLICY` and the agent's name as
   the activity summary. The worker registers `ChaosAwareGemini` (`model_config.py`) in ADK's model
   registry, so the chaos flags apply and a real Gemini 429 becomes a rate-limit error.
@@ -364,6 +364,7 @@ For the Java open-account worker, start the worker with `startcloudworker.sh jav
 | Variable | Default | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` | required | Gemini API key for the worker (`scripts/setgeminikey.sh`) |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | The Gemini model every agent uses |
 | `TEMPORAL_ADDRESS` | `127.0.0.1:7233` | Temporal service address |
 | `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
 | `TEMPORAL_API_KEY` | none | API key authentication |

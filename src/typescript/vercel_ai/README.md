@@ -5,7 +5,7 @@ A customer lists, adds and deletes beneficiaries, and lists, opens and closes in
 account starts a child workflow with KYC, a human compliance approval and a saga.
 
 A supervisor agent routes requests to specialist agents (beneficiaries, investments, open account), which hand
-off to each other with tools. The model is Gemini (`gemini-2.5-pro`). In the Temporal version, every model call
+off to each other with tools. The model is Gemini (`GEMINI_MODEL`, default `gemini-3.8-flash`). In the Temporal version, every model call
 runs as an activity through Temporal's AI SDK plugin (`@temporalio/vercel-ai-sdk`).
 
 This framework was imported from [temporal-sa/vai-wealth-management](https://github.com/temporal-sa/vai-wealth-management).

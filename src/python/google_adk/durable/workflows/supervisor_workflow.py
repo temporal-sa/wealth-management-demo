@@ -29,11 +29,11 @@ with workflow.unsafe.imports_passed_through():
     from temporalio.google_adk import TemporalModel
     from durable.activities.activity_tool import _activity_tool
     from durable.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
-    from durable.task_queues import LLM_TASK_QUEUE
+    from durable.task_queues import GEMINI_MODEL, LLM_TASK_QUEUE
     from temporalio.exceptions import is_cancelled_exception
 
 
-MODEL = "gemini-2.5-flash"
+MODEL = GEMINI_MODEL
 APP_NAME = "wealth-management"
 # Sent when the model ends a turn with no text and no tool call, which Gemini occasionally does
 EMPTY_RESPONSE_NUDGE = "Please continue, following your instructions."

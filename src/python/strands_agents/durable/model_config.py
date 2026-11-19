@@ -15,11 +15,12 @@ from strands.types.streaming import StreamEvent
 from temporalio.exceptions import ApplicationError
 
 from common.chaos_manager import ChaosFlag
+from common.gemini_model import gemini_model
 from common.task_queues import open_account_task_queue
 from durable.chaos import inject_failure
 
 MODEL_NAME = "gemini"
-MODEL_ID = "gemini-2.5-flash"
+MODEL_ID = gemini_model()
 
 # This framework's default chat task queue, so its worker can run next to other frameworks'.
 # Start the shared API with ./startlocalapi.sh strands_agents to use it.

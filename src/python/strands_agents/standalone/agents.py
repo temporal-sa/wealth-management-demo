@@ -13,6 +13,7 @@ from functools import lru_cache
 from strands import Agent, tool
 from strands.models.gemini import GeminiModel
 
+from common.gemini_model import gemini_model
 from standalone.approval import ConfirmDestructive
 
 from prompts.agent_constants import (
@@ -22,7 +23,7 @@ from prompts.agent_constants import (
 )
 from standalone import tools as wm_tools
 
-MODEL_ID = "gemini-2.5-flash"
+MODEL_ID = gemini_model()
 
 
 @lru_cache(maxsize=1)

@@ -7,7 +7,8 @@ outage pauses the conversation instead of losing it, and Temporal resumes the tu
 The agents are built with the [Vercel AI SDK](https://ai-sdk.dev/) (AI SDK v7, `generateText` with tools)
 and hand off to each other with tools. Temporal's AI SDK integration,
 [`@temporalio/vercel-ai-sdk`](https://www.npmjs.com/package/@temporalio/vercel-ai-sdk) (with the Temporal
-TypeScript SDK 1.26), runs each model call as an activity. The model is Gemini (`gemini-2.5-pro`).
+TypeScript SDK 1.26), runs each model call as an activity. The model is Gemini (`GEMINI_MODEL`, default `gemini-3.8-flash`): the workflow asks
+for the model `gemini` and the worker's provider (`gemini.ts`) turns it into `GEMINI_MODEL`, since workflow code can't read the environment.
 Prerequisites, installing the dependencies and the Gemini key are in the [framework README](../README.md).
 
 ![Web UI](../../../../docs/images/vercel_ai/ux-waiting-compliance-review.png)
@@ -368,6 +369,7 @@ The worker and scripts read these (see [common/client-helper.ts](../../common/cl
 | Variable | Default | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` (or `GOOGLE_GENERATIVE_AI_API_KEY`) | none | Gemini API key (`scripts/setgeminikey.sh`) |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | The Gemini model every agent uses |
 | `TEMPORAL_ADDRESS` | `localhost:7233` | Temporal service address |
 | `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
 | `TEMPORAL_API_KEY` | none | API key for Temporal Cloud (`scripts/setcloudenv.sh`) |

@@ -20,7 +20,7 @@ import assert from 'assert';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 import { AiSdkPlugin } from '@temporalio/vercel-ai-sdk';
-import { gemini, geminiApiKey } from '../gemini';
+import { geminiApiKey, geminiProvider } from '../gemini';
 import { BeneficiariesManager } from '../../common/beneficiaries-manager';
 import { InvestmentManager } from '../../common/investment-manager';
 import { get_client, validate_new_account } from '../durable/activities/activities';
@@ -63,7 +63,7 @@ describe('Opening the same account twice (live Gemini)', function () {
       connection: env.nativeConnection,
       taskQueue: TASK_QUEUE,
       workflowsPath: require.resolve('../durable/workflows/index'),
-      plugins: [new AiSdkPlugin({ modelProvider: gemini() })],
+      plugins: [new AiSdkPlugin({ modelProvider: geminiProvider() })],
       bundlerOptions: { ignoreModules: ['@temporalio/activity', '@temporalio/client', 'crypto'] },
       activities: {
         // Read data/*.json, without the chaos flags (Redis)

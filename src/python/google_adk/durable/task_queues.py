@@ -1,4 +1,4 @@
-"""Task queue names, read once from the environment (see ClientHelper).
+"""Task queue names and the Gemini model, read once from the environment (see ClientHelper).
 
 Workflow code must not read the environment, so workflow modules import these
 constants through workflow.unsafe.imports_passed_through(), which runs this module
@@ -6,6 +6,7 @@ once, outside the sandbox.
 """
 
 from common.client_helper import ClientHelper
+from common.gemini_model import gemini_model
 
 # This framework's default chat task queue, used when TEMPORAL_TASK_QUEUE isn't set. Each framework
 # has its own default so that their workers can run against the same Temporal service at
@@ -20,3 +21,6 @@ _client_helper = ClientHelper(default_task_queue=DEFAULT_TASK_QUEUE)
 OPEN_ACCOUNT_TASK_QUEUE = _client_helper.taskQueueOpenAccount
 # Model calls run on their own task queue, so they can be rate limited separately from the tools.
 LLM_TASK_QUEUE = _client_helper.taskQueueLLM
+
+# The Gemini model every agent uses (GEMINI_MODEL), read here for the same reason as the queues.
+GEMINI_MODEL = gemini_model()

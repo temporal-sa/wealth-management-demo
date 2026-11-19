@@ -8,7 +8,7 @@ import {
   ToolModelMessage,
   ToolSet,
 } from 'ai';
-import { gemini } from '../gemini';
+import { gemini, geminiModel } from '../gemini';
 import { z } from 'zod';
 
 import {
@@ -243,7 +243,7 @@ async function runAgent(
     const def = agentDefs[currentAgent];
 
     const result = await generateText({
-      model: gemini()('gemini-2.5-pro'),
+      model: gemini()(geminiModel()),
       system: buildSystemPrompt(currentAgent),
       messages: currentMessages,
       tools: def.tools as any,
