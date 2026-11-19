@@ -1,6 +1,8 @@
 import json
 import os
 
+from common.data_store import JsonDocument
+
 script_dir = os.path.dirname(__file__)
 relative_path = '../../../data/funding_accounts.json'
 FUNDING_FILE = os.path.join(script_dir, relative_path)
@@ -20,17 +22,18 @@ class FundingManager:
 
     def __init__(self, json_file=FUNDING_FILE):
         self.json_file = json_file
+        self._document = JsonDocument(json_file)
         self._load_data()
 
     def _load_data(self):
-        with open(self.json_file, 'r') as f:
-            self.data = json.load(f)
+        self.data = self._document.load()
+        if self.data is None:
+            raise FileNotFoundError(f"No funding account data at {self.json_file}")
         self.data.setdefault("accounts", {})
         self.data.setdefault("transfers", {})
 
     def _save_data(self):
-        with open(self.json_file, 'w') as f:
-            json.dump(self.data, f, indent=2)
+        self._document.save(self.data, indent=2)
 
     def get_account(self, client_id: str) -> dict:
         account = self.data["accounts"].get(client_id)

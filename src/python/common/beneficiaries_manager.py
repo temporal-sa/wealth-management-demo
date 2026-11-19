@@ -5,6 +5,8 @@ import uuid  # For generating unique beneficiary IDs
 import logging
 from typing import List, Dict, Any
 
+from common.data_store import JsonDocument
+
 # --- Configuration ---
 script_dir = os.path.dirname(__file__)
 relative_path = '../../../data/beneficiaries.json'
@@ -27,6 +29,7 @@ class BeneficiariesManager:
             file_path (str): The path to the JSON file where beneficiary data is stored.
         """
         self.file_path = file_path
+        self._document = JsonDocument(file_path)
 
     def _load_data(self) -> Dict[str, List[Dict[str, Any]]]:
         """
@@ -35,11 +38,8 @@ class BeneficiariesManager:
         Returns:
             dict: The loaded beneficiary data.
         """
-        if not os.path.exists(self.file_path) or os.stat(self.file_path).st_size == 0:
-            return {}
         try:
-            with open(self.file_path, 'r') as f:
-                return json.load(f)
+            return self._document.load() or {}
         except json.JSONDecodeError:
             logger.warning(f"Warning: Could not decode JSON from '{self.file_path}'. Starting with empty data.")
             return {}
@@ -54,8 +54,7 @@ class BeneficiariesManager:
             data (dict): The beneficiary data to save.
         """
         try:
-            with open(self.file_path, 'w') as f:
-                json.dump(data, f, indent=4)
+            self._document.save(data, indent=4)
         except Exception as e:
             logger.error(f"Error saving data to '{self.file_path}': {e}")
 
