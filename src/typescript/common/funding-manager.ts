@@ -1,5 +1,5 @@
-import * as fs from 'fs';
 import * as path from 'path';
+import { JsonDocument } from './data-store';
 
 const FUNDING_FILE = path.join(__dirname, '../../../data/funding_accounts.json');
 
@@ -26,28 +26,34 @@ export class InsufficientFundsError extends Error {}
  *
  * Every movement of money carries a caller-supplied transfer ID and is recorded
  * in a ledger, so applying the same transfer twice (e.g. when an activity is
- * retried after it already succeeded) only moves the money once.
+ * retried after it already succeeded) only moves the money once. The data is data/funding_accounts.json
+ * as the current browser session sees it (data-store.ts).
  */
 export class FundingManager {
-  constructor(private readonly filePath = FUNDING_FILE) {}
+  private readonly document: JsonDocument<Partial<FundingData>>;
 
-  private loadData(): FundingData {
-    const parsed = JSON.parse(fs.readFileSync(this.filePath, 'utf-8'));
+  constructor(private readonly filePath = FUNDING_FILE) {
+    this.document = new JsonDocument(filePath);
+  }
+
+  private async loadData(): Promise<FundingData> {
+    const parsed = await this.document.load();
+    if (parsed === undefined) throw new Error(`No funding account data at ${this.filePath}`);
     return { accounts: parsed.accounts ?? {}, transfers: parsed.transfers ?? {} };
   }
 
-  private saveData(data: FundingData): void {
-    fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
+  private async saveData(data: FundingData): Promise<void> {
+    await this.document.save(data);
   }
 
-  getAccount(clientId: string): FundingAccount {
-    const account = this.loadData().accounts[clientId];
+  async getAccount(clientId: string): Promise<FundingAccount> {
+    const account = (await this.loadData()).accounts[clientId];
     if (!account) throw new Error(`No linked funding account for client ${clientId}`);
     return account;
   }
 
-  debit(clientId: string, amount: number, transferId: string): Transfer {
-    const data = this.loadData();
+  async debit(clientId: string, amount: number, transferId: string): Promise<Transfer> {
+    const data = await this.loadData();
     const existing = data.transfers[transferId];
     if (existing) return existing;
     const account = this.accountIn(data, clientId);
@@ -59,8 +65,8 @@ export class FundingManager {
     return this.apply(data, clientId, -amount, transferId);
   }
 
-  credit(clientId: string, amount: number, transferId: string): Transfer {
-    const data = this.loadData();
+  async credit(clientId: string, amount: number, transferId: string): Promise<Transfer> {
+    const data = await this.loadData();
     const existing = data.transfers[transferId];
     if (existing) return existing;
     return this.apply(data, clientId, amount, transferId);
@@ -72,12 +78,12 @@ export class FundingManager {
     return account;
   }
 
-  private apply(data: FundingData, clientId: string, delta: number, transferId: string): Transfer {
+  private async apply(data: FundingData, clientId: string, delta: number, transferId: string): Promise<Transfer> {
     const account = this.accountIn(data, clientId);
     account.balance = Math.round((account.balance + delta) * 100) / 100;
     const transfer: Transfer = { client_id: clientId, amount: delta, balance_after: account.balance };
     data.transfers[transferId] = transfer;
-    this.saveData(data);
+    await this.saveData(data);
     return transfer;
   }
 }

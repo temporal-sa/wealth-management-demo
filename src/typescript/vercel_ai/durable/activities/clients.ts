@@ -13,7 +13,7 @@ export async function add_client(client: WealthManagementClient): Promise<Wealth
 
 /** Saves the given fields. Returns the reference framework's result message. */
 export async function update_client(clientId: string, fields: Partial<WealthManagementClient>): Promise<string> {
-  return mgr.updateClient(clientId, fields)
+  return (await mgr.updateClient(clientId, fields))
     ? 'Client information successfully updated'
     : `Client ${clientId} not found`;
 }

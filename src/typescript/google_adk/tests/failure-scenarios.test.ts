@@ -148,8 +148,8 @@ describe('failure scenarios', function () {
       const result = await handle.result();
       assert.deepStrictEqual(result, { account_created: true, message: 'investment account created' });
       assert.strictEqual(await handle.query(getCurrentStateQuery), STATE_COMPLETE);
-      assert.ok(t.store.listInvestments('123').some((a) => a.name === 'Vacation' && a.balance === 13_000));
-      assert.strictEqual(t.store.getFundingAccount('123').balance, 237_000);
+      assert.ok((await t.store.listInvestments('123')).some((a) => a.name === 'Vacation' && a.balance === 13_000));
+      assert.strictEqual((await t.store.getFundingAccount('123')).balance, 237_000);
       assert.deepStrictEqual(await scheduledActivities(handle), [
         'get_client',
         'open_investment',
@@ -176,8 +176,8 @@ describe('failure scenarios', function () {
         'credit_linked_account',
         'remove_investment',
       ]);
-      assert.ok(!t.store.listInvestments('123').some((a) => a.name === 'Vacation'));
-      assert.strictEqual(t.store.getFundingAccount('123').balance, 250_000);
+      assert.ok(!(await t.store.listInvestments('123')).some((a) => a.name === 'Vacation'));
+      assert.strictEqual((await t.store.getFundingAccount('123')).balance, 250_000);
     });
   });
 
@@ -192,8 +192,8 @@ describe('failure scenarios', function () {
         'debit_linked_account',
         'remove_investment',
       ]);
-      assert.ok(!t.store.listInvestments('123').some((a) => a.name === 'Vacation'));
-      assert.strictEqual(t.store.getFundingAccount('123').balance, 250_000);
+      assert.ok(!(await t.store.listInvestments('123')).some((a) => a.name === 'Vacation'));
+      assert.strictEqual((await t.store.getFundingAccount('123')).balance, 250_000);
     });
   });
 

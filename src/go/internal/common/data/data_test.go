@@ -1,6 +1,7 @@
 package data_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -24,11 +25,11 @@ func testStore(t *testing.T) *data.Store { return testfixtures.Store(t) }
 
 func TestDemoData(t *testing.T) {
 	s := testStore(t)
-	c, err := s.GetClient("123")
+	c, err := s.GetClient(context.Background(), "123")
 	require.NoError(t, err)
 	assert.Equal(t, "Don", c.FirstName)
 	assert.Equal(t, "123 Main Street", c.Address)
-	inv, err := s.ListInvestments("123")
+	inv, err := s.ListInvestments(context.Background(), "123")
 	require.NoError(t, err)
 	var names []string
 	for _, i := range inv {
@@ -39,29 +40,29 @@ func TestDemoData(t *testing.T) {
 
 func TestTransfersAreIdempotent(t *testing.T) {
 	s := testStore(t)
-	first, err := s.Debit("123", 1000, "t-1")
+	first, err := s.Debit(context.Background(), "123", 1000, "t-1")
 	require.NoError(t, err)
-	again, err := s.Debit("123", 1000, "t-1")
+	again, err := s.Debit(context.Background(), "123", 1000, "t-1")
 	require.NoError(t, err)
 	assert.Equal(t, first, again)
 	assert.Equal(t, 249000.0, again.BalanceAfter)
 
-	_, err = s.Debit("123", 300000, "t-2")
+	_, err = s.Debit(context.Background(), "123", 300000, "t-2")
 	assert.True(t, errors.Is(err, data.ErrInsufficientFunds))
 }
 
 func TestBeneficiariesAndClients(t *testing.T) {
 	s := testStore(t)
-	rec, err := s.AddBeneficiary(domain.Beneficiary{ClientID: "123", FirstName: "Ann", LastName: "Doe", Relationship: "sister"})
+	rec, err := s.AddBeneficiary(context.Background(), domain.Beneficiary{ClientID: "123", FirstName: "Ann", LastName: "Doe", Relationship: "sister"})
 	require.NoError(t, err)
-	ok, err := s.DeleteBeneficiary("123", rec.BeneficiaryID)
+	ok, err := s.DeleteBeneficiary(context.Background(), "123", rec.BeneficiaryID)
 	require.NoError(t, err)
 	assert.True(t, ok)
 
-	msg, err := s.UpdateClient("123", map[string]any{"last_name": "Doenut"})
+	msg, err := s.UpdateClient(context.Background(), "123", map[string]any{"last_name": "Doenut"})
 	require.NoError(t, err)
 	assert.Equal(t, "Client information successfully updated", msg)
-	c, _ := s.GetClient("123")
+	c, _ := s.GetClient(context.Background(), "123")
 	assert.Equal(t, "Doenut", c.LastName)
 	assert.Equal(t, "Don", c.FirstName)
 }

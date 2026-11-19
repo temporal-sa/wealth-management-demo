@@ -12,7 +12,7 @@ function mockApi(config, history = []) {
     urls.push(url);
     if (url.includes('/get-chat-history')) {
       // The history from the requested index on
-      const from = Number(new URL(url).searchParams.get('from_index'));
+      const from = Number(new URL(url, 'http://localhost').searchParams.get('from_index'));
       return { ok: true, json: async () => history.slice(from) };
     }
     if (url.includes('/approve-compliance')) {
@@ -23,16 +23,20 @@ function mockApi(config, history = []) {
       return { ok: true, json: async () => config };
     }
     if (url.includes('/start-workflow')) {
-      return { ok: true, json: async () => ({ message: 'Workflow started.' }) };
+      return { ok: true, json: async () => ({ message: 'Workflow started.', workflow_id: CHAT_ID }) };
     }
     return { ok: true, json: async () => [] };
   });
   return urls;
 }
 
-const startedWorkflowId = (urls) => {
-  const url = urls.find((u) => u.includes('/start-workflow'));
-  return new URL(url).searchParams.get('workflow_id');
+// The workflow ID the API picks for a new chat (it carries the browser's session)
+const CHAT_ID = `pyai-temporal-agent-session-${'a'.repeat(32)}-chat-${'b'.repeat(16)}`;
+
+// The workflow_id parameter of the first call to this path
+const workflowIdSentTo = (urls, path) => {
+  const url = urls.find((u) => u.includes(path));
+  return url && new URL(url, 'http://localhost').searchParams.get('workflow_id');
 };
 
 test('renders the chat with a Start Chat button', () => {
@@ -41,14 +45,16 @@ test('renders the chat with a Start Chat button', () => {
   expect(screen.getByPlaceholderText('Type a message...')).toBeDisabled();
 });
 
-test("names the chat workflow after the API's AI framework", async () => {
+test('starts a chat with the workflow ID the API picks, calling the API on its own origin', async () => {
   const urls = mockApi({ framework: 'pyai', workflow_id_prefix: 'pyai-temporal-agent-' });
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Start Chat' }));
 
-  await waitFor(() => expect(urls.some((u) => u.includes('/start-workflow'))).toBe(true));
-  expect(startedWorkflowId(urls)).toMatch(/^pyai-temporal-agent-[a-z0-9]+$/);
+  await waitFor(() => expect(urls.some((u) => u.includes('/get-chat-history'))).toBe(true));
+  expect(urls.find((u) => u.includes('/start-workflow'))).toBe('/api/start-workflow');
+  expect(workflowIdSentTo(urls, '/get-chat-history')).toBe(CHAT_ID);
+  expect(urls.every((u) => u.startsWith('/api/'))).toBe(true);
 });
 
 test('shows the AI framework the API serves in the header', async () => {
@@ -58,14 +64,14 @@ test('shows the AI framework the API serves in the header', async () => {
   expect(await screen.findByText('AI framework: Google ADK')).toBeInTheDocument();
 });
 
-test('falls back to the default prefix when the API has no /config', async () => {
+test('still starts a chat when /config fails, without a framework in the header', async () => {
   const urls = mockApi(null);
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Start Chat' }));
 
-  await waitFor(() => expect(urls.some((u) => u.includes('/start-workflow'))).toBe(true));
-  expect(startedWorkflowId(urls)).toMatch(/^oai-temporal-agent-[a-z0-9]+$/);
+  await waitFor(() => expect(urls.some((u) => u.includes('/get-chat-history'))).toBe(true));
+  expect(workflowIdSentTo(urls, '/get-chat-history')).toBe(CHAT_ID);
   expect(screen.queryByText(/AI framework:/)).toBeNull();
 });
 
@@ -81,8 +87,7 @@ test('approves compliance review from a button while an account opening waits fo
   fireEvent.click(await screen.findByRole('button', { name: 'Approve compliance review' }));
 
   await waitFor(() => expect(urls.some((u) => u.includes('/approve-compliance'))).toBe(true));
-  const approval = new URL(urls.find((u) => u.includes('/approve-compliance')));
-  expect(approval.searchParams.get('workflow_id')).toBe(startedWorkflowId(urls));
+  expect(workflowIdSentTo(urls, '/approve-compliance')).toBe(CHAT_ID);
   expect(await screen.findByRole('button', { name: 'Approving…' })).toBeDisabled();
 });
 

@@ -23,7 +23,7 @@ This framework was imported from [temporal-sa/strands-wealth-management](https:/
 | `prompts/` | The agents' instructions and the confirmation wording (`approval_prompts.py`) |
 | `tests/` | The framework's tests |
 
-Its chat workflows run on the `Strands-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in `durable/model_config.py`), so its worker can run next to another framework's, and the web app names them `strands-temporal-agent-<random>`. As in every framework, the customer confirms a delete or close in the chat: the agent asks, and the customer's next message answers.
+Its chat workflows run on the `Strands-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in `durable/model_config.py`), so its worker can run next to another framework's, and the web app names them `strands-temporal-agent-session-<session>-chat-<random>`. As in every framework, the customer confirms a delete or close in the chat: the agent asks, and the customer's next message answers.
 
 Scenarios currently implemented include:
 

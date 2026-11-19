@@ -19,7 +19,7 @@ This framework was imported from [temporal-sa/adk-wealth-management](https://git
 
 Its chat workflows run on the `ADK-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in
 `durable/task_queues.py`), so its worker can run next to another framework's. Start the API for it with
-`./startlocalapi.sh google_adk`; the web app then names its chats `adk-temporal-agent-<random>`.
+`./startlocalapi.sh google_adk`; the web app then names its chats `adk-temporal-agent-session-<session>-chat-<random>`.
 
 Scenarios currently implemented include
 * Add Beneficiary - add a new beneficiary to your account

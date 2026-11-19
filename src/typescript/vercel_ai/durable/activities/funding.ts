@@ -11,7 +11,7 @@ const mgr = new FundingManager();
 export async function debit_linked_account(clientId: string, amount: number, transferId: string): Promise<Transfer> {
   await maybeSlowDown();
   try {
-    return mgr.debit(clientId, amount, transferId);
+    return await mgr.debit(clientId, amount, transferId);
   } catch (err) {
     if (err instanceof InsufficientFundsError) {
       // A business-rule failure: retrying will not make the money appear

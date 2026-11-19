@@ -24,7 +24,7 @@ which is what lets the Python API serve it. The Go module is [`src/go/go.mod`](.
 Its chat workflows run on the `ADK-Go-Supervisor` task queue by default (`DefaultTaskQueue` in
 [internal/config](internal/config/config.go)), so its worker can run next to another framework's. Start the API for
 it with the `google_adk_go` AI framework (`./startlocalapi.sh google_adk_go`); the web app then names its chats
-`adk-go-temporal-agent-<random>`.
+`adk-go-temporal-agent-session-<session>-chat-<random>`.
 
 The demo comes in two versions:
 

@@ -19,7 +19,7 @@ Setup (prerequisites, `uv sync`, the OpenAI key in `scripts/setoaikey.sh`) is in
 - **Web UI and API.** The customer chats in the web UI (`frontend/`), which calls the shared
   [API](../../api/README.md) to start, message and end the chat workflow and polls it for new events.
 - **Chat workflow** (`WealthManagementWorkflow`, `workflows/supervisor_workflow.py`). One workflow
-  per chat (`oai-temporal-agent-<random>`). Each customer message runs the current agent with
+  per chat (`oai-temporal-agent-session-<session>-chat-<random>`). Each customer message runs the current agent with
   `Runner.run`, handoffs included. Model and tool calls run as activities. The conversation stays in
   one workflow run (production would use continue-as-new; see the TODO in the workflow).
   A chat with no customer message and no account-opening status update for an hour ends by itself, as on
@@ -234,7 +234,8 @@ workflow calls by name on `OAI-Supervisor`.
 The chaos panel (**Chaos** in the chat header) injects failures at runtime: activities and the model
 read its flags from Redis on every attempt, so a failure can be turned on and off mid-conversation. It
 lists each injected failure; the Temporal UI shows the pending activity, its attempts and last
-failure. **Reset all** clears every flag.
+failure. **Reset all** clears every flag. Flags belong to your browser session: they fail only that browser's chats, in any framework (see
+[Sharing one demo](../../../../README.md#sharing-one-demo)).
 
 | Scenario | How to show it | What Temporal does |
 |---|---|---|
@@ -356,6 +357,7 @@ environment configuration.
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Most model calls per second the Temporal service dispatches, across all workers |
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, chaos flags and claim check (Python components) |
+| `DEMO_DATA_STORE` | `file` | Where the sample data (`data/*.json`) lives: `file` uses the files themselves; `redis` gives each browser session its own copy in Redis (`data:<session>:<name>`, starting from the files, expiring a day after its last change), for a shared demo |
 | `USE_CLAIM_CHECK` | `false` | Turns on the claim check codec (`scripts/setclaimcheck.sh`) |
 | `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `SKIP_OPENAI_PLUGIN` | `False` | Runs the worker without the `OpenAIAgentsPlugin` (set by `startlocalopenaccount.sh`) |

@@ -36,8 +36,9 @@ The agents are built with the [Google Agent Development Kit for TypeScript](http
   and the model activity on `ADK-TS-Supervisor-llm`, where the Temporal service can rate-limit model calls.
   `GoogleAdkPlugin` bundles ADK into the workflow sandbox and registers the model activity.
 * **Redis**: the chat's event stream (`events:<chat workflow ID>`) that the web UI reads through the API,
-  the chaos flags (`chaos:flags`, with injected failures logged to `chaos:events`), and the optional claim
-  check.
+  the chaos flags (`chaos:<session>:flags`, with injected failures logged to `chaos:<session>:events`, per
+  browser session), with `DEMO_DATA_STORE=redis` each session's copy of the sample data
+  (`data:<session>:<file>`), and the optional claim check.
 
 ### How the agents work
 
@@ -103,7 +104,7 @@ cd frontend && npm install && npm start
 ```
 
 Open http://localhost:3000. **Start Chat** starts a chat workflow with the ID
-`adk-ts-temporal-agent-<random>`. For example: "Who are my beneficiaries?", "123", "What investments do I
+`adk-ts-temporal-agent-session-<session>-chat-<random>`. For example: "Who are my beneficiaries?", "123", "What investments do I
 have?", then "Open Vacation with $13,000" and "Yes" when the agent shows your details.
 
 ### Approve compliance
@@ -120,7 +121,7 @@ from outside the chat. The open-account workflow's ID is
 OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>
 ```
 
-for example `OpenAccount-adk-ts-temporal-agent-<random>-123-Vacation-1`. Find it in the Temporal UI, or list
+for example `OpenAccount-adk-ts-temporal-agent-session-<session>-chat-<random>-123-Vacation-1`. Find it in the Temporal UI, or list
 the running openings:
 
 ```bash
@@ -130,7 +131,7 @@ temporal workflow list --query 'WorkflowType="OpenInvestmentAccountWorkflow" AND
 Then approve it, quoting the ID:
 
 ```bash
-./src/typescript/google_adk/durable/localsendcomplianceapproval.sh "OpenAccount-adk-ts-temporal-agent-<random>-123-Vacation-1"
+./src/typescript/google_adk/durable/localsendcomplianceapproval.sh "OpenAccount-adk-ts-temporal-agent-session-<session>-chat-<random>-123-Vacation-1"
 ```
 
 The saga runs, its states appear in the web UI, and the agent reports the result when asked.
@@ -243,8 +244,9 @@ use `startcloudworker.sh java` and the Java worker's `startcloudworker.sh`.
 ## Failure scenarios (chaos panel)
 
 Every failure is switched on from the chaos panel in the web UI, at runtime, with no restart. The activities
-and the model wrapper read the flags from the Redis hash `chaos:flags` on every attempt; if Redis can't be
-reached, the flags read as off. Each injected failure is logged to `chaos:events` for the panel.
+and the model wrapper read the flags from the Redis hash `chaos:<session>:flags` on every attempt (the browser session comes from
+the workflow ID, see `common/session-scope.ts`); if Redis can't be reached, the flags read as off. Each
+injected failure is logged to `chaos:<session>:events` for the panel.
 
 | Scenario | How to show it | What Temporal does |
 | --- | --- | --- |
@@ -351,6 +353,7 @@ For the Java worker on Temporal Cloud, see the
 | `LLM_MAX_CALLS_PER_SECOND` | none | A cap on model calls per second across all workers |
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | The event stream, the chaos flags and the claim check |
+| `DEMO_DATA_STORE` | `file` | Where the sample data (`data/*.json`) lives: `file` uses the files themselves; `redis` gives each browser session its own copy in Redis (`data:<session>:<name>`, starting from the files, expiring a day after its last change), for a shared demo |
 | `USE_CLAIM_CHECK` | off | The claim check (`true`, `yes` or `1`). Set in `scripts/setclaimcheck.sh` |
 | `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `CODEC_SERVER_HOST`, `CODEC_SERVER_PORT` | `127.0.0.1`, `8081` | Where the codec server listens |

@@ -58,17 +58,17 @@ type closeInvestmentArgs struct {
 func beneficiaryTools(store *data.Store) []tool.Tool {
 	return []tool.Tool{
 		mustTool("list_beneficiaries", "List a client's beneficiaries.",
-			func(_ agent.Context, in clientIDArgs) ([]domain.BeneficiaryRecord, error) {
-				return store.ListBeneficiaries(in.ClientID)
+			func(ctx agent.Context, in clientIDArgs) ([]domain.BeneficiaryRecord, error) {
+				return store.ListBeneficiaries(ctx, in.ClientID)
 			}),
 		mustTool("add_beneficiary", "Add a new beneficiary for a client.",
-			func(_ agent.Context, in addBeneficiaryArgs) (string, error) {
-				_, err := store.AddBeneficiary(domain.Beneficiary(in))
+			func(ctx agent.Context, in addBeneficiaryArgs) (string, error) {
+				_, err := store.AddBeneficiary(ctx, domain.Beneficiary(in))
 				return "Beneficiary added.", err
 			}),
 		mustTool("delete_beneficiary", "Delete a client's beneficiary by its beneficiary ID.",
-			func(_ agent.Context, in deleteBeneficiaryArgs) (string, error) {
-				_, err := store.DeleteBeneficiary(in.ClientID, in.BeneficiaryID)
+			func(ctx agent.Context, in deleteBeneficiaryArgs) (string, error) {
+				_, err := store.DeleteBeneficiary(ctx, in.ClientID, in.BeneficiaryID)
 				return "Beneficiary deleted.", err
 			}),
 	}
@@ -77,16 +77,16 @@ func beneficiaryTools(store *data.Store) []tool.Tool {
 func investmentTools(store *data.Store) []tool.Tool {
 	return []tool.Tool{
 		mustTool("list_investments", "List a client's investment accounts and their balances.",
-			func(_ agent.Context, in clientIDArgs) ([]domain.InvestmentRecord, error) {
-				return store.ListInvestments(in.ClientID)
+			func(ctx agent.Context, in clientIDArgs) ([]domain.InvestmentRecord, error) {
+				return store.ListInvestments(ctx, in.ClientID)
 			}),
 		mustTool("open_investment", "Open a new investment account for a client, with an initial deposit.",
-			func(_ agent.Context, in openInvestmentArgs) (domain.InvestmentRecord, error) {
-				return store.AddInvestment(domain.InvestmentAccount{ClientID: in.ClientID, Name: in.AccountName, Balance: in.InitialBalance})
+			func(ctx agent.Context, in openInvestmentArgs) (domain.InvestmentRecord, error) {
+				return store.AddInvestment(ctx, domain.InvestmentAccount{ClientID: in.ClientID, Name: in.AccountName, Balance: in.InitialBalance})
 			}),
 		mustTool("close_investment", "Close a client's investment account by its investment ID.",
-			func(_ agent.Context, in closeInvestmentArgs) (string, error) {
-				_, err := store.DeleteInvestment(in.ClientID, in.InvestmentID)
+			func(ctx agent.Context, in closeInvestmentArgs) (string, error) {
+				_, err := store.DeleteInvestment(ctx, in.ClientID, in.InvestmentID)
 				return "Investment account closed.", err
 			}),
 	}

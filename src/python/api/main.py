@@ -1,8 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import Optional, AsyncGenerator
 
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter, FastAPI, HTTPException, Query, Request
 from temporalio.client import Client
 from temporalio.exceptions import TemporalError
 from temporalio.service import RPCError
@@ -12,6 +11,7 @@ from api.frameworks import Framework, selected_framework
 from common.chaos_manager import CHAOS_FLAGS, ChaosFlag, ChaosManager
 from common.event_stream_manager import EventStreamManager
 from common.client_helper import ClientHelper
+from common.session_scope import is_session_id, new_chat_workflow_id, new_session_id, owns_workflow
 
 temporal_client: Optional[Client] = None
 task_queue: Optional[str] = None
@@ -35,21 +35,46 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # app teardown
 app = FastAPI(lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Each browser gets a random session ID in this cookie. It scopes the browser's chats (their
+# workflow IDs carry it, see common/session_scope.py), chaos flags and, with DEMO_DATA_STORE=redis,
+# sample data. The web UI calls the API on its own origin (/api, proxied by the React dev server),
+# so the browser sends the cookie without any cross-origin setup.
+SESSION_COOKIE = "wm_session"
+
+
+@app.middleware("http")
+async def browser_session(request: Request, call_next):
+    session_id = request.cookies.get(SESSION_COOKIE)
+    new_session = not is_session_id(session_id)
+    if new_session:
+        session_id = new_session_id()
+    request.state.session_id = session_id
+    response = await call_next(request)
+    if new_session:
+        # Secure when the browser reached us over HTTPS (directly or through a proxy)
+        https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
+        response.set_cookie(SESSION_COOKIE, session_id, httponly=True, samesite="lax", secure=https, path="/")
+    return response
+
+
+def own_chat(request: Request, workflow_id: str) -> str:
+    """The workflow ID, if it is one of this browser session's chats; 404 otherwise."""
+    if not owns_workflow(framework.workflow_id_prefix, request.state.session_id, workflow_id):
+        raise HTTPException(status_code=404, detail="No such chat in this browser session")
+    return workflow_id
+
+
+api = APIRouter(prefix="/api")
+
 
 @app.get("/")
 def root():
     return {"message": "Wealth Management Agent API"}
 
-@app.get("/config")
+
+@api.get("/config")
 def get_config():
-    """The AI framework this API serves, so the web application can name its chat workflows after it."""
+    """The AI framework this API serves, for the web UI's header."""
     return {
         "framework": framework.name,
         "label": framework.label,
@@ -57,12 +82,15 @@ def get_config():
         "workflow_id_prefix": framework.workflow_id_prefix,
     }
 
-@app.get("/get-chat-history")
+
+@api.get("/get-chat-history")
 async def get_chat_history(
+    request: Request,
     workflow_id: str,
     from_index: int = Query(0, description="Get events starting from this index")
 ):
     """ Retrieves the chat history from Redis """
+    own_chat(request, workflow_id)
     try:
         history = await EventStreamManager().get_events_from_index(workflow_id=workflow_id, from_index=from_index)
         if history is None:
@@ -80,8 +108,10 @@ async def get_chat_history(
             detail=f"Internal server error while querying workflow. {error_message}",
         )
 
-@app.post("/send-prompt")
-async def send_prompt(workflow_id: str, prompt: str):
+
+@api.post("/send-prompt")
+async def send_prompt(request: Request, workflow_id: str, prompt: str):
+    own_chat(request, workflow_id)
     print(f"Received prompt {prompt}")
 
     try:
@@ -94,9 +124,10 @@ async def send_prompt(workflow_id: str, prompt: str):
     return {"response": response}
 
 
-@app.post("/end-chat")
-async def end_chat(workflow_id: str):
+@api.post("/end-chat")
+async def end_chat(request: Request, workflow_id: str):
     """Sends an end_workflow signal to the workflow."""
+    own_chat(request, workflow_id)
     try:
         await chat.end_chat(temporal_client, workflow_id)
         return {"message": "End chat signal sent."}
@@ -105,13 +136,15 @@ async def end_chat(workflow_id: str):
         # Workflow not found; return an empty response
         return {}
 
-@app.post("/approve-compliance")
-async def approve_compliance(workflow_id: str):
+
+@api.post("/approve-compliance")
+async def approve_compliance(request: Request, workflow_id: str):
     """Approves the compliance review of this chat's account openings that wait for it.
 
     Does what localsendcomplianceapproval.sh does, from a button in the web UI, without needing
     the open-account workflow's ID.
     """
+    own_chat(request, workflow_id)
     try:
         approved = await chat.approve_compliance(temporal_client, workflow_id)
     except ValueError as e:
@@ -121,27 +154,23 @@ async def approve_compliance(workflow_id: str):
         raise HTTPException(status_code=502, detail=f"Couldn't approve compliance: {e}")
     return {"approved": approved}
 
-UPDATE_STATUS_NAME = "update_status"
 
-@app.post("/start-workflow")
-async def start_workflow(workflow_id: str):
+@api.post("/start-workflow")
+async def start_workflow(request: Request):
+    """Starts a chat for this browser session, with a workflow ID the API picks, and returns the ID."""
+    workflow_id = new_chat_workflow_id(framework.workflow_id_prefix, request.state.session_id)
     try:
         await chat.start_chat(temporal_client, workflow_id, task_queue)
-
-        return {
-            "message": f"Workflow started."
-        }
+        return {"message": "Workflow started.", "workflow_id": workflow_id}
     except Exception as e:
         print(f"Exception occurred starting workflow {e}")
-        return {
-            "message": f"An error occurred starting the workflow {e}"
-        }
+        return {"message": f"An error occurred starting the workflow {e}"}
 
 
-@app.get("/chaos")
-async def get_chaos():
-    """The failure-injection flags for the UI chaos panel, plus the failures they recently caused."""
-    manager = ChaosManager()
+@api.get("/chaos")
+async def get_chaos(request: Request):
+    """This browser session's failure-injection flags, plus the failures they recently caused."""
+    manager = ChaosManager(session_id=request.state.session_id)
     try:
         enabled = await manager.get_flags()
         return {
@@ -160,13 +189,13 @@ async def get_chaos():
         await manager.close()
 
 
-@app.post("/chaos")
-async def set_chaos(flag: str, enabled: bool):
+@api.post("/chaos")
+async def set_chaos(request: Request, flag: str, enabled: bool):
     try:
         chaos_flag = ChaosFlag(flag)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Unknown chaos flag: {flag}")
-    manager = ChaosManager()
+    manager = ChaosManager(session_id=request.state.session_id)
     try:
         await manager.set_enabled(chaos_flag, enabled)
         return {"flag": flag, "enabled": enabled}
@@ -174,10 +203,10 @@ async def set_chaos(flag: str, enabled: bool):
         await manager.close()
 
 
-@app.post("/chaos/reset")
-async def reset_chaos():
-    """Turn every flag off and clear the failure log."""
-    manager = ChaosManager()
+@api.post("/chaos/reset")
+async def reset_chaos(request: Request):
+    """Turn every flag off and clear the failure log, for this browser session."""
+    manager = ChaosManager(session_id=request.state.session_id)
     try:
         for info in CHAOS_FLAGS:
             await manager.set_enabled(info.flag, False)
@@ -185,3 +214,6 @@ async def reset_chaos():
         return {"message": "All failure injection turned off."}
     finally:
         await manager.close()
+
+
+app.include_router(api)

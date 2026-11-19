@@ -10,22 +10,33 @@ when enabled), never a framework's workflow class or framework plugin. The start
 prefix of its chat workflow IDs (see [`frameworks.py`](frameworks.py)). The Temporal calls are in
 [`client.py`](client.py); [`main.py`](main.py) is the HTTP layer.
 
+## Browser sessions
+
+Several people can use one running API at once. On its first request, each browser gets a random session ID in an
+httpOnly cookie, `wm_session`. The API picks every chat's workflow ID itself, carrying that session:
+`<workflow_id_prefix>session-<session ID>-chat-<random>`. The endpoints that take a `workflow_id` answer 404 for a chat
+of another session. The session also scopes the chaos flags and, with `DEMO_DATA_STORE=redis` on the workers, the sample
+data: activities find it from their workflow ID ([`common/session_scope.py`](../common/session_scope.py)).
+
+All routes are under `/api`. The web UI calls them on its own origin: the React dev server proxies `/api` to the API, so
+the browser sends the cookie without any cross-origin setup. With curl, keep a session in a cookie jar (`-b`/`-c`).
+
 Operations (all parameters are query parameters)
 
 | Method | Endpoint | Parameters | Description |
 |---|---|---|---|
 | GET | `/` | | Health check |
-| GET | `/config` | | The AI framework the API serves: `framework`, `label`, `task_queue` and `workflow_id_prefix`. The web application names each chat workflow `<workflow_id_prefix><random>` |
-| POST | `/start-workflow` | `workflow_id` | Starts a chat workflow with that ID on the framework's task queue |
-| POST | `/send-prompt` | `workflow_id`, `prompt` | Sends the customer's message to the workflow (`process_user_message` signal) |
-| GET | `/get-chat-history` | `workflow_id`, `from_index` (default `0`) | Returns the conversation events (chat messages and account-opening status updates) stored in Redis, starting at `from_index` |
-| POST | `/end-chat` | `workflow_id` | Sends the `end_workflow` signal |
-| POST | `/approve-compliance` | `workflow_id` (the chat's) | Sends `compliance_approved` to the chat's running open-account workflows (IDs starting `OpenAccount-<workflow_id>-`) whose `get_current_state` is `Waiting Compliance Review`. Returns `{"approved": [<their workflow IDs>]}` |
-| GET | `/chaos` | | The chaos panel's failure-injection flags and the failures they recently caused |
-| POST | `/chaos` | `flag`, `enabled` (`true` / `false`) | Turns a flag on or off. Flags: `tool_down`, `llm_down`, `llm_rate_limited`, `custodian_rejects`, `slow_saga`, `workflow_bug` |
-| POST | `/chaos/reset` | | Turns every flag off and clears the failure log |
+| GET | `/api/config` | | The AI framework the API serves: `framework`, `label`, `task_queue` and `workflow_id_prefix` |
+| POST | `/api/start-workflow` | | Starts a chat workflow for this browser session on the framework's task queue. Returns `{"message": "Workflow started.", "workflow_id": <its ID>}` |
+| POST | `/api/send-prompt` | `workflow_id`, `prompt` | Sends the customer's message to the workflow (`process_user_message` signal) |
+| GET | `/api/get-chat-history` | `workflow_id`, `from_index` (default `0`) | Returns the conversation events (chat messages and account-opening status updates) stored in Redis, starting at `from_index` |
+| POST | `/api/end-chat` | `workflow_id` | Sends the `end_workflow` signal |
+| POST | `/api/approve-compliance` | `workflow_id` (the chat's) | Sends `compliance_approved` to the chat's running open-account workflows (IDs starting `OpenAccount-<workflow_id>-`) whose `get_current_state` is `Waiting Compliance Review`. Returns `{"approved": [<their workflow IDs>]}` |
+| GET | `/api/chaos` | | This session's failure-injection flags and the failures they recently caused |
+| POST | `/api/chaos` | `flag`, `enabled` (`true` / `false`) | Turns a flag on or off for this session. Flags: `tool_down`, `llm_down`, `llm_rate_limited`, `custodian_rejects`, `slow_saga`, `workflow_bug` |
+| POST | `/api/chaos/reset` | | Turns every flag off and clears the failure log, for this session |
 
-CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1:3000`.
+The endpoints that take a `workflow_id` answer 404 unless it is one of this session's chats.
 
 ## Prerequisites
 
@@ -37,14 +48,14 @@ CORS allows the web application at `http://localhost:3000` and `http://127.0.0.1
 
 | AI framework | Start the API with | Task queue | Chat workflow IDs |
 |---|---|---|---|
-| [OpenAI Agents SDK](../openai_agents/durable/README.md) | `./startlocalapi.sh openai_agents` | `OAI-Supervisor` | `oai-temporal-agent-<random>` |
-| [Pydantic AI](../pyai/durable/README.md) | `./startlocalapi.sh pyai` | `PYAI-Supervisor` | `pyai-temporal-agent-<random>` |
-| [Strands Agents](../strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents` | `Strands-Supervisor` | `strands-temporal-agent-<random>` |
-| [Google ADK](../google_adk/durable/README.md) | `./startlocalapi.sh google_adk` | `ADK-Supervisor` | `adk-temporal-agent-<random>` |
-| [Pure Python (LiteLLM)](../pure/durable/README.md) | `./startlocalapi.sh pure` | `Pure-Supervisor` | `pure-temporal-agent-<random>` |
-| [Vercel AI SDK (TypeScript)](../../typescript/vercel_ai/durable/README.md) | `./startlocalapi.sh vercel_ai` | `VAI-Supervisor` | `vai-temporal-agent-<random>` |
-| [Google ADK (TypeScript)](../../typescript/google_adk/durable/README.md) | `./startlocalapi.sh google_adk_ts` | `ADK-TS-Supervisor` | `adk-ts-temporal-agent-<random>` |
-| [Google ADK (Go)](../../go/google_adk/docs/temporal.md) | `./startlocalapi.sh google_adk_go` | `ADK-Go-Supervisor` | `adk-go-temporal-agent-<random>` |
+| [OpenAI Agents SDK](../openai_agents/durable/README.md) | `./startlocalapi.sh openai_agents` | `OAI-Supervisor` | `oai-temporal-agent-session-<session>-chat-<random>` |
+| [Pydantic AI](../pyai/durable/README.md) | `./startlocalapi.sh pyai` | `PYAI-Supervisor` | `pyai-temporal-agent-session-<session>-chat-<random>` |
+| [Strands Agents](../strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents` | `Strands-Supervisor` | `strands-temporal-agent-session-<session>-chat-<random>` |
+| [Google ADK](../google_adk/durable/README.md) | `./startlocalapi.sh google_adk` | `ADK-Supervisor` | `adk-temporal-agent-session-<session>-chat-<random>` |
+| [Pure Python (LiteLLM)](../pure/durable/README.md) | `./startlocalapi.sh pure` | `Pure-Supervisor` | `pure-temporal-agent-session-<session>-chat-<random>` |
+| [Vercel AI SDK (TypeScript)](../../typescript/vercel_ai/durable/README.md) | `./startlocalapi.sh vercel_ai` | `VAI-Supervisor` | `vai-temporal-agent-session-<session>-chat-<random>` |
+| [Google ADK (TypeScript)](../../typescript/google_adk/durable/README.md) | `./startlocalapi.sh google_adk_ts` | `ADK-TS-Supervisor` | `adk-ts-temporal-agent-session-<session>-chat-<random>` |
+| [Google ADK (Go)](../../go/google_adk/docs/temporal.md) | `./startlocalapi.sh google_adk_go` | `ADK-Go-Supervisor` | `adk-go-temporal-agent-session-<session>-chat-<random>` |
 
 There is no default framework: without a valid one, the scripts stop and list every framework.
 `TEMPORAL_TASK_QUEUE` and `CHAT_WORKFLOW_ID_PREFIX` override the framework's values. The API prints the
@@ -85,46 +96,47 @@ Test that the API is running:
 curl http://127.0.0.1:8000
 ```
 
-Start a workflow:
+Start a workflow. The cookie jar (`-b`/`-c`) keeps your session for the calls that follow; the response gives the
+chat's workflow ID:
 ```bash
-curl -X POST 'http://127.0.0.1:8000/start-workflow?workflow_id=<your-workflow-id>'
+curl -b /tmp/wm-cookies -c /tmp/wm-cookies -X POST 'http://127.0.0.1:8000/api/start-workflow'
 ```
 
 Send a prompt
 ```bash
-curl -X POST 'http://127.0.0.1:8000/send-prompt?workflow_id=<your-workflow-id>&prompt=Who%20are%20my%20beneficiaries%3F'
+curl -b /tmp/wm-cookies -X POST 'http://127.0.0.1:8000/api/send-prompt?workflow_id=<your-workflow-id>&prompt=Who%20are%20my%20beneficiaries%3F'
 ```
 
 Respond with a client ID
 ```bash
-curl -X POST 'http://127.0.0.1:8000/send-prompt?workflow_id=<your-workflow-id>&prompt=123'
+curl -b /tmp/wm-cookies -X POST 'http://127.0.0.1:8000/api/send-prompt?workflow_id=<your-workflow-id>&prompt=123'
 ```
 
 Ask about investment accounts
 ```bash
-curl -X POST 'http://127.0.0.1:8000/send-prompt?workflow_id=<your-workflow-id>&prompt=What%20investment%20accounts%20do%20I%20have%3F'
+curl -b /tmp/wm-cookies -X POST 'http://127.0.0.1:8000/api/send-prompt?workflow_id=<your-workflow-id>&prompt=What%20investment%20accounts%20do%20I%20have%3F'
 ```
 
 Get the chat history
 ```bash
-curl "http://127.0.0.1:8000/get-chat-history?workflow_id=<your-workflow-id>&from_index=0"
+curl -b /tmp/wm-cookies "http://127.0.0.1:8000/api/get-chat-history?workflow_id=<your-workflow-id>&from_index=0"
 ```
 
-Turn a chaos flag on, list the flags, and turn them all off
+Turn a chaos flag on, list the flags, and turn them all off (for this session)
 ```bash
-curl -X POST 'http://127.0.0.1:8000/chaos?flag=tool_down&enabled=true'
-curl http://127.0.0.1:8000/chaos
-curl -X POST http://127.0.0.1:8000/chaos/reset
+curl -b /tmp/wm-cookies -X POST 'http://127.0.0.1:8000/api/chaos?flag=tool_down&enabled=true'
+curl -b /tmp/wm-cookies http://127.0.0.1:8000/api/chaos
+curl -b /tmp/wm-cookies -X POST http://127.0.0.1:8000/api/chaos/reset
 ```
 
 Approve the compliance review of the chat's account openings that wait for it
 ```bash
-curl -X POST "http://127.0.0.1:8000/approve-compliance?workflow_id=<your-workflow-id>"
+curl -b /tmp/wm-cookies -X POST "http://127.0.0.1:8000/api/approve-compliance?workflow_id=<your-workflow-id>"
 ```
 
 End the Chat
 ```bash
-curl -X POST "http://127.0.0.1:8000/end-chat?workflow_id=<your-workflow-id>"
+curl -b /tmp/wm-cookies -X POST "http://127.0.0.1:8000/api/end-chat?workflow_id=<your-workflow-id>"
 ```
 
 ## Tests

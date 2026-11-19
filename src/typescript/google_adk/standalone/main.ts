@@ -49,8 +49,8 @@ const beneficiaryTools: BaseTool[] = [
     'add_beneficiary',
     'Add a new beneficiary for a client.',
     { client_id: str(), first_name: str(), last_name: str(), relationship: str() },
-    (b) => {
-      store.addBeneficiary(b.client_id, b.first_name, b.last_name, b.relationship);
+    async (b) => {
+      await store.addBeneficiary(b.client_id, b.first_name, b.last_name, b.relationship);
       return 'Beneficiary added.';
     },
   ),
@@ -58,8 +58,8 @@ const beneficiaryTools: BaseTool[] = [
     'delete_beneficiary',
     "Delete a client's beneficiary by its beneficiary ID.",
     { client_id: str(), beneficiary_id: str() },
-    ({ client_id, beneficiary_id }) => {
-      store.deleteBeneficiary(client_id, beneficiary_id);
+    async ({ client_id, beneficiary_id }) => {
+      await store.deleteBeneficiary(client_id, beneficiary_id);
       return 'Beneficiary deleted.';
     },
   ),
@@ -76,8 +76,8 @@ const investmentTools: BaseTool[] = [
     'close_investment',
     "Close a client's investment account by its investment ID.",
     { client_id: str(), investment_id: str() },
-    ({ client_id, investment_id }) => {
-      store.deleteInvestment(client_id, investment_id);
+    async ({ client_id, investment_id }) => {
+      await store.deleteInvestment(client_id, investment_id);
       return 'Investment account closed.';
     },
   ),

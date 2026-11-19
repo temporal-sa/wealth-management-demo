@@ -19,7 +19,7 @@ workflows keep the same Temporal contract as the other frameworks, which is what
 Its chat workflows run on the `ADK-TS-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in
 [adk_agents/config.ts](adk_agents/config.ts)), so its worker can run next to another framework's. Start the API for
 it with the `google_adk_ts` AI framework (`./startlocalapi.sh google_adk_ts`); the web app then names its chats
-`adk-ts-temporal-agent-<random>`.
+`adk-ts-temporal-agent-session-<session>-chat-<random>`.
 
 Scenarios:
 

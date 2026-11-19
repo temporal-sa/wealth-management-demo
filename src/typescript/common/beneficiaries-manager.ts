@@ -1,6 +1,6 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
+import { JsonDocument } from './data-store';
 
 const BENEFICIARIES_FILE = path.join(__dirname, '../../../data/beneficiaries.json');
 
@@ -13,45 +13,46 @@ export interface Beneficiary {
 
 type BeneficiariesData = Record<string, Beneficiary[]>;
 
+/**
+ * data/beneficiaries.json, as the current browser session sees it (data-store.ts). Every call reads
+ * the data again, because the session can differ from call to call.
+ */
 export class BeneficiariesManager {
-  private filePath: string;
-  private data: BeneficiariesData;
+  private readonly document: JsonDocument<BeneficiariesData>;
 
   constructor(filePath = BENEFICIARIES_FILE) {
-    this.filePath = filePath;
-    this.data = this.loadData();
+    this.document = new JsonDocument(filePath);
   }
 
-  private loadData(): BeneficiariesData {
-    if (fs.existsSync(this.filePath)) {
-      try {
-        const raw = fs.readFileSync(this.filePath, 'utf-8');
-        const parsed = JSON.parse(raw);
-        if (typeof parsed === 'object' && parsed !== null) return parsed;
-      } catch {
-        // fall through to empty
-      }
+  private async loadData(): Promise<BeneficiariesData> {
+    try {
+      const parsed = await this.document.load();
+      if (typeof parsed === 'object' && parsed !== null) return parsed;
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
+      // invalid JSON: fall through to empty
     }
     return {};
   }
 
-  private saveData(): void {
-    fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2));
+  private async saveData(data: BeneficiariesData): Promise<void> {
+    await this.document.save(data);
   }
 
-  listBeneficiaries(clientId: string): Beneficiary[] {
-    return this.data[clientId] ?? [];
+  async listBeneficiaries(clientId: string): Promise<Beneficiary[]> {
+    return (await this.loadData())[clientId] ?? [];
   }
 
-  addBeneficiary(
+  async addBeneficiary(
     clientId: string,
     firstName: string,
     lastName: string,
     relationship: string,
-  ): Beneficiary {
-    if (!this.data[clientId]) this.data[clientId] = [];
+  ): Promise<Beneficiary> {
+    const data = await this.loadData();
+    if (!data[clientId]) data[clientId] = [];
 
-    const existingIds = new Set(this.data[clientId].map((b) => b.beneficiary_id));
+    const existingIds = new Set(data[clientId].map((b) => b.beneficiary_id));
     let newId = `b-${randomUUID().replace(/-/g, '').slice(0, 8)}`;
     while (existingIds.has(newId)) {
       newId = `b-${randomUUID().replace(/-/g, '').slice(0, 8)}`;
@@ -63,20 +64,19 @@ export class BeneficiariesManager {
       last_name: lastName,
       relationship,
     };
-    this.data[clientId].push(beneficiary);
-    this.saveData();
+    data[clientId].push(beneficiary);
+    await this.saveData(data);
     return beneficiary;
   }
 
-  deleteBeneficiary(clientId: string, beneficiaryId: string): boolean {
-    if (!this.data[clientId]) return false;
-    const before = this.data[clientId].length;
-    this.data[clientId] = this.data[clientId].filter(
-      (b) => b.beneficiary_id !== beneficiaryId,
-    );
-    if (this.data[clientId].length < before) {
-      if (this.data[clientId].length === 0) delete this.data[clientId];
-      this.saveData();
+  async deleteBeneficiary(clientId: string, beneficiaryId: string): Promise<boolean> {
+    const data = await this.loadData();
+    if (!data[clientId]) return false;
+    const before = data[clientId].length;
+    data[clientId] = data[clientId].filter((b) => b.beneficiary_id !== beneficiaryId);
+    if (data[clientId].length < before) {
+      if (data[clientId].length === 0) delete data[clientId];
+      await this.saveData(data);
       return true;
     }
     return false;

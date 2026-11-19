@@ -160,7 +160,7 @@ func newChatEnv(t *testing.T, m model.LLM) *chatEnv {
 	// The chat-side open-account activities reach the child through the Temporal client,
 	// which the test environment doesn't have: stand in for them.
 	env.RegisterActivityWithOptions(func(ctx context.Context, workflowID string) (domain.WealthManagementClient, error) {
-		c, err := ce.store.GetClient("123")
+		c, err := ce.store.GetClient(context.Background(), "123")
 		return *c, err
 	}, activity.RegisterOptions{Name: activities.GetCurrentClientInfo})
 	env.RegisterActivityWithOptions(func(ctx context.Context, workflowID string) error {

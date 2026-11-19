@@ -44,9 +44,14 @@ func main() {
 	rdb := redisx.NewClient()
 	defer rdb.Close()
 	chaosFlags := chaos.NewManager(rdb)
+	store := data.NewStore(dataDir)
+	if data.UseRedis() {
+		store = data.NewRedisStore(dataDir, rdb)
+		log.Printf("Sample data: one copy per browser session in Redis (%s), starting from %s", redisx.Addr(), dataDir)
+	}
 
 	acts := &activities.Activities{
-		Data:   data.NewStore(dataDir),
+		Data:   store,
 		Chaos:  chaosFlags,
 		Events: eventstream.NewRedis(rdb),
 		Client: c,

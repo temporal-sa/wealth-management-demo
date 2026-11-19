@@ -19,6 +19,7 @@ import (
 	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/config"
 	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/standalone"
 	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/redisx"
 )
 
 func main() {
@@ -36,7 +37,14 @@ func main() {
 	if err != nil {
 		log.Fatalln("Unable to create the Gemini model:", err)
 	}
-	root, err := standalone.Build(m, data.NewStore(dataDir))
+	store := data.NewStore(dataDir)
+	if data.UseRedis() {
+		// The CLI isn't a browser session: it uses the default session's copy of the data.
+		rdb := redisx.NewClient()
+		defer rdb.Close()
+		store = data.NewRedisStore(dataDir, rdb)
+	}
+	root, err := standalone.Build(m, store)
 	if err != nil {
 		log.Fatalln(err)
 	}

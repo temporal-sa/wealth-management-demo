@@ -16,7 +16,7 @@ the [Java worker](../../../interop/open_account/java/README.md), `scripts/` and 
 
 Its chat workflows run on the `Pure-Supervisor` task queue by default (`DEFAULT_TASK_QUEUE` in
 `durable/task_queues.py`), so its worker can run next to another framework's. Start the API for it with
-`./startlocalapi.sh pure`; the web app then names its chats `pure-temporal-agent-<random>`.
+`./startlocalapi.sh pure`; the web app then names its chats `pure-temporal-agent-session-<session>-chat-<random>`.
 
 The demo is implemented twice:
 

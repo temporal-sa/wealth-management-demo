@@ -1,7 +1,8 @@
 /**
- * Failure injection for the chaos panel. The flags live in Redis (chaos:flags) and are read on every
- * activity attempt, so a failure is switched on and off at runtime with no restart. These helpers do
- * I/O, so they run only in activities (the model activity included), never in workflow code.
+ * Failure injection for the chaos panel. The flags live in Redis (chaos:<session>:flags, the session
+ * found from the running activity's workflow ID) and are read on every activity attempt, so a failure
+ * is switched on and off at runtime with no restart. These helpers do I/O, so they run only in
+ * activities (the model activity included), never in workflow code.
  */
 import { Context } from '@temporalio/activity';
 import { ChaosEvent, ChaosFlag, ChaosManager } from '../../common/chaos-manager';

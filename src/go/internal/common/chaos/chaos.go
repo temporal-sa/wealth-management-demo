@@ -1,10 +1,15 @@
 // Package chaos is the demo's failure injection, driven by the flags in the web UI's chaos
 // panel.
 //
-// The flags live in the Redis hash chaos:flags and are read on every activity attempt
-// (including every model call), so a failure is switched on and off at runtime with no
-// restart. If Redis can't be reached, every flag reads as off. Each injected failure is
-// logged to the Redis list chaos:events (the last 50) for the panel to show.
+// The flags live in the Redis hash chaos:<session>:flags and are read on every activity
+// attempt (including every model call), so a failure is switched on and off at runtime with no
+// restart. If Redis can't be reached, every flag reads as off. Each injected failure is logged
+// to the Redis list chaos:<session>:events (the last 50) for the panel to show.
+//
+// Each browser session has its own flags and log (package session), expiring a day after their
+// last change. In an activity, the session comes from the running workflow's ID, so a flag only
+// affects the chats of the browser that turned it on. Outside an activity it is the default
+// session, unless the Manager was given one (ForSession).
 //
 // It is called from inside activities only, never from workflow code: reading Redis is
 // non-deterministic I/O.
@@ -19,6 +24,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"go.temporal.io/sdk/activity"
+
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/session"
 )
 
 // Flag is one failure-injection switch.
@@ -69,9 +76,13 @@ func IsKnown(f Flag) bool {
 	return false
 }
 
+// FlagsKey is the Redis hash of a session's flags (field = flag name, value "1" when on).
+func FlagsKey(sessionID string) string { return "chaos:" + sessionID + ":flags" }
+
+// EventsKey is the Redis list of a session's injected failures, newest first.
+func EventsKey(sessionID string) string { return "chaos:" + sessionID + ":events" }
+
 const (
-	flagsKey  = "chaos:flags"
-	eventsKey = "chaos:events"
 	maxEvents = 50
 
 	// SlowSagaDelay is how long each saga step sleeps while SlowSaga is on.
@@ -94,18 +105,32 @@ type Source interface {
 	RecordEvent(ctx context.Context, e Event)
 }
 
-// Manager stores the flags and the failure log in Redis.
+// Manager stores the flags and the failure log in Redis, per session.
 type Manager struct {
-	rdb *redis.Client
+	rdb       *redis.Client
+	sessionID string // "" means the session of the running activity (session.Current)
 }
 
-// NewManager returns a Manager using the given Redis client.
+// NewManager returns a Manager using the given Redis client. It uses the session of the
+// activity whose ctx each call is given, or the default session outside an activity.
 func NewManager(rdb *redis.Client) *Manager { return &Manager{rdb: rdb} }
+
+// ForSession returns a Manager for one given session, whatever ctx each call is given.
+func (m *Manager) ForSession(sessionID string) *Manager {
+	return &Manager{rdb: m.rdb, sessionID: sessionID}
+}
+
+func (m *Manager) session(ctx context.Context) string {
+	if m.sessionID != "" {
+		return m.sessionID
+	}
+	return session.Current(ctx)
+}
 
 // IsEnabled reports whether a flag is on. It fails open: if Redis can't be reached,
 // the flag is off rather than breaking the demo.
 func (m *Manager) IsEnabled(ctx context.Context, f Flag) bool {
-	v, err := m.rdb.HGet(ctx, flagsKey, string(f)).Result()
+	v, err := m.rdb.HGet(ctx, FlagsKey(m.session(ctx)), string(f)).Result()
 	if err != nil {
 		if !errors.Is(err, redis.Nil) {
 			slog.Warn("could not read chaos flag", "flag", f, "error", err)
@@ -115,17 +140,21 @@ func (m *Manager) IsEnabled(ctx context.Context, f Flag) bool {
 	return v == "1"
 }
 
-// SetEnabled turns a flag on or off.
+// SetEnabled turns a flag on or off. Turning one on restarts the session's flags' 24-hour expiry.
 func (m *Manager) SetEnabled(ctx context.Context, f Flag, enabled bool) error {
-	if enabled {
-		return m.rdb.HSet(ctx, flagsKey, string(f), "1").Err()
+	key := FlagsKey(m.session(ctx))
+	if !enabled {
+		return m.rdb.HDel(ctx, key, string(f)).Err()
 	}
-	return m.rdb.HDel(ctx, flagsKey, string(f)).Err()
+	if err := m.rdb.HSet(ctx, key, string(f), "1").Err(); err != nil {
+		return err
+	}
+	return m.rdb.Expire(ctx, key, session.TTL).Err()
 }
 
 // GetFlags returns whether each flag is on.
 func (m *Manager) GetFlags(ctx context.Context) (map[Flag]bool, error) {
-	all, err := m.rdb.HGetAll(ctx, flagsKey).Result()
+	all, err := m.rdb.HGetAll(ctx, FlagsKey(m.session(ctx))).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -136,12 +165,15 @@ func (m *Manager) GetFlags(ctx context.Context) (map[Flag]bool, error) {
 	return out, nil
 }
 
-// RecordEvent logs an injected failure for the chaos panel, keeping the last 50.
+// RecordEvent logs an injected failure for the chaos panel, keeping the last 50, and restarts
+// the session's log's 24-hour expiry.
 func (m *Manager) RecordEvent(ctx context.Context, e Event) {
 	b, _ := json.Marshal(e)
+	key := EventsKey(m.session(ctx))
 	pipe := m.rdb.TxPipeline()
-	pipe.LPush(ctx, eventsKey, b)
-	pipe.LTrim(ctx, eventsKey, 0, maxEvents-1)
+	pipe.LPush(ctx, key, b)
+	pipe.LTrim(ctx, key, 0, maxEvents-1)
+	pipe.Expire(ctx, key, session.TTL)
 	if _, err := pipe.Exec(ctx); err != nil {
 		slog.Warn("could not record chaos event", "error", err)
 	}
@@ -149,7 +181,7 @@ func (m *Manager) RecordEvent(ctx context.Context, e Event) {
 
 // GetEvents returns the most recent injected failures, newest first.
 func (m *Manager) GetEvents(ctx context.Context, limit int64) ([]Event, error) {
-	raw, err := m.rdb.LRange(ctx, eventsKey, 0, limit-1).Result()
+	raw, err := m.rdb.LRange(ctx, EventsKey(m.session(ctx)), 0, limit-1).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +197,7 @@ func (m *Manager) GetEvents(ctx context.Context, limit int64) ([]Event, error) {
 
 // ClearEvents empties the failure log.
 func (m *Manager) ClearEvents(ctx context.Context) error {
-	return m.rdb.Del(ctx, eventsKey).Err()
+	return m.rdb.Del(ctx, EventsKey(m.session(ctx))).Err()
 }
 
 // Off is a Source with every flag off. The live tests use it.

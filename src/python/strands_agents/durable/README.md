@@ -19,7 +19,7 @@ Setup (Python, dependencies and the Gemini key in `scripts/setgeminikey.sh`) is 
 
 - **Web UI and API.** The customer chats in the shared web UI ([frontend/](../../../../frontend/README.md)).
   It calls the shared [API](../../api/README.md), started with the argument `strands_agents`, which starts
-  chat workflows named `strands-temporal-agent-<random>` and sends them the customer's messages as signals.
+  chat workflows named `strands-temporal-agent-session-<session>-chat-<random>` and sends them the customer's messages as signals.
 - **Chat workflow** (`WealthManagementWorkflow`, `workflows/supervisor_workflow.py`). A supervisor
   `TemporalAgent` delegates each request to specialist agents exposed to it as tools (see
   [How the agents work](#how-the-agents-work)). The `StrandsPlugin` runs every model call as an activity on
@@ -261,8 +261,8 @@ Click **Chaos** in the chat header to open the chaos panel. Its switches inject 
 activities and the model read the flags from Redis on every attempt, so you can turn a failure on and off
 mid-conversation without restarting anything. The panel lists each injected failure as it happens. Open
 the [Temporal UI](http://localhost:8233) alongside it to show the pending activity, its attempt count and
-the last failure. **Reset all** turns every flag off. The flags are shared by every framework using the same
-Redis.
+the last failure. **Reset all** turns every flag off. Flags belong to your browser session: they fail only that browser's chats, in any framework (see
+[Sharing one demo](../../../../README.md#sharing-one-demo)).
 
 | Scenario | How to show it | What Temporal does |
 |---|---|---|
@@ -383,6 +383,7 @@ For the Java open-account worker, start the worker with `startcloudworker.sh jav
 | `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Most model calls per second dispatched from the LLM queue, across all workers |
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, chaos flags and claim check payloads |
+| `DEMO_DATA_STORE` | `file` | Where the sample data (`data/*.json`) lives: `file` uses the files themselves; `redis` gives each browser session its own copy in Redis (`data:<session>:<name>`, starting from the files, expiring a day after its last change), for a shared demo |
 | `USE_CLAIM_CHECK` | `false` | `true` turns on the claim check codec (`scripts/setclaimcheck.sh`) |
 | `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 

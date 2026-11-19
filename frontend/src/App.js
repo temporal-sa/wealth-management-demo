@@ -4,12 +4,8 @@ import './App.css';
 import { API_BASE_URL } from './config';
 import ChaosPanel from './ChaosPanel';
 
-// Used if the API doesn't report its AI framework's prefix (an API without GET /config).
-const DEFAULT_WORKFLOW_ID_PREFIX = 'oai-temporal-agent-';
-
-// The API's GET /config: the AI framework it serves (label, e.g. "Pydantic AI") and that
-// framework's chat workflow ID prefix (e.g. pyai-temporal-agent-), so each workflow ID names
-// the SDK that runs it. Empty if the API can't be reached or has no /config.
+// The API's GET /api/config: the AI framework it serves (label, e.g. "Pydantic AI"), for the
+// header. Empty if the API can't be reached.
 async function fetchConfig() {
   try {
     const response = await fetch(`${API_BASE_URL}/config`);
@@ -113,23 +109,21 @@ function App() {
   const handleStartChat = async () => {
     try {
       let response;
-      const newSessionId = Math.random().toString(36).substring(2, 15);
       const config = await fetchConfig();
       setFrameworkLabel(config.label || '');
-      const newWorkflowId = (config.workflow_id_prefix || DEFAULT_WORKFLOW_ID_PREFIX) + newSessionId;
-      console.log(`Getting ready to start workflow with id ${newWorkflowId}`);
-      response = await fetch(`${API_BASE_URL}/start-workflow?workflow_id=${newWorkflowId}`, { method: 'POST' });
+      // The API picks the chat's workflow ID, in this browser's session, and returns it
+      response = await fetch(`${API_BASE_URL}/start-workflow`, { method: 'POST' });
       if (response.ok) {
         const result = await response.json();
 
         // check to see if it has truly been started
-        if (result.message === 'Workflow started.') {
-          console.log('Workflow has been started.');
-          setWorkflowId(newWorkflowId);
+        if (result.message === 'Workflow started.' && result.workflow_id) {
+          console.log(`Workflow ${result.workflow_id} has been started.`);
+          setWorkflowId(result.workflow_id);
           setMessages([{text: defaultHeaderText, type: 'bot'}]);
           setIsChatActive(true);
           eventCountRef.current = 0;
-          setSessionId(newSessionId);
+          setSessionId(result.workflow_id);
           setIsPolling(true); // Start polling immediately when chat becomes active
           setIsWaitingForAIResponse(false); // Start with slower polling until user sends a message
         } else {

@@ -5,6 +5,8 @@ from dataclasses import dataclass
 import uuid
 import argparse
 
+from common.data_store import JsonDocument
+
 script_dir = os.path.dirname(__file__)
 relative_path = '../../../data/investments.json'
 INVESTMENTS_FILE =  os.path.join(script_dir, relative_path)
@@ -18,28 +20,26 @@ class InvestmentAccount:
 class InvestmentManager:
     def __init__(self, json_file=INVESTMENTS_FILE):
         self.json_file = json_file
+        self._document = JsonDocument(json_file)
         self._load_data()
 
     def _load_data(self):
         """Loads investment client data from the JSON file."""
-        if os.path.exists(self.json_file):
-            with open(self.json_file, 'r') as f:
-                try:
-                    self.data = json.load(f)
-                    # Ensure the top level is a dictionary
-                    if not isinstance(self.data, dict):
-                        print(f"Warning: JSON file '{self.json_file}' has an invalid root structure. Re-initializing.")
-                        self.data = {}
-                except json.JSONDecodeError:
-                    print(f"Warning: JSON file '{self.json_file}' is corrupted or empty. Initializing with empty data.")
-                    self.data = {}
-        else:
+        try:
+            self.data = self._document.load()
+        except json.JSONDecodeError:
+            print(f"Warning: JSON file '{self.json_file}' is corrupted or empty. Initializing with empty data.")
+            self.data = {}
+        if self.data is None:
+            self.data = {}
+        elif not isinstance(self.data, dict):
+            # Ensure the top level is a dictionary
+            print(f"Warning: JSON file '{self.json_file}' has an invalid root structure. Re-initializing.")
             self.data = {}
 
     def _save_data(self):
         """Saves current investment client data to the JSON file."""
-        with open(self.json_file, 'w') as f:
-            json.dump(self.data, f, indent=2)
+        self._document.save(self.data, indent=2)
 
     def list_investment_accounts(self, client_id):
         """

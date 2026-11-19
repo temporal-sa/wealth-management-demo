@@ -14,7 +14,6 @@ import { markModelFailureHandled, TemporalModel } from '@temporalio/google-adk/w
 import {
   ActivityFailure,
   ApplicationFailure,
-  condition,
   defineQuery,
   defineSignal,
   log,
@@ -29,7 +28,7 @@ import { CHAT_IDLE_TIMEOUT, waitForCustomer } from '../../../common/chat-idle';
 import { INVEST_INSTRUCTIONS } from '../../prompts/agent-constants';
 import { buildAgentTree } from '../../adk_agents/agents';
 import type { WorkerConfig } from '../../adk_agents/config';
-import { CLIENT_FIELDS, type WealthManagementClient } from '../../adk_agents/data-store';
+import { CLIENT_FIELDS, type WealthManagementClient } from '../../adk_agents/client-record';
 import type { Activities } from '../activities';
 import { LLM_RETRY_POLICY, MODEL_TIMEOUT, TOOL_RETRY_POLICY, TOOL_TIMEOUT } from '../retry-policies';
 import {

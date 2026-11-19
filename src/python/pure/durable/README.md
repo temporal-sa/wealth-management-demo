@@ -18,7 +18,7 @@ dependencies and the model key are in the [framework README](../README.md).
 
 * **The web UI and the API.** The web UI ([frontend/](../../../../frontend/README.md)) talks to the shared
   [API](../../../python/api/README.md), started with the `pure` AI framework. The API starts a chat workflow
-  per conversation (IDs `pure-temporal-agent-<random>`), sends it the customer's messages, and serves the
+  per conversation (IDs `pure-temporal-agent-session-<session>-chat-<random>`), sends it the customer's messages, and serves the
   conversation from Redis.
 * **The chat workflow** `WealthManagementWorkflow` runs for the whole conversation and runs the agent loop.
   Customer messages arrive as the `process_user_message` signal and are processed one at a time. Every
@@ -241,9 +241,10 @@ the Java worker's `startcloudworker.sh`.
 ## Failure scenarios (chaos panel)
 
 Click **Chaos** in the web UI's chat header to open the chaos panel. Activities and the model call read
-the flags from the Redis hash `chaos:flags` on every attempt, so you can turn a failure on and off
+the flags from the Redis hash `chaos:<session>:flags` (your browser session's, found from the workflow ID;
+see `common/session_scope.py`) on every attempt, so you can turn a failure on and off
 mid-conversation with no restart. If Redis can't be reached, the flags read as off. Each injected failure
-is logged to `chaos:events` and listed in the panel.
+is logged to `chaos:<session>:events` and listed in the panel.
 
 | Scenario | How to show it | What Temporal does |
 |---|---|---|
@@ -376,6 +377,7 @@ Temporal Cloud.
 | `LLM_MAX_CALLS_PER_SECOND` | unlimited | Dispatch rate limit for model calls, across all workers |
 | `REDIS_URL` | none | `redis://:<password>@<host>:<port>/<db>`; wins over the three below |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | `localhost`, `6379`, none | Redis for the event stream, the chaos flags and claim check |
+| `DEMO_DATA_STORE` | `file` | Where the sample data (`data/*.json`) lives: `file` uses the files themselves; `redis` gives each browser session its own copy in Redis (`data:<session>:<name>`, starting from the files, expiring a day after its last change), for a shared demo |
 | `USE_CLAIM_CHECK` | `false` | Store payloads in Redis and send Temporal only their IDs (`scripts/setclaimcheck.sh`) |
 | `CLAIM_CHECK_TTL_SECONDS` | `604800` (7 days) | How long Redis keeps claim-checked payloads; `0` keeps them forever. A workflow needs its payloads to replay, and the Temporal UI to show its history, so keep it well beyond how long a chat runs |
 | `LIVE_TEST_RUNS` / `LIVE_TURN_TIMEOUT` | `1` / `300` | Live tests: conversations to run, and seconds to wait for each reply |

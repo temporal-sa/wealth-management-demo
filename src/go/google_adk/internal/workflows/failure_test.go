@@ -65,7 +65,7 @@ func vacation(amount float64) domain.OpenInvestmentAccountInput {
 
 func findAccount(t *testing.T, store *data.Store, name string) *domain.InvestmentRecord {
 	t.Helper()
-	list, err := store.ListInvestments("123")
+	list, err := store.ListInvestments(context.Background(), "123")
 	require.NoError(t, err)
 	for _, r := range list {
 		if r.Name == name {
@@ -83,7 +83,7 @@ func TestSagaSuccess(t *testing.T) {
 	acct := findAccount(t, store, "Vacation")
 	require.NotNil(t, acct)
 	assert.Equal(t, 13000.0, acct.Balance)
-	tr, err := store.Credit("123", 0, "probe") // reads the balance without changing it
+	tr, err := store.Credit(context.Background(), "123", 0, "probe") // reads the balance without changing it
 	require.NoError(t, err)
 	assert.Equal(t, 237000.0, tr.BalanceAfter)
 }
@@ -97,7 +97,7 @@ func TestSagaRollbackCustodianRejects(t *testing.T) {
 	assert.Equal(t, "The account was not opened: The custodian rejected the account registration", out.Message)
 	assert.Equal(t, "Rolled back. The account was not opened: The custodian rejected the account registration.", states[len(states)-1])
 	assert.Nil(t, findAccount(t, store, "Vacation"), "the account record is removed")
-	tr, err := store.Credit("123", 0, "probe")
+	tr, err := store.Credit(context.Background(), "123", 0, "probe")
 	require.NoError(t, err)
 	assert.Equal(t, 250000.0, tr.BalanceAfter, "the deposit is refunded")
 	assert.Equal(t, 1, src.count(chaos.CustodianRejects))

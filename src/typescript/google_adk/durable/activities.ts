@@ -128,7 +128,7 @@ export function createActivities(deps: ActivityDeps) {
       log.info('open_investment', { ...new_account });
       await maybeSlowDown();
       await coreBankingApi();
-      const record = store.addInvestment(new_account);
+      const record = await store.addInvestment(new_account);
       if (!record) {
         throw ApplicationFailure.nonRetryable(
           `Invalid opening balance ${formatUsd(new_account.balance)}`,
@@ -146,7 +146,7 @@ export function createActivities(deps: ActivityDeps) {
       log.info('remove_investment', { client_id, investment_id });
       await maybeSlowDown();
       await coreBankingApi();
-      store.deleteInvestment(client_id, investment_id);
+      await store.deleteInvestment(client_id, investment_id);
       return true;
     },
 
@@ -173,7 +173,7 @@ export function createActivities(deps: ActivityDeps) {
       log.info('debit_linked_account', { client_id, amount, transfer_id });
       await maybeSlowDown();
       try {
-        return store.debit(client_id, amount, transfer_id);
+        return await store.debit(client_id, amount, transfer_id);
       } catch (err) {
         if (err instanceof InsufficientFundsError) {
           // A business-rule failure: retrying won't make the money appear
