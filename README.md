@@ -109,7 +109,10 @@ run on `<queue>-open-account`.
   - *Still to decide:* multi-user (a session cookie issued by the API, chat workflow IDs picked by the API, chaos
     flags and sample data per browser session in Redis), and deployment (a Docker build, claim check payloads in S3,
     and a `/codec` endpoint on the API).
-- **Java worker:** the Pure Python repo's copy of the Java worker (temporal-sa/pure-wealth-management at 8470bdc) has things the shared one in `interop/open_account/java` doesn't: a Temporal Cloud API-key profile (`application-tc-apikey.yaml`, chosen by `startcloudworker.sh` when `TEMPORAL_API_KEY` is set) and unit tests for the claim check codec. The import kept the shared worker. Decide whether to bring those into it.
+- **Java worker:** brought in from the Pure Python repo's copy of the Java worker (temporal-sa/pure-wealth-management
+  at 8470bdc): a Temporal Cloud API-key profile (`application-tc-apikey.yaml`, chosen by `startcloudworker.sh` when
+  `TEMPORAL_API_KEY` is set), unit tests for the claim check codec (with a clear error for a missing payload, and no
+  payload contents in the log), `TEMPORAL_ADDRESS` and `TEMPORAL_NAMESPACE` in the local profile, and startup log lines.
 - **One UI for every framework:** the plan is one web app where the user picks the AI framework. The task queue names
   already support it; the notes for when that work starts:
   - *Queue names are a contract.* The API's list in `src/python/api/frameworks.py` is the only thing that maps a
