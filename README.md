@@ -106,9 +106,11 @@ run on `<queue>-open-account`.
     after 7 days (`CLAIM_CHECK_TTL_SECONDS`).
   - *Left as is, by choice:* the "Bug in workflow code" chaos switch healing paused openings when turned off.
     Fixing the code and restarting the worker stays the point of that scenario.
-  - *Still to decide:* multi-user (a session cookie issued by the API, chat workflow IDs picked by the API, chaos
-    flags and sample data per browser session in Redis), and deployment (a Docker build, claim check payloads in S3,
-    and a `/codec` endpoint on the API).
+  - *Also brought in, multi-user:* the API gives each browser a session cookie and picks chat workflow IDs that carry
+    it (its routes are under `/api`, proxied by the web UI's dev server), chaos flags are per browser session, and
+    `DEMO_DATA_STORE=redis` gives each session its own copy of the sample data. See the
+    [API's Browser sessions](src/python/api/README.md#browser-sessions).
+  - *Still to decide:* deployment (a Docker build, claim check payloads in S3, and a `/codec` endpoint on the API).
 - **Java worker:** brought in from the Pure Python repo's copy of the Java worker (temporal-sa/pure-wealth-management
   at 8470bdc): a Temporal Cloud API-key profile (`application-tc-apikey.yaml`, chosen by `startcloudworker.sh` when
   `TEMPORAL_API_KEY` is set), unit tests for the claim check codec (with a clear error for a missing payload, and no
@@ -126,7 +128,7 @@ run on `<queue>-open-account`.
     predictable names, the API can ask Temporal whether `<queue>` and `<queue>-llm` have pollers and list only those.
   - *One Java worker could serve every framework.* It would poll every `<queue>-open-account` and call the activities on
     the queue name without `-open-account`, instead of running one Java worker per framework.
-  - *Other shared state.* The chaos flags are global in Redis (`chaos:flags`), so a flag affects every framework at
-    once, and every framework reads and writes the same `data/*.json`, so openings from different frameworks at the same
-    time can overwrite each other's changes (see Hosting: per-session data in Redis would fix both).
+  - *Other shared state.* Chaos flags are per browser session, so a flag affects that browser's chats in every
+    framework. By default every framework reads and writes the same `data/*.json`, so openings from different frameworks
+    at the same time can overwrite each other's changes; `DEMO_DATA_STORE=redis` gives each browser session its own copy.
 - **History:** import each repo the way the first two were: on a branch, `git mv` its files into place in rename-only commits, remove the files the monorepo already shares, then merge with `--allow-unrelated-histories`. The frameworks started from the same layout, so `git log --follow` on a moved file can show commits from more than one framework; `git log <path-in-the-original-repo>` on the import's second parent shows one framework's history.

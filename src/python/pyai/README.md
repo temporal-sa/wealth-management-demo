@@ -22,7 +22,7 @@ This framework was imported from [temporal-sa/pyai-wealth-management](https://gi
 | `prompts/` | The agents' instructions |
 | `tests/` | The framework's tests |
 
-Its chat workflows run on the `PYAI-Supervisor` task queue by default, so its worker can run next to another framework's. Start the API with `./startlocalapi.sh pyai`, which uses that queue and names each chat workflow `pyai-temporal-agent-<random>`, and the Java worker with `TEMPORAL_TASK_QUEUE=PYAI-Supervisor`.
+Its chat workflows run on the `PYAI-Supervisor` task queue by default, so its worker can run next to another framework's. Start the API with `./startlocalapi.sh pyai`, which uses that queue and names each chat workflow `pyai-temporal-agent-session-<session>-chat-<random>`, and the Java worker with `TEMPORAL_TASK_QUEUE=PYAI-Supervisor`.
 
 Scenarios currently implemented include:
 * Add Beneficiary - add a new beneficiary to your account
