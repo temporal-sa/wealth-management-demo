@@ -5,7 +5,7 @@ the workflow with Temporal's [Go integration for Google ADK](https://docs.tempor
 (`go.temporal.io/googleadk`), so every model call and every tool that does I/O is a durable activity.
 Each account opening is a child workflow, `OpenInvestmentAccountWorkflow`.
 
-![Web UI](../../../../docs/images/webui.png)
+![Web UI](../../../../docs/images/google_adk_go/webui.png)
 
 ## Architecture
 

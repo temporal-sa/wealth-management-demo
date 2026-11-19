@@ -88,7 +88,7 @@ Watch the workflows in the Temporal UI at http://localhost:8233.
 
 After the customer confirms their details, the opening waits for compliance review:
 
-![Waiting for compliance review](../../../../docs/images/vercel_ai/ux-waiting-compliance-review.png)
+![Waiting for compliance review](../../../../docs/images/google_adk_ts/ux-waiting-compliance-review.png)
 
 Find the opening's workflow ID in the Temporal UI, or list the openings:
 

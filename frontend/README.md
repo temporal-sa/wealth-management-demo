@@ -82,6 +82,8 @@ npm test
 
 ## Example
 
-Here's an example screenshot of the web application running:
+Here's the web application running against the Pydantic AI port, with the chaos panel open. The header
+shows the AI framework the API serves (from its `GET /config`), and **Chaos** opens or hides the chaos panel,
+which turns failures on and off while you chat:
 
 ![](../docs/images/webui.png)
