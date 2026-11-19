@@ -73,7 +73,7 @@ cd src/python/api
 ```
 
 #### Connect to Temporal Cloud
-Be sure to have created scripts/setcloudenv.sh. See the [Temporal README](../openai_agents/durable/README.md#running-the-demo-in-temporal-cloud) for more details.
+Be sure to have created scripts/setcloudenv.sh. See the [Temporal README](../openai_agents/durable/README.md#running-on-temporal-cloud) for more details.
 ```bash
 cd src/python/api
 ./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk, pure, vercel_ai, google_adk_ts, google_adk_go

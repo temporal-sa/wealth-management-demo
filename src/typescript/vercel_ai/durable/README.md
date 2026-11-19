@@ -1,541 +1,474 @@
-# Vercel AI SDK port: Temporal version
+# Vercel AI SDK (TypeScript): Temporal version
 
-Demonstrates how to use [Vercel AI SDK](https://ai-sdk.dev/) with [Temporal](https://temporal.io/).
-It runs the agent loop inside a Temporal Workflow as a durable, replayable, long-running conversation,
-with each model call and tool call running as an Activity. It uses tools to hand off to other agents.
+In this version the agents run inside a Temporal workflow as a durable, replayable, long-running
+conversation, and every model call and tool call is durable. A worker crash, a model outage or a tool
+outage pauses the conversation instead of losing it, and Temporal resumes the turn where it stopped.
 
-Scenarios currently implemented include
-* Add Beneficiary - add a new beneficiary to your account
-* List Beneficiaries - shows a list of beneficiaries and their relationship to the account owner
-* Delete Beneficiary - delete a beneficiary from your account
-* Open Investment Account - opens a new investment account using a **Child Workflow**, which can optionally
-  run in [Java](../../../../interop/open_account/java/README.md). It waits for KYC and compliance approval, and opening is a saga: if a
-  step fails, the steps already done are undone. See
-  [How the Open Account functionality works](#how-the-open-account-functionality-works).
-* List Investments - shows a list of accounts and their current balances
-* Close Investment Account - closes an investment account
-* Off-topic questions - questions that are not about beneficiaries or investment accounts are politely
-  declined by the supervisor agent (this is handled in the agents' prompts)
+The agents are built with the [Vercel AI SDK](https://ai-sdk.dev/) (AI SDK v7, `generateText` with tools)
+and hand off to each other with tools. Temporal's AI SDK integration,
+[`@temporalio/vercel-ai-sdk`](https://www.npmjs.com/package/@temporalio/vercel-ai-sdk) (with the Temporal
+TypeScript SDK 1.26), runs each model call as an activity. The model is Gemini (`gemini-2.5-pro`).
+Prerequisites, installing the dependencies and the Gemini key are in the [port README](../README.md).
 
-The Temporal version also has a **Chaos Panel** that injects failures at runtime (API and LLM outages,
-rate limits, a saga rollback, a bug in workflow code) to show how Temporal handles them. See
-[Failure scenarios](#failure-scenarios-chaos-panel).
+![Web UI](../../../../docs/images/vercel_ai/ux-waiting-compliance-review.png)
 
-## Application Architecture
+## Architecture
 
-The overall application architecture looks like this:
+![Architecture](../../../../docs/images/vercel_ai/application-architecture.png)
 
-![](../../../../docs/images/vercel_ai/application-architecture.png)
+* **The web UI and the API.** The web UI ([frontend/](../../../../frontend/README.md)) talks to the shared
+  [API](../../../python/api/README.md), written in Python and started with the `vercel_ai` AI framework.
+  The API starts a chat workflow per conversation (IDs `vai-temporal-agent-<random>`), sends it the
+  customer's messages, and serves the conversation from Redis. This port's workflows keep the same
+  Temporal contracts as the Python ports, which is what lets the Python API serve them.
+* **The chat workflow** `WealthManagementWorkflow`
+  ([workflows/wealth-management.ts](workflows/wealth-management.ts)) runs for the whole conversation.
+  Customer messages arrive as the `process_user_message` signal and are processed one at a time by the
+  agent loop ([workflows/agent-loop.ts](workflows/agent-loop.ts)), which runs in workflow code. Each
+  `generateText` model call becomes an activity through the `TemporalProvider`, and every tool that
+  touches a system calls an activity. After each turn, the reply is appended to the Redis list
+  `events:<workflow ID>`.
+* **The open-account workflow** `OpenInvestmentAccountWorkflow`
+  ([workflows/open-account.ts](workflows/open-account.ts)) is a child workflow, one per account opening:
+  KYC, compliance approval, then a saga. It reports each state change to the chat workflow with the
+  `update_account_opening_state` signal.
+* **The worker** ([worker.ts](worker.ts)) runs two workers on one connection: the workflows and tool
+  activities on `VAI-Supervisor`, and the model activities on `VAI-Supervisor-llm`, so model calls can be
+  rate limited apart from the tools. Both get the `AiSdkPlugin`, which registers the model activities.
+* **Redis** holds the chat's event stream that the web UI reads (through the API), the chaos flags, and,
+  optionally, the claim check payloads.
 
-There is a React UX ([frontend/](../../../../frontend/README.md), shared by every port) which is where the customer
-interacts with the application. The React UX leverages an API which exposes endpoints to start a workflow, send a
-prompt, retrieve the chat history, end the chat, and set the chaos flags. It is the
-[API](../../../python/api/README.md) every port shares, written in Python: it starts this port's chat workflows
-with `vercel_ai` as its AI framework.
-The React frontend uses adaptive polling
-to retrieve new events from Redis, providing real-time status updates as the Open Account
-child workflow progresses through the different steps.
+### How the agents work
 
-The API in turn, communicates with Temporal to start workflows and send signals. Finally,
-the worker contains the two workflows - supervisor and open account - which contain the
-agents and business logic that drive the agentic application.
+| Agent | Tools | Hands off to |
+|---|---|---|
+| Supervisor Agent | none | Beneficiary Agent, Investment Agent |
+| Beneficiary Agent | `list_beneficiaries`, `add_beneficiary`, `delete_beneficiary` | Supervisor Agent |
+| Investment Agent | `list_investments`, `close_investment` | Supervisor Agent, Open Account Agent |
+| Open Account Agent | `open_new_investment_account`, `get_current_client_info`, `update_client_details`, `approve_kyc`, `get_account_opening_status` | Investment Agent |
 
-## Prerequisites
+* Each agent is instructions ([prompts/agent-constants.ts](../prompts/agent-constants.ts)) and a
+  `ToolSet` of AI SDK `tool()`s with Zod input schemas. Tool `execute` functions run in workflow context,
+  so anything non-deterministic goes through an activity.
+* A **handoff** is a tool named `handoff_to_<agent>_agent` (the Beneficiary and Investment handoffs take
+  the client ID). Each `generateText` call stops when the model calls a handoff tool (`stopWhen` with
+  `hasToolCall`); the loop then switches the active agent and calls `generateText` again, so the new agent
+  answers the customer's message in the same turn. A shared system prompt prefix tells every agent to hand
+  off without asking or announcing it.
+* **Model calls:** the `TemporalProvider` in the workflow turns each model call into the plugin's
+  `invokeModel` activity, on `VAI-Supervisor-llm` with a 2-minute timeout per attempt and unlimited
+  retries. On the worker, the plugin calls the real Gemini provider ([gemini.ts](../gemini.ts)), wrapped
+  by [chaos-model.ts](chaos-model.ts) to inject the chaos panel's model failures and to turn a real HTTP
+  429 into a retry after 15 s.
+* Once the client ID is known, every agent's instructions include it, so an agent that is handed the
+  conversation doesn't ask for it again.
+* Off-topic questions are declined by the Supervisor Agent, through the agents' prompts only.
 
-- [Node.js 20+](https://nodejs.org/) and npm (for the worker, the API and the React UX)
-- [Temporal CLI](https://github.com/temporalio/cli)
-- [Redis](https://redis.io/) (used for chat history and the chaos panel; optionally for the claim-check payload codec)
-- A [Google Gemini API key](https://aistudio.google.com/app/apikey) (the model is `gemini-2.5-pro`)
-- JDK 25 or later (optional, only to run the Open Account workflow in [Java](../../../../interop/open_account/java/README.md); the Gradle
-  wrapper is included, so no separate Gradle install is needed)
+## Running locally
 
-## Install dependencies
+Each command runs in its own terminal, from the repository root.
 
-The TypeScript code (this port and `src/typescript/common`) is one set of npm workspaces
-with one `node_modules`. From `src/typescript`:
+### Start Temporal and Redis
 
-```shell
-npm install
-```
-
-## Set up your Gemini API key
-
-From the repository root, copy the shared Gemini key file and fill in your key (the Strands Agents and Google
-ADK ports use the same file):
-
-```shell
-cp scripts/setgeminikey.example scripts/setgeminikey.sh
-```
-
-It sets `GEMINI_API_KEY`; the Vercel AI SDK's own `GOOGLE_GENERATIVE_AI_API_KEY` also works. `scripts/setgeminikey.sh`
-is gitignored. The worker start scripts (`startlocalworker.sh`, `startcloudworker.sh`) source it.
-
-## Set up Redis
-
-Redis is used for storing conversation history and providing real-time status updates. If you don't have an existing Redis server, you can run one locally after installing it.
-
-In a new terminal / shell run the following command:
-```shell
-redis-server
-```
-
-By default, the application expects to find Redis running locally (`localhost:6379`). You can override the location of Redis by setting the environment variables (the Java worker reads the same ones):
-
-```shell
-export REDIS_HOST=localhost
-export REDIS_PORT=6379
-```
-
-## Set up Claim Check (optional)
-
-An optional configuration is to substitute the data sent to Temporal (e.g. function/method parameters and return values)
-with an ID. This is known as the [Claim Check Pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/StoreInLibrary.html).
-The original data is stored in Redis. This uses a
-[Custom Payload Codec](https://docs.temporal.io/develop/typescript/converters-and-encryption)
-that intercepts data going to Temporal Cloud, replaces it with a GUID. When the data is retrieved, it looks up the GUID
-replaces it with the data stored in Redis.
-
-From the repository root:
-
-```shell
-cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
-```
-
-Now edit `scripts/setclaimcheck.sh` and fill in the location of Redis
-It should look something like this:
-```shell
-export USE_CLAIM_CHECK=true
-export REDIS_HOST=localhost
-export REDIS_PORT=6379
-```
-
-Save the file and be sure that you have Redis running. For example:
-
-```shell
-redis-server
-```
-
-Claim check is optional. Without `scripts/setclaimcheck.sh`, the worker, API and codec server start scripts run
-without it.
-
-The claim-checked payloads are the same as the Python ports' and the Java worker's (encoding `claim-checked`, the
-Payload stored in Redis under a random ID), so they can read each other's.
-
-Note that the application assumes you only have one Redis server that is used by the application for storing the
-conversation history and is also used if Claim Check has been enabled.
-
-Be aware that using a claim check pattern introduces performance costs by doing remote calls to Redis for every payload.
-Also, make sure your Redis implementation is rock solid as any downtime will directly affect your workflows.
-
-## Run Codec Server for Claim Check (optional)
-If you have decided to set up the Claim Check above, you will
-most likely want to also run a Codec Server to be able to see the actual sent to
-the workflow and activities.
-
-Be sure you have created `scripts/setclaimcheck.sh` as mentioned above.
-
-To run the Codec Server, from the repository root:
-```shell
-./src/typescript/vercel_ai/durable/startcodecserver.sh
-```
-
-And of course, make sure that your Redis Server is up and running.
-
-Once it's up and running, the default endpoint is http://127.0.0.1:8081 (set `CODEC_SERVER_HOST` and
-`CODEC_SERVER_PORT` to change it).
-
-Open up your browser and navigate to the Temporal UI. Locally, open it at exactly http://localhost:8233
-(the codec server only allows requests from that origin, so http://127.0.0.1:8233 won't work).
-For Temporal Cloud that will be https://cloud.temporal.io
-
-In the upper right, there is an icon that looks like glasses. Click on that and you
-can configure your codec server.
-
-Change the drop down to "Use my browser setting and ignore Cluster-level setting".
-
-Use the endpoint of your codec server (default is http://127.0.0.1:8081). Be sure there are no
-extra spaces at the end of the URL or it will not work. You can turn off the two options - Pass the
-user access token and Include cross-origin credentials. Click on apply and you have configured
-the codec server.
-
-![](../../../../docs/images/vercel_ai/config-codec-server.png)
-
-As you run through different scenarios, you'll be able to see the decoded values in the browser.
-
-![](../../../../docs/images/vercel_ai/decoded-input.png)
-
-If you remove the codec server settings, you won't be able to see anything other than a BASE64 Encoded ID.
-
-![](../../../../docs/images/vercel_ai/encoded-input.png)
-
-## Running the Demo locally
-
-Run each of these in its own terminal, starting from the repository root.
-
-### Start Temporal
-
-```shell
+```bash
 temporal server start-dev
 ```
 
-### Start the Worker
+```bash
+redis-server
+```
 
-```shell
+### Start the worker
+
+```bash
 ./src/typescript/vercel_ai/durable/startlocalworker.sh
 ```
 
-The worker polls the `VAI-Supervisor` task queue (`DEFAULT_TASK_QUEUE` in [task-queues.ts](task-queues.ts)), so it
-can run next to another port's worker, and runs the model calls on `VAI-Supervisor-llm` (see
-[Environment variables](#environment-variables)).
-
-### Run the Open Account workflow in Java (optional)
-
-To run the Open Account child workflow in Java instead, start the worker with the argument `java` and the
-[Java worker](../../../../interop/open_account/java/README.md) for this port. The argument sets
-`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java`, which the worker turns into this port's own
-`VAI-Supervisor-open-account` queue ([common/task-queues.ts](../../common/task-queues.ts)). When that queue
-differs from the worker's own (`TEMPORAL_TASK_QUEUE`), the TypeScript worker registers only the supervisor
-workflow ([workflows/supervisor-only.ts](workflows/supervisor-only.ts)) and leaves the Open Account workflow
-to the Java worker; otherwise it registers both ([workflows/index.ts](workflows/index.ts)). This works the
-same way with `startcloudworker.sh`.
-
-```shell
-./src/typescript/vercel_ai/durable/startlocalworker.sh java
-
-# in another terminal: TEMPORAL_TASK_QUEUE makes the Java workflow call this port's activities
-cd interop/open_account/java
-TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh
-```
+The worker polls `VAI-Supervisor` (`DEFAULT_TASK_QUEUE` in [task-queues.ts](task-queues.ts)) for the
+workflows and tools, and `VAI-Supervisor-llm` for the model calls, so it can run next to other ports'
+workers. It needs `scripts/setgeminikey.sh` and sources `scripts/setclaimcheck.sh` if it exists.
 
 ### Start the API
 
-```shell
+```bash
 ./src/python/api/startlocalapi.sh vercel_ai
 ```
 
-The argument is the AI framework the API serves; without a valid one, the script lists them. The web app then
-names its chats
-`vai-temporal-agent-<random>`.
+The endpoints are in the [API README](../../../python/api/README.md).
 
-### Start the UX
+### Start the web UI
 
-```shell
-cd frontend
-npm install   # first time only
-npm start
+```bash
+cd frontend && npm install && npm start
 ```
 
-A new browser window opens where you can interact with the application.
+Open http://localhost:3000 for the chat, and http://localhost:8233 for the Temporal UI.
 
-### Send the Compliance Reviewed Signal
+### Approve compliance
 
-When you open a new investment account, the workflow waits for a compliance review. To approve it:
+Each account opening waits for compliance approval, which comes from outside the chat. The open-account
+workflow ID is `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, with the account name as
+the customer gave it and `<n>` the number of openings started in the chat so far, this one included (1, 2,
+3, ...). For example, opening "College Fund" for client 123 as the chat's first opening gives
+`OpenAccount-vai-temporal-agent-k3j9x2m1q8-123-College Fund-1`. The web UI doesn't show this ID (it logs
+the chat's workflow ID in the browser console). Find it in the Temporal UI (a running
+`OpenInvestmentAccountWorkflow`, child of the chat's `WealthManagementWorkflow`), or with:
 
-```shell
-./src/typescript/vercel_ai/durable/localsendcomplianceapproval.sh "<Child Workflow ID>"
-```
-
-The child workflow ID is `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, with the account
-name exactly as the customer gave it and `<n>` the number of account openings started in the chat so far,
-this one included (1, 2, 3, ...). Each chat in the UX gets a random workflow ID starting with
-`vai-temporal-agent-`, so opening "College Fund" for client 123 as the chat's first opening gives something
-like `OpenAccount-vai-temporal-agent-k3j9x2m1q8-123-College Fund-1`. Account names can contain spaces, so put
-the ID in quotes:
-
-```shell
-./src/typescript/vercel_ai/durable/localsendcomplianceapproval.sh "OpenAccount-vai-temporal-agent-k3j9x2m1q8-123-College Fund-1"
-```
-
-The UX doesn't show this ID (it logs the chat's workflow ID in the browser console). To find it, open the [Temporal UI](http://localhost:8233) and look for the
-running `OpenInvestmentAccountWorkflow` (it is a child of the chat's `WealthManagementWorkflow`), or use the CLI:
-
-```shell
+```bash
 temporal workflow list --query "WorkflowType='OpenInvestmentAccountWorkflow' AND ExecutionStatus='Running'"
 ```
 
-Every request to open an account starts a new account opening (a new child workflow) with its own KYC, even if
-an account with the same name was opened, or is still being opened, earlier in the chat. Opening "Vacation"
-twice gives two workflows, `...-123-Vacation-1` and `...-123-Vacation-2`, which can both be pending at once; the
-customer confirms their details for each, and each needs its own compliance approval. If more than one is
-running, the list above shows them all: pick the one whose ID ends with the number you want.
+Then approve it. Account names can contain spaces, so quote the ID:
 
-### Testing the open-account workflow on its own
-
-`startlocalopenaccount.sh` exercises `OpenInvestmentAccountWorkflow` without the chat, the API, the UX or the
-LLM (no Gemini key needed). It starts a TypeScript worker in the background, runs
-`run_open_account_workflow.ts` (`npm run open-account.scenarios`), and stops the worker when it finishes. The
-script runs three scenarios for client `123`, each starting the workflow directly and printing every state
-it reports (from the `get_current_state` query) and the result:
-
-1. KYC approved (`verify_kyc` signal), then compliance approved.
-2. Client details read (`get_client_details` update) and changed (`update_client_details` update, which also
-   completes KYC: client 123's last name becomes "Doenut"), then compliance approved.
-3. KYC approved, then the workflow waits in `Waiting Compliance Review` until you send the approval yourself.
-   The script prints the command to run from the repository root, for example
-   `src/typescript/vercel_ai/durable/localsendcomplianceapproval.sh "OpenAccount-standalone-<run>-123-Vacation3"`.
-
-Temporal must be running (and Redis, as for the demo). The script can be run from any directory:
-
-```shell
-src/typescript/vercel_ai/durable/startlocalopenaccount.sh
+```bash
+./src/typescript/vercel_ai/durable/localsendcomplianceapproval.sh "<open-account workflow ID>"
 ```
 
-With the argument `java`, the workflow runs on this port's `VAI-Supervisor-open-account` queue, so you can run
-the same scenarios against the Java workflow (start the Java worker first: `cd interop/open_account/java && TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh`):
+If more than one opening is running, pick the one whose ID ends with the number you want.
 
-```shell
-src/typescript/vercel_ai/durable/startlocalopenaccount.sh java
-```
+### What you'll see
 
-Further arguments go to `run_open_account_workflow.ts`: `--scenario N` (repeatable) runs only some scenarios,
-and `--amount X` sets the initial deposit, e.g. `--scenario 1 --amount 300000` to see the saga roll back
-(client 123's linked bank account has $250,000). Each run uses new workflow IDs
-(`OpenAccount-standalone-<run>-123-<account>`). There is no chat workflow, so the workflow has no parent and
-skips its status updates. Like the demo, the scenarios change `data/*.json` (a new account, the linked bank
-account balance, client 123's last name); reset them with `git checkout data/` (see below).
+Waiting for the customer to confirm their details (KYC):
+
+![Waiting for KYC](../../../../docs/images/vercel_ai/ux-waiting-kyc.png)
+
+Waiting for compliance approval:
+
+![Waiting for compliance review](../../../../docs/images/vercel_ai/ux-waiting-compliance-review.png)
+
+The account opened:
+
+![Account opened](../../../../docs/images/vercel_ai/ux-open-account-complete.png)
+
+The open-account workflow in the Temporal UI:
+
+![Open-account workflow in the Temporal UI](../../../../docs/images/vercel_ai/temporal-ui-open-account.png)
 
 ### Resetting the demo data
 
-Opening and closing accounts, editing client details during KYC and adding or deleting beneficiaries change
-the JSON files in [data/](../../../../data) (shared by every port and tracked by git). To reset them, from the
-repository root:
+Opening and closing accounts, changing client details during KYC, and adding or deleting beneficiaries
+change the JSON files in [data/](../../../../data), which every port shares and git tracks. The linked bank
+balances and the transfer ledger are in `data/funding_accounts.json`. To reset them:
 
-```shell
+```bash
 git checkout data/
 ```
 
-## How the Open Account functionality works
+## How account opening works
 
-1. The Investment Agent hands off to the Open Account Agent, which calls the `open_new_investment_account`
-   tool with the client ID, account name and initial amount. The tool first checks the business rules
-   (`validate_new_account`: a deposit from $100 to $1,000,000). If one is broken, the agent explains why and no workflow is started. Otherwise it starts the
-   `OpenInvestmentAccountWorkflow` child workflow
-   ([workflows/start-open-account.ts](workflows/start-open-account.ts)) on the supervisor's task queue, or on
-   `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` when the [Java worker](../../../../interop/open_account/java/README.md) runs it, and returns the
-   child workflow ID.
-2. The child workflow ([workflows/open-account.ts](workflows/open-account.ts)) loads the client's details and
-   moves to `Waiting KYC`. Every state change is sent to the chat workflow with the `update_account_opening_state`
-   signal (`{account_name, state, workflow_id}`). The chat workflow keeps the latest state of each opening and
-   writes `New <account> account status changed: <state>` to Redis; the UX shows it in its status area. The
-   agent itself learns the status by calling the `get_account_opening_status(workflow_id)` tool, which reads
-   the state the chat workflow kept (no query or activity, so an unknown or mistyped ID gets `No account
-   opening with workflow ID <id> was found in this conversation.`). It only does so while handling a customer
-   message, so the customer asks (for example "what's the status?") to get an update in the chat.
-3. KYC: the agent calls `get_current_client_info` (the `get_client_details` update, which waits until the
-   details are loaded), shows the details, and asks if they are correct. If the customer confirms in a later
-   message, `approve_kyc` sends the `verify_kyc` signal. The tool refuses to approve in the same turn the
-   details were shown, or with a confirmation given for a different opening. If the details are wrong, the
-   agent collects the changes and calls `update_client_details` (an update that saves them to
-   `data/clients.json` and also approves KYC).
-4. The workflow moves to `Waiting Compliance Review` and waits for the `compliance_approved` signal, which you
-   send with `localsendcomplianceapproval.sh` / `cloudsendcomplianceapproval.sh "<Child Workflow ID>"`. The
-   signal handlers wait for the steps before them: `verify_kyc` takes effect once the client details are
-   loaded, and `compliance_approved` once KYC is approved, so an early signal is not lost or applied out of order.
-5. The account is then opened as a saga: create the account record (`open_investment`), transfer the initial
-   deposit from the linked bank account (`debit_linked_account`), and register the account with the custodian
-   (`register_account`). If a step fails non-retryably, the completed steps are undone in reverse order
-   (`credit_linked_account` refund, then `remove_investment`, which counts an account record that is already gone
-   as removed, so a retried compensation succeeds) and the final state starts with `Rolled back`. The
-   transfer IDs make retried transfers idempotent. On success the state is `Complete`, and the Open Account
+1. The Investment Agent hands off to the Open Account Agent, which calls `open_new_investment_account`
+   with the client ID, account name and initial amount. The tool first checks the business rules
+   (`validate_new_account`: a deposit from $100 to $1,000,000). If one is broken, the agent explains why
+   and no workflow is started.
+2. Otherwise the tool starts the `OpenInvestmentAccountWorkflow` child workflow
+   ([workflows/start-open-account.ts](workflows/start-open-account.ts)) on the chat's task queue, or on
+   `VAI-Supervisor-open-account` when the Java worker runs it, and returns its workflow ID.
+3. The child loads the client's details and moves to `Waiting KYC`. Every state change is sent to the chat
+   workflow with the `update_account_opening_state` signal. The chat workflow keeps the latest state of
+   each opening and writes `New <account> account status changed: <state>` to the event stream, which the
+   web UI shows. The agent learns the status with `get_account_opening_status(workflow_id)`, which reads
+   the state the chat workflow kept (an unknown ID gets
+   `No account opening with workflow ID <id> was found in this conversation.`), when the customer asks.
+4. KYC: the agent calls `get_current_client_info` (the child's `get_client_details` update, which waits
+   until the details are loaded), shows the details and asks if they are correct. If the customer confirms
+   in a later message, `approve_kyc` sends the `verify_kyc` signal. The tool refuses in the turn the details
+   were shown, or for an opening whose details weren't shown. If the details are wrong, the agent calls
+   `update_client_details` (an update that saves them to `data/clients.json` and also approves KYC).
+5. The opening moves to `Waiting Compliance Review` and waits for the `compliance_approved` signal. The
+   signal handlers wait for the steps before them (`verify_kyc` until the details are loaded,
+   `compliance_approved` until KYC is approved), so an early signal is not lost or applied out of order.
+6. The saga creates the account record (`open_investment`), transfers the deposit from the linked bank
+   account (`debit_linked_account`), and registers the account with the custodian (`register_account`).
+   If a step fails non-retryably, the completed steps are undone in reverse order
+   (`credit_linked_account`, then `remove_investment`, which counts an account already gone as removed)
+   and the final state starts with `Rolled back`. Transfer IDs include the workflow and run IDs, so a
+   retried transfer never moves money twice. On success the state is `Complete`, and the Open Account
    Agent hands back to the Investment Agent.
-6. With the **Bug in workflow code** chaos flag on, the opening gets a `WELCOME-BONUS` promo code, and the
-   workflow's bonus lookup fails after compliance approval (see
-   [Failure scenarios](#failure-scenarios-chaos-panel)).
+7. **Every request starts a new opening**, with its own KYC and compliance approval, even if an account
+   with the same name was opened, or is still being opened, earlier in the chat: opening "Vacation" twice
+   gives `...-123-Vacation-1` and `...-123-Vacation-2`, which can both be pending at once.
 
-Ending the chat terminates any opening that is still running, because a child workflow is terminated when its
+Ending the chat terminates any opening still running, because a child workflow is terminated when its
 parent closes.
 
-The chat workflow deletes its conversation history from Redis when it starts and again when it ends. The
-delete at the start matters when a chat workflow ID is used again after its workflow was terminated (which
-skips the delete at the end), so the new chat doesn't show the old history.
+### Testing the open-account workflow on its own
+
+`startlocalopenaccount.sh` runs `OpenInvestmentAccountWorkflow` without the chat, the API, the web UI or
+the model (no Gemini key needed). It starts a worker in the background, runs
+[run_open_account_workflow.ts](run_open_account_workflow.ts), and stops the worker when it finishes. Three
+scenarios for client 123 each print every state (from the `get_current_state` query) and the result:
+
+1. KYC approved (`verify_kyc`), then compliance approved.
+2. Client details read (`get_client_details`) and changed (`update_client_details`, which completes KYC:
+   the last name becomes "Doenut"), then compliance approved.
+3. KYC approved, then the workflow waits in `Waiting Compliance Review` until you send the approval
+   yourself. The script prints the command, with an ID like
+   `OpenAccount-standalone-<run>-123-Vacation3`.
+
+```bash
+./src/typescript/vercel_ai/durable/startlocalopenaccount.sh
+```
+
+With the argument `java`, the scenarios run on `VAI-Supervisor-open-account`, against the Java worker
+(start it first, as in [Java open-account worker](#java-open-account-worker-optional)):
+
+```bash
+./src/typescript/vercel_ai/durable/startlocalopenaccount.sh java
+```
+
+Further arguments go to the runner: `--scenario N` (repeatable) runs only some scenarios, and `--amount X`
+sets the initial deposit, for example `--scenario 1 --amount 300000` to see the saga roll back. The
+workflow has no parent here, so it skips its status updates. The scenarios change the demo data; reset it
+with `git checkout data/`.
+
+## Java open-account worker (optional)
+
+The open-account workflow can run on the shared
+[Java worker](../../../../interop/open_account/java/README.md) instead. Start this port's worker with the
+argument `java`:
+
+```bash
+./src/typescript/vercel_ai/durable/startlocalworker.sh java
+```
+
+The argument sets `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java`, which the worker turns into this port's own
+`VAI-Supervisor-open-account` queue ([common/task-queues.ts](../../common/task-queues.ts)). The worker
+then registers only the chat workflow ([workflows/supervisor-only.ts](workflows/supervisor-only.ts))
+instead of both ([workflows/index.ts](workflows/index.ts)). Start the Java worker for this port, so it
+polls that queue and calls this port's activities:
+
+```bash
+TEMPORAL_TASK_QUEUE=VAI-Supervisor ./interop/open_account/java/startlocalworker.sh
+```
+
+The chat workflow, the tools and the model calls stay on the TypeScript worker; the open-account workflow
+runs in Java, and its activities (client details, the saga steps) still run on the TypeScript worker. Any
+other argument names the open-account task queue. On Temporal Cloud, use `startcloudworker.sh java` and
+the Java worker's `startcloudworker.sh`.
 
 ## Failure scenarios (chaos panel)
 
-Click **Chaos** in the chat header to open the chaos panel. Its switches inject
-failures at runtime: activities and the model read the flags from Redis on every
-attempt, so you can turn a failure on and off mid-conversation without restarting
-anything. The panel also lists each injected failure as it happens (activity and
-attempt number). Open the [Temporal UI](http://localhost:8233) alongside it to show
-the pending activity, its attempt count, and the last failure. **Reset all** turns
-every flag off and clears the failure log.
+Click **Chaos** in the web UI's chat header to open the chaos panel. Activities and the model read the
+flags from Redis (`chaos:flags`) on every attempt, so you can turn a failure on and off mid-conversation
+with no restart. If Redis can't be reached, the flags read as off. The panel lists each injected failure
+(activity and attempt number); **Reset all** turns every flag off and clears the log. Open the Temporal
+UI alongside it to show the pending activity, its attempt count and the last failure.
 
 | Scenario | How to show it | What Temporal does |
 |---|---|---|
-| Tool / API down | Turn on **Core banking API down**, ask to list your investments, wait, turn it off | The investment and beneficiary activities fail with a connection error and are retried (at most 5 seconds apart) until the switch is off. The agent waits mid-turn; nothing is lost or re-asked. |
-| LLM down | Turn on **Gemini API down** and send a message | The model call is an activity, so it is retried the same way (at most 10 seconds apart) and the conversation resumes where it was. |
-| LLM rate limited | Turn on **Gemini rate limited (429)** and send a message | The model activity fails with `nextRetryDelay: 15s`, which overrides the backoff like a Retry-After header: attempts are exactly 15 seconds apart. A real 429 from Gemini is handled the same way. |
-| Proactive rate limit | Restart the worker with `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh` and chat in several tabs | Model calls run on their own task queue (`TEMPORAL_TASK_QUEUE_LLM`, default `VAI-Supervisor-llm`), which the Temporal server rate limits across all workers. Calls queue up instead of failing. |
-| Business rule | Ask to open an account with $2,000,000 (over the $1,000,000 limit), or under $100 | Validation fails once, non-retryably, and the agent explains why. No account opening is started. |
-| Saga rollback | Turn on **Custodian rejects new accounts** (and **Slow account-opening steps**), then open an account through compliance approval. Without flags: as client 123, open an account with $300,000 (the linked bank account has $250,000) | Opening an account creates the account record, debits the linked bank account, then registers with the custodian. A non-retryable failure undoes the completed steps in reverse: refund, then remove the account. Transfers are idempotent, so a retried debit or refund never moves money twice. With slow steps on, you can kill the worker mid-rollback and it picks up where it left off. |
-| Bug in workflow code | Turn on **Bug in workflow code** and open an account through compliance approval | New openings get a `WELCOME-BONUS` promo code, and the workflow's promo code path has a real bug. The workflow *task* fails with a `TypeError` (`NullPointerException` in Java), and the workflow stays Running with all its state while other chats keep working. |
+| Tool / API down | Turn on **Core banking API down**, ask to list your investments, wait, turn it off | The investment and beneficiary activities fail with a connection error and are retried (at most 5 s apart) until the flag is off. The agent waits mid-turn; nothing is lost or asked again. |
+| LLM down | Turn on **LLM API down** and send a message | The model call is an activity, so it is retried (at most 10 s apart) and the conversation resumes where it was. |
+| LLM rate limited | Turn on **LLM rate limited (429)** and send a message | The model activity fails with `nextRetryDelay: 15s`, which overrides the backoff like a `Retry-After` header: attempts are 15 s apart. A real 429 from Gemini is handled the same way. |
+| Proactive rate limit | Restart the worker with `LLM_MAX_CALLS_PER_SECOND=0.2` set and chat in several tabs | Model calls run on `VAI-Supervisor-llm`, which the Temporal service rate limits across all workers. Calls queue up instead of failing. |
+| Business rule | Open an account with $2,000,000 (over the $1,000,000 limit), or under $100 | Validation fails once, non-retryably, and the agent explains why. No opening is started. |
+| Saga rollback | Turn on **Custodian rejects new accounts** (and **Slow account-opening steps**), then open an account through compliance approval. Without flags: as client 123, open an account with $300,000 (the linked bank account has $250,000) | A non-retryable failure undoes the completed steps in reverse: refund, then remove the account. With slow steps on (4 s per step), you can kill the worker mid-rollback and it picks up where it left off. |
+| Bug in workflow code | Turn on **Bug in workflow code** and open an account through compliance approval | New openings get a `WELCOME-BONUS` promo code, whose code path has a bug. The workflow task fails with a `TypeError`, and the workflow stays Running with its state while other chats keep working. |
 
-To fix the workflow bug, swap the two `PROMOTIONS` lines in
-[workflows/open-account.ts](workflows/open-account.ts) (or the two `BONUS_RATES` lines in the
-[Java workflow](../../../../interop/open_account/java/src/main/java/io/temporal/demo/wealthmanagement/workflow/OpenInvestmentAccountWorkflowImpl.java))
-and restart the worker. Turning the switch off doesn't help, because the promo code is part of the
-workflow's input. Workflow task retries back off (to as much as 10 minutes), so after a fix it can take
-from a few seconds to a minute or so for the workflow to resume. Afterwards, `git checkout` the file to
-re-arm the bug.
+Notes:
 
-A few things to know:
-
-* The flags live in Redis (`chaos:flags`), so every worker using that Redis sees them. To test without
-  disturbing someone else's demo, use a different Redis or Temporal server.
-* The linked bank balances and the transfer ledger are in `data/funding_accounts.json`, and the demo
-  updates them (and `data/investments.json`) as accounts are opened and rolled back.
-* Retries are unlimited, so a bad Gemini API key stalls a turn instead of failing it. Check the
-  pending activity in the Temporal UI.
+* The flags live in Redis, so every worker using that Redis sees them. To avoid disturbing someone else's
+  demo, use a different Redis or Temporal service.
+* Retries are unlimited, so a bad Gemini API key stalls a turn instead of failing it. Check the pending
+  activity in the Temporal UI.
 * If you change which activities or child workflows a workflow runs, end the chats started on the old
-  code; they would fail on replay. The workflow-bug fix above is safe because it doesn't change the steps.
-* Each chat runs in a single workflow run. A production system would need continue-as-new for long
-  conversations (see the TODO in [workflows/wealth-management.ts](workflows/wealth-management.ts)).
+  code; they would fail on replay. The workflow bug fix below is safe because it doesn't change the steps.
 
-## Environment variables
+### Bug in workflow code
 
-The worker, API and scripts read these (see `src/typescript/common/client-helper.ts` and
-`src/typescript/common/redis-config.ts`):
+The promo code is `WELCOME-BONUS` (hyphen), but `PROMOTIONS` in
+[workflows/open-account.ts](workflows/open-account.ts) is keyed by `WELCOME_BONUS` (underscore), so the
+lookup in `welcomeBonus` returns `undefined` and reading its rate throws a `TypeError` after compliance
+approval. Turning the flag off doesn't help, because the promo code is part of the workflow's input.
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `GEMINI_API_KEY` (or `GOOGLE_GENERATIVE_AI_API_KEY`) | none | Gemini API key (set in `scripts/setgeminikey.sh`) |
-| `TEMPORAL_ADDRESS` | `localhost:7233` | Temporal frontend address |
-| `TEMPORAL_NAMESPACE` | `default` | Namespace |
-| `TEMPORAL_API_KEY` | empty | API key auth for Temporal Cloud |
-| `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | empty | mTLS auth for Temporal Cloud |
-| `TEMPORAL_TASK_QUEUE` | `VAI-Supervisor` | Task queue for the supervisor workflow, the activities and (by default) the Open Account workflow |
-| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | unset | `java` means `<TEMPORAL_TASK_QUEUE>-open-account`, the Java worker's queue for this port. Task queue for the Open Account workflow (the Java worker). Set by the worker start scripts' optional argument. When it differs from `TEMPORAL_TASK_QUEUE`, the TypeScript worker does not register the Open Account workflow |
-| `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm`, i.e. `VAI-Supervisor-llm` | Task queue for the model calls |
-| `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Server-side rate limit for the model calls task queue, e.g. `LLM_MAX_CALLS_PER_SECOND=0.2 ./startlocalworker.sh` |
-| `REDIS_HOST`, `REDIS_PORT` | `localhost`, `6379` | Redis for chat history, chaos flags and claim check |
-| `USE_CLAIM_CHECK` | `false` | `true`, `1` or `yes` (any case) turns on the claim-check codec (set in `scripts/setclaimcheck.sh`) |
-| `CODEC_SERVER_HOST`, `CODEC_SERVER_PORT` | `127.0.0.1`, `8081` | Codec server bind address |
+To fix it, swap the two `PROMOTIONS` lines below the `*** Bug-In-Workflow-Code ***` comment (uncomment
+the first, comment out the second) and restart the worker. Workflow task retries back off (to as much as
+10 minutes), so the workflow can take from a few seconds to a minute or so to resume. Afterwards,
+`git checkout` the file to re-arm the bug.
 
-The API has its own settings; see the [API README](../../../python/api/README.md).
+The Java open-account workflow has its own version of this bug (a `NullPointerException` from its
+`BONUS_RATES` lookup); see its
+[README](../../../../interop/open_account/java/README.md#bug-in-the-workflow-code-chaos-panel).
 
-### Running the tests
+## Claim check and codec server (optional)
 
-From `src/typescript/vercel_ai` (or from `src/typescript`, which runs every TypeScript workspace's tests):
+With claim check on, Temporal never sees the demo's data. Every payload is stored in Redis under a random
+ID, and Temporal stores only the ID. This is the
+[Claim Check pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/StoreInLibrary.html),
+implemented as a [payload codec](https://docs.temporal.io/develop/typescript/converters-and-encryption) in
+[common/claim-check-codec.ts](../../common/claim-check-codec.ts). The payloads use the same format as the
+Python ports and the Java worker (encoding `claim-checked`), so they read each other's.
 
-```shell
-npm test
+To turn it on, make sure Redis is running and copy the example file:
+
+```bash
+cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
 ```
 
-The tests run the workflows against a local Temporal test server, which is downloaded automatically on the
-first run, with stub activities and a scripted model (no Redis, Gemini key or worker needed). They cover the
-saga (happy path, rollback in reverse order, undoing only completed steps, transient retries), the promo-code
-bug pausing the workflow, a new opening (with its own KYC) each time the same account is opened, the KYC
-approval check, the business rules,
-idempotent transfers, the 429 handling, the claim check payload format, and the agent instructions (off-topic
-handling).
+The worker, API, compliance approval, open-account runner and codec server scripts source
+`scripts/setclaimcheck.sh` if it exists. Every component must agree on whether claim check is on, so
+restart them all after creating or deleting it. Every payload now costs a Redis call, and Redis holds part
+of every workflow's history: if it is down or loses a key, the workflows are affected.
 
-The other test suites:
+The Temporal UI then shows only the claim check IDs. To see the data, start the codec server, which
+decodes payloads for the Temporal UI by looking them up in Redis:
 
-```shell
-# React UX, from the repository root (run once; without CI=true it starts in watch mode)
-cd frontend
-npm install   # first time only
-CI=true npm test
-
-# Java Open Account workflow, from the repository root
-cd interop/open_account/java
-./gradlew test
+```bash
+./src/typescript/vercel_ai/durable/startcodecserver.sh
 ```
 
-#### Live agent tests
+It listens on http://127.0.0.1:8081 (`CODEC_SERVER_HOST`, `CODEC_SERVER_PORT`) and accepts requests only
+from http://localhost:8233 and https://cloud.temporal.io. To configure it in the Temporal UI:
 
-`npm test` uses a scripted model, so it can't check what the model decides to do. The live test runs the real
-chat workflow against Gemini: the customer asks about beneficiaries, gives client ID 123, then asks what
-investments they have. The Beneficiary Agent must hand the conversation to the Investment Agent (through the
-supervisor) in the same turn, without asking the customer whether to transfer or announcing the transfer, and
-the reply must list the investment accounts. It calls the paid Gemini API, so it isn't part of `npm test`:
+1. Open the Temporal UI at http://localhost:8233 (not 127.0.0.1), or at https://cloud.temporal.io.
+2. Click the glasses icon at the top right.
+3. Choose "Use my browser setting and ignore Cluster-level setting".
+4. Enter `http://127.0.0.1:8081`, with no trailing space.
+5. Turn off "Pass the user access token" and "Include cross-origin credentials", then click Apply.
 
-```shell
-source ../../../scripts/setgeminikey.sh
-npm run test:live
-LIVE_TEST_RUNS=10 npm run test:live   # repeat the conversation, since model output varies
-```
+![Codec server settings](../../../../docs/images/config-codec-server.png)
 
-The second live test, `repeat-opening.live.ts`, runs the conversation "Who are my beneficiaries?", "123", "what
-investments do I have?", "Open Vacation with $13,000", "Yes", "Open Vacation with $13,000". The replies to
-both "Open Vacation" messages must show the client's details for KYC (Don, 123 Main Street), and two
-Open Account workflows must be started, ending `-Vacation-1` and `-Vacation-2`. It stubs the activities that
-would write `data/*.json`, use Redis or connect to another Temporal server.
+![Decoded payload](../../../../docs/images/decoded-input.png)
 
-Redis is optional for the handoff test (without it, the chaos flags read as off); the repeat-opening test
-doesn't use it.
+![Encoded payload](../../../../docs/images/encoded-input.png)
 
-## Running the demo in Temporal Cloud
+## Running on Temporal Cloud
 
-Copy the shared Temporal Cloud settings file. From the repository root:
+The cloud scripts read the connection settings from `scripts/setcloudenv.sh`, which git ignores. Copy the
+example and fill in your namespace, with either an mTLS client certificate and key or an API key:
 
-```shell
+```bash
 cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
-Edit `scripts/setcloudenv.sh` to match your Temporal Cloud account:
+Then start the worker and the API against Temporal Cloud (Redis and the web UI run locally as before):
 
-```shell
-export TEMPORAL_ADDRESS=<namespace>.<accountID>.tmprl.cloud:7233
-export TEMPORAL_NAMESPACE=<namespace>.<accountID>
-export TEMPORAL_TLS_CLIENT_CERT_PATH="/path/to/cert.pem"
-export TEMPORAL_TLS_CLIENT_KEY_PATH="/path/to/key.key"
-```
-
-To use an API key instead of certificates, replace the two certificate lines with
-`export TEMPORAL_API_KEY=<your-api-key>`. `scripts/setcloudenv.sh` is gitignored; keep keys and certificates
-out of the repository.
-
-### Start the Worker
-
-```shell
+```bash
 ./src/typescript/vercel_ai/durable/startcloudworker.sh
 ```
 
-To run the Open Account workflow in Java, use `startcloudworker.sh java` here and
-`TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startcloudworker.sh` in `interop/open_account/java/`
-(see [Run the Open Account workflow in Java](#run-the-open-account-workflow-in-java-optional)).
-
-### Start the API
-
-```shell
+```bash
 ./src/python/api/startcloudapi.sh vercel_ai
 ```
 
-### Start the UX
+To approve an account opening, find its workflow ID in the Temporal Cloud UI (https://cloud.temporal.io)
+and run:
 
-```shell
-cd frontend
-npm install   # first time only
-npm start
+```bash
+./src/typescript/vercel_ai/durable/cloudsendcomplianceapproval.sh "<open-account workflow ID>"
 ```
 
-### Send the Compliance Reviewed Signal
+The scripts stop with instructions if `setcloudenv.sh` is missing. `startcloudworker.sh` takes the same
+optional `java` argument as `startlocalworker.sh`.
 
-When you open a new investment account, approve the compliance review with the script below. It reads the
-connection settings from `scripts/setcloudenv.sh`. Find the child workflow ID in the Temporal
-Cloud UI as described in [Send the Compliance Reviewed Signal](#send-the-compliance-reviewed-signal).
+## Environment variables
 
-```shell
-./src/typescript/vercel_ai/durable/cloudsendcomplianceapproval.sh "<Child Workflow ID>"
+The worker and scripts read these (see [common/client-helper.ts](../../common/client-helper.ts) and
+[common/redis-config.ts](../../common/redis-config.ts)):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` (or `GOOGLE_GENERATIVE_AI_API_KEY`) | none | Gemini API key (`scripts/setgeminikey.sh`) |
+| `TEMPORAL_ADDRESS` | `localhost:7233` | Temporal service address |
+| `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
+| `TEMPORAL_API_KEY` | none | API key for Temporal Cloud (`scripts/setcloudenv.sh`) |
+| `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | mTLS client certificate and key for Temporal Cloud (`scripts/setcloudenv.sh`) |
+| `TEMPORAL_TASK_QUEUE` | `VAI-Supervisor` | Task queue of the chat workflow, the activities and, by default, the open-account workflow |
+| `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | unset (the chat queue) | Task queue of the open-account workflow. `java` means `VAI-Supervisor-open-account`, the Java worker's queue for this port (set by `startlocalworker.sh java`). When it differs from `TEMPORAL_TASK_QUEUE`, this worker doesn't register the open-account workflow |
+| `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue of the model calls |
+| `LLM_MAX_CALLS_PER_SECOND` | unset (no limit) | Server-side rate limit for the model calls' task queue, across all workers |
+| `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Redis for the event stream, the chaos flags and claim check |
+| `USE_CLAIM_CHECK` | `false` | `true`, `1` or `yes` (any case) turns on claim check (`scripts/setclaimcheck.sh`) |
+| `CODEC_SERVER_HOST` / `CODEC_SERVER_PORT` | `127.0.0.1` / `8081` | Codec server bind address |
+| `LIVE_TEST_RUNS` | `1` | Live tests: how many times to repeat the conversation |
+
+The API has its own settings; see the [API README](../../../python/api/README.md).
+
+## Tests
+
+### Default tests
+
+The default tests need nothing running: no Gemini key, no Redis and no worker. They run the workflows
+against Temporal's local test server (downloaded on first run), with stub activities and a scripted model.
+From `src/typescript` instead, `npm test` runs every TypeScript workspace's tests.
+
+```bash
+cd src/typescript/vercel_ai && npm test
 ```
 
-Here are a few screenshots of the UX while opening a new account.
+| Test file | Checks |
+|---|---|
+| `failure-scenarios.test.ts` | The saga (success, with and without a parent, rollback in reverse, undoing only completed steps, transient failures retried, early approvals applied in order, a reused workflow ID moving money again); client details read and updated; the promo-code bug pausing the workflow; a new opening per request and its workflow ID; the business rules; `remove_investment` as a compensation; which workflows the worker registers; `USE_CLAIM_CHECK` values; idempotent transfers; the 429 handling |
+| `kyc-guard.test.ts` | `approve_kyc` refuses until this opening's details were shown in an earlier turn, also in the real chat workflow; `get_account_opening_status`; a second "Vacation" opening needs its own KYC |
+| `agent-instructions.test.ts` | The agents' prompts: off-topic questions declined, handoffs, the status tool, no guardrail code |
+| `task-queues.test.ts` | The open-account task queue rules, including `java` |
+| `claim-check.test.ts` | The claim check payload format shared with the Python ports and the Java worker |
+| `example.test.ts` | A workflow retries one failed activity |
 
-Waiting for KYC to be confirmed:
-![](../../../../docs/images/vercel_ai/ux-waiting-kyc.png)
+The web UI (`cd frontend && CI=true npm test`) and the Java worker
+(`cd interop/open_account/java && ./gradlew test`) have their own tests.
 
-Waiting for the Compliance Review to be done:
-![](../../../../docs/images/vercel_ai/ux-waiting-compliance-review.png)
+### Live tests
 
-New account is complete and opened:
-![](../../../../docs/images/vercel_ai/ux-open-account-complete.png)
+The live tests run the real chat workflow against Gemini, so they call the paid model API and are not part
+of `npm test`. `LIVE_TEST_RUNS` repeats the conversation, since model output varies:
 
-You can also add and delete beneficiaries.
+```bash
+cd src/typescript/vercel_ai && source ../../../scripts/setgeminikey.sh && LIVE_TEST_RUNS=3 npm run test:live
+```
 
-Here is a sample event history shown in the Temporal UX
+* `agent-handoffs.live.ts`: "Who are my beneficiaries?", "123", "What investments do I have?". The
+  Beneficiary Agent must hand the conversation to the Investment Agent (through the supervisor) in the same
+  turn, without asking whether to transfer or announcing it, and the reply must list the investment
+  accounts. Redis is optional (without it, the chaos flags read as off).
+* `repeat-opening.live.ts`: the same three messages, then "Open Vacation with $13,000", "Yes" and
+  "Open Vacation with $13,000" again. Both open replies must show the client's details for KYC (Don, 123
+  Main Street), and two open-account workflows must be started, ending `-Vacation-1` and `-Vacation-2`. It
+  stubs the activities that would write `data/*.json`, use Redis or connect to another Temporal service.
 
-![](../../../../docs/images/vercel_ai/temporal-event-history-timeline.png)
+## Temporal contracts
 
-And here is a sample event history for the Open Account workflow in the Temporal UX:
+The API, the web UI, the scripts and the Java worker rely on these names and payloads
+([common/shared.ts](../../common/shared.ts)).
 
-![](../../../../docs/images/vercel_ai/child-workflow-event-history.png)
+**Chat workflow** `WealthManagementWorkflow` (no input), on `VAI-Supervisor`:
+
+| Kind | Name | Payload |
+|---|---|---|
+| Signal | `process_user_message` | `{user_input}` |
+| Signal | `update_account_opening_state` | `{account_name, state, workflow_id}` |
+| Signal | `end_workflow` | none |
+
+Each turn's `{user_prompt, text_response, agent_trace}` and each status update `{status}` are appended to
+the Redis list `events:<chat workflow ID>`, which the API serves to the web UI.
+
+**Open-account workflow** `OpenInvestmentAccountWorkflow`, input
+`{client_id, account_name, initial_amount, promo_code}`, result `{account_created, message}`, workflow ID
+`OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`:
+
+| Kind | Name | Payload |
+|---|---|---|
+| Signal | `verify_kyc` | none |
+| Signal | `compliance_approved` | none |
+| Query | `get_current_state` | returns the state string |
+| Update | `get_client_details` | returns the client record (name, address, phone, email, marital status) |
+| Update | `update_client_details` | the changed fields; returns a message and completes KYC |
+
+**Activities:** `list_beneficiaries`, `add_beneficiary`, `delete_beneficiary`, `list_investments`,
+`validate_new_account`, `find_promotion`, `open_investment`, `remove_investment`, `close_investment`,
+`debit_linked_account`, `credit_linked_account`, `register_account`, `get_client`, `add_client`,
+`update_client`, `get_current_client_info`, `update_client_details`, `approve_kyc`,
+`append_chat_interaction`, `append_status_update` and `delete_conversation` on `VAI-Supervisor`, and the
+plugin's `invokeModel` on `VAI-Supervisor-llm`. The Java open-account workflow calls the client and saga
+activities by these names. `get_open_account_task_queue` and `get_llm_task_queue` (workflow code can't read
+the environment) are this port's own, not part of the shared contracts.
+
+## Port notes
+
+* The chat workflow has no `get_chat_history` query; the API reads the conversation from Redis.
+* The chat workflow deletes its conversation from Redis when it starts and again when it ends. The delete
+  at the start matters when a chat workflow ID is used again after its workflow was terminated (which
+  skips the delete at the end).
+* Each chat runs in a single workflow run. A production system would need continue-as-new for long
+  conversations (see the TODO in [workflows/wealth-management.ts](workflows/wealth-management.ts)).
+* The [standalone version](../standalone/README.md) runs the agents as a command-line chat with no
+  Temporal.

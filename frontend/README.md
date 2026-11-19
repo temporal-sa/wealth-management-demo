@@ -57,7 +57,7 @@ at runtime and lists the failures as they happen. See
 
 Remember, if you are opening a new investment account, in another terminal
 send the compliance approval to the Open Account child workflow. See
-[How to find the Child Workflow ID](../src/python/openai_agents/durable/README.md#send-the-compliance-reviewed-signal).
+[How to find the Child Workflow ID](../src/python/openai_agents/durable/README.md#approve-compliance).
 
 ### Send the Compliance Reviewed Signal (Local)
 ```bash

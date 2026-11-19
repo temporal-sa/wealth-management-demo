@@ -79,7 +79,7 @@ To try the Java workflow without the chat or an OpenAI key, run the open-account
 ## Running with Temporal Cloud
 
 Create `scripts/setcloudenv.sh` (copy `scripts/setcloudenv.example`)
-as described in the [Temporal README](../../../src/python/openai_agents/durable/README.md#running-the-demo-in-temporal-cloud).
+as described in the [Temporal README](../../../src/python/openai_agents/durable/README.md#running-on-temporal-cloud).
 Start the port's worker with `java`, then the Java worker with the port's queue:
 
 ```bash

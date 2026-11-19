@@ -59,7 +59,7 @@ Open Account Agent  (open_new_investment_account, get_account_opening_status,
 * Failure demos from the UI's chaos panel: tool outage, model outage, model rate limiting,
   custodian rejection (saga rollback), slow saga steps, and a bug in workflow code that is fixed
   by editing one line while the workflow waits. See the
-  [Temporal README](durable/README.md#failure-scenarios).
+  [Temporal README](durable/README.md#failure-scenarios-chaos-panel).
 
 ## Prerequisites
 

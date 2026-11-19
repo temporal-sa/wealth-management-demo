@@ -93,7 +93,7 @@ uv run pytest
 ```
 
 The tests need no OpenAI API key or Redis. Some run against a local Temporal test server, which is
-downloaded automatically on the first run. See the [Temporal version](durable/README.md#running-the-tests)
+downloaded automatically on the first run. See the [Temporal version](durable/README.md#tests)
 for the Java and frontend tests, and for the live tests against the real OpenAI model
 (`source ../../../scripts/setoaikey.sh && uv run pytest tests/live_agent_handoffs.py tests/live_repeat_opening.py -s`),
 which call the paid API and are not part of the default run.
