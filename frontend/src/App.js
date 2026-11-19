@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Markdown from './Markdown';
 import './App.css';
 import { API_BASE_URL } from './config';
 import ChaosPanel from './ChaosPanel';
@@ -287,12 +288,16 @@ function App() {
         <div className="chat-window" ref={chatWindowRef}>
           {messages.map((msg, index) => (
             <div key={index} className={`message ${msg.type}`}>
-              {msg.text.split('\n').map((line, i) => (
-                    <span key={i}>
-                      {line}
-                      <br />
-                    </span>
-              ))}
+              {msg.type === 'bot' ? (
+                <Markdown text={msg.text} />
+              ) : (
+                msg.text.split('\n').map((line, i) => (
+                  <span key={i}>
+                    {line}
+                    <br />
+                  </span>
+                ))
+              )}
             </div>
           ))}
         </div>

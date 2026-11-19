@@ -64,6 +64,38 @@ body {
     text-align: left;
 }
 
+/* Markdown in the agents' replies */
+.markdown p,
+.markdown ul,
+.markdown ol {
+    margin: 0;
+}
+
+.markdown > * + * {
+    margin-top: 8px;
+}
+
+.markdown ul,
+.markdown ol {
+    padding-left: 22px;
+}
+
+.markdown li + li {
+    margin-top: 2px;
+}
+
+.markdown code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+    background-color: rgba(0, 0, 0, 0.06);
+    padding: 1px 4px;
+    border-radius: 4px;
+}
+
+.markdown a {
+    color: #4a2ad8;
+}
+
 .input-area {
     display: flex;
     padding: 16px;
