@@ -20,6 +20,7 @@ Operations (all parameters are query parameters)
 | POST | `/send-prompt` | `workflow_id`, `prompt` | Sends the customer's message to the workflow (`process_user_message` signal) |
 | GET | `/get-chat-history` | `workflow_id`, `from_index` (default `0`) | Returns the conversation events (chat messages and account-opening status updates) stored in Redis, starting at `from_index` |
 | POST | `/end-chat` | `workflow_id` | Sends the `end_workflow` signal |
+| POST | `/approve-compliance` | `workflow_id` (the chat's) | Sends `compliance_approved` to the chat's running open-account workflows (IDs starting `OpenAccount-<workflow_id>-`) whose `get_current_state` is `Waiting Compliance Review`. Returns `{"approved": [<their workflow IDs>]}` |
 | GET | `/chaos` | | The chaos panel's failure-injection flags and the failures they recently caused |
 | POST | `/chaos` | `flag`, `enabled` (`true` / `false`) | Turns a flag on or off. Flags: `tool_down`, `llm_down`, `llm_rate_limited`, `custodian_rejects`, `slow_saga`, `workflow_bug` |
 | POST | `/chaos/reset` | | Turns every flag off and clears the failure log |
@@ -114,6 +115,11 @@ Turn a chaos flag on, list the flags, and turn them all off
 curl -X POST 'http://127.0.0.1:8000/chaos?flag=tool_down&enabled=true'
 curl http://127.0.0.1:8000/chaos
 curl -X POST http://127.0.0.1:8000/chaos/reset
+```
+
+Approve the compliance review of the chat's account openings that wait for it
+```bash
+curl -X POST "http://127.0.0.1:8000/approve-compliance?workflow_id=<your-workflow-id>"
 ```
 
 End the Chat

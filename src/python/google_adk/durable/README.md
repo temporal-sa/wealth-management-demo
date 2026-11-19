@@ -111,6 +111,11 @@ The web UI opens at http://localhost:3000. Click
 
 ### Approve compliance
 
+The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
+them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
+script below.
+
 Compliance approval is sent from a terminal; there is no button in the web UI. The open-account workflow's
 ID is `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, where `<n>` counts the account
 openings started in the conversation, this one included, for example

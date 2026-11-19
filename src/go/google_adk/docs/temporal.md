@@ -108,6 +108,11 @@ Open http://localhost:3000. **Start Chat** starts a chat workflow with the ID
 
 ### Approve compliance
 
+The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
+them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
+script below.
+
 Compliance approval comes from outside the chat, from a compliance officer. The open-account workflow's ID is
 
 ```text

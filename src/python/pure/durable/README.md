@@ -105,6 +105,11 @@ Open http://localhost:3000 for the chat, and http://localhost:8233 for the Tempo
 
 ### Approve compliance
 
+The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
+them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
+script below.
+
 Each account opening waits for compliance approval, which comes from outside the chat. The open-account
 workflow ID is `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, where `<n>` counts the
 openings started in this chat (a refused request doesn't use up a number), for example

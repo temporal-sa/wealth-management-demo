@@ -55,9 +55,10 @@ Click **Chaos** in the chat header to open the chaos panel, which turns failure 
 at runtime and lists the failures as they happen. See
 [Failure scenarios](../src/python/openai_agents/durable/README.md#failure-scenarios-chaos-panel).
 
-Remember, if you are opening a new investment account, in another terminal
-send the compliance approval to the Open Account child workflow. See
-[How to find the Child Workflow ID](../src/python/openai_agents/durable/README.md#approve-compliance).
+When you open a new investment account, it waits for compliance review after KYC. While the status bar says
+**Waiting Compliance Review**, click **Approve compliance review** in it, or send the approval from a terminal to
+the Open Account child workflow (see
+[How to find the Child Workflow ID](../src/python/openai_agents/durable/README.md#approve-compliance)).
 
 ### Send the Compliance Reviewed Signal (Local)
 ```bash

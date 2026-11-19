@@ -101,6 +101,11 @@ Click **Start Chat** in the browser window that opens. Client ID `123` has demo 
 
 ### Approve compliance
 
+The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
+them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
+script below.
+
 An account opening waits for a compliance officer's approval after KYC. Its child workflow ID has the
 format `OpenAccount-<chat workflow ID>-<client ID>-<account name>-<n>`, where `<n>` numbers the account
 openings started in the chat (1, 2, 3, ...), for example
