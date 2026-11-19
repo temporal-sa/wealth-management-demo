@@ -22,6 +22,8 @@ Setup (prerequisites, `uv sync`, the OpenAI key in `scripts/setoaikey.sh`) is in
   per chat (`pyai-temporal-agent-<random>`). Each customer message runs the current agent, and any
   agent it routes to, in the same turn. Model and tool calls run as activities. The conversation stays
   in one workflow run (production would use continue-as-new; see the TODO in the workflow).
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat_idle.py`), so chats abandoned without End Chat don't run forever.
 - **Open-account workflow** (`OpenInvestmentAccountWorkflow`, `workflows/open_account_workflow.py`).
   A child workflow per account opening: KYC, compliance approval, then a saga that opens the
   account. It runs in Python by default, or in [Java](#java-open-account-worker-optional).

@@ -3,11 +3,13 @@ package workflows
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/temporal-sa/wealth-management-demo/src/go/google_adk/internal/prompts"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/domain"
 )
 
 const vacation1 = "OpenAccount-" + testChatID + "-123-Vacation-1"
@@ -108,4 +110,25 @@ func TestBusinessRuleRefusal(t *testing.T) {
 	assert.Contains(t, history[0].JSONResponse, "The account cannot be opened: Initial deposits over $1,000,000.00")
 	assert.Contains(t, history[1].JSONResponse, "The account cannot be opened: The initial deposit must be at least $100.00")
 	assert.Contains(t, history[2].JSONResponse, vacation1)
+}
+
+// TestIdleChatEnds: a chat with no customer message and no account-opening status update
+// for ChatIdleTimeout completes by itself, and a message resets that clock.
+func TestIdleChatEnds(t *testing.T) {
+	ce := newChatEnv(t, newScriptedModel(text("How can I help?")))
+	start := ce.Now()
+	// A message half an hour in: the chat then stays open for another full timeout
+	ce.RegisterDelayedCallback(func() {
+		ce.SignalWorkflow(SignalProcessUserMessage, domain.ProcessUserMessageInput{UserInput: "Hi"})
+	}, 30*time.Minute)
+	ce.ExecuteWorkflow(WealthManagementWorkflowName)
+
+	require.True(t, ce.IsWorkflowCompleted())
+	require.NoError(t, ce.GetWorkflowError())
+	assert.Equal(t, 30*time.Minute+ChatIdleTimeout, ce.Now().Sub(start), "ends one idle timeout after the last message")
+	v, err := ce.QueryWorkflow(QueryGetChatHistory)
+	require.NoError(t, err)
+	var history []domain.ChatInteraction
+	require.NoError(t, v.Get(&history))
+	require.Len(t, history, 1)
 }

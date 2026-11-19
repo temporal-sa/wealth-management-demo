@@ -19,6 +19,7 @@ from prompts.client_id_memory import remember_client_id
 from durable.activities.event_stream_activities import EventStreamActivities
 
 with workflow.unsafe.imports_passed_through():
+    from common.chat_idle import CHAT_IDLE_TIMEOUT, chat_idle_timeout
     from durable.activities.beneficiaries import Beneficiaries, Beneficiary
     from durable.activities.investments import Investments
     from durable.activities.open_account import OpenAccount, open_new_investment_account
@@ -369,13 +370,19 @@ class WealthManagementWorkflow:
         )
 
         while True:
-            await workflow.wait_condition(
-                lambda: (
-                    not self.pending_chat_messages.empty()
-                    or not self.pending_status_updates.empty()
-                    or self.end_workflow_flag
+            try:
+                await workflow.wait_condition(
+                    lambda: (
+                        not self.pending_chat_messages.empty()
+                        or not self.pending_status_updates.empty()
+                        or self.end_workflow_flag
+                    ),
+                    timeout=chat_idle_timeout(),
                 )
-            )
+            except asyncio.TimeoutError:
+                # Nobody has used this chat for a while (e.g. the tab was closed without End Chat)
+                workflow.logger.info(f"Ending chat: idle for {CHAT_IDLE_TIMEOUT}")
+                return
 
             if self.end_workflow_flag:
                 return

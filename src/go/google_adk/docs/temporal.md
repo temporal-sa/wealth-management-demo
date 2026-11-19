@@ -27,6 +27,8 @@ Gemini key).
   task queue. The tools run in the workflow and call the activities listed under
   [Temporal contracts](#temporal-contracts). After each turn the workflow appends a `chat_interaction` event
   to Redis.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`ChatIdleTimeout` in `chat.go`), so chats abandoned without End Chat don't run forever.
 * **Open-account workflow** (`OpenInvestmentAccountWorkflow`,
   [`internal/workflows/openaccount.go`](../internal/workflows/openaccount.go)): reads the client's details,
   waits for KYC and then for compliance approval, and runs the saga. It signals every state change to the

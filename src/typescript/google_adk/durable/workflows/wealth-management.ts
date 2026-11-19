@@ -25,6 +25,7 @@ import {
   startChild,
   workflowInfo,
 } from '@temporalio/workflow';
+import { CHAT_IDLE_TIMEOUT, waitForCustomer } from '../../../common/chat-idle';
 import { INVEST_INSTRUCTIONS } from '../../prompts/agent-constants';
 import { buildAgentTree } from '../../adk_agents/agents';
 import type { WorkerConfig } from '../../adk_agents/config';
@@ -440,7 +441,11 @@ export async function WealthManagementWorkflow(): Promise<void> {
   }
 
   for (;;) {
-    await condition(() => pendingMessages.length > 0 || pendingStatuses.length > 0 || endWorkflow);
+    if (!(await waitForCustomer(() => pendingMessages.length > 0 || pendingStatuses.length > 0 || endWorkflow))) {
+      // Nobody has used this chat for a while (e.g. the tab was closed without End Chat)
+      log.info(`Ending chat: idle for ${CHAT_IDLE_TIMEOUT}`);
+      return;
+    }
     if (endWorkflow) {
       log.info('Ending chat');
       return;

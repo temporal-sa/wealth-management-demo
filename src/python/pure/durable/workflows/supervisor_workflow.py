@@ -10,6 +10,7 @@ state, so it is deterministic and survives replay.
 """
 
 from dataclasses import dataclass, field
+import asyncio
 from datetime import timedelta
 from typing import Optional
 
@@ -18,6 +19,7 @@ from temporalio.exceptions import ActivityError, ApplicationError, ChildWorkflow
 from temporalio.workflow import ParentClosePolicy
 
 with workflow.unsafe.imports_passed_through():
+    from common.chat_idle import CHAT_IDLE_TIMEOUT, chat_idle_timeout
     from common.account_context import UpdateAccountOpeningStateInput
     from pure_agents.agent_loop import Agent, AgentContext, ModelRequest, ModelResponse, all_agents, function_tool, run_turn
     from common.status_update import StatusUpdate
@@ -250,8 +252,15 @@ class WealthManagementWorkflow:
         await self._local_activity("delete_conversation", wf_id)
 
         while True:
-            await workflow.wait_condition(
-                lambda: bool(self.pending_chat_messages or self.pending_status_updates or self.ending))
+            try:
+                await workflow.wait_condition(
+                    lambda: bool(self.pending_chat_messages or self.pending_status_updates or self.ending),
+                    timeout=chat_idle_timeout(),
+                )
+            except asyncio.TimeoutError:
+                # Nobody has used this chat for a while (e.g. the tab was closed without End Chat)
+                workflow.logger.info(f"Ending chat: idle for {CHAT_IDLE_TIMEOUT}")
+                return
             if self.ending:
                 workflow.logger.info("Ending workflow.")
                 return

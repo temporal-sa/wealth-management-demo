@@ -29,6 +29,8 @@ Prerequisites, installing the dependencies and the Gemini key are in the [framew
   `generateText` model call becomes an activity through the `TemporalProvider`, and every tool that
   touches a system calls an activity. After each turn, the reply is appended to the Redis list
   `events:<workflow ID>`.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat-idle.ts`), so chats abandoned without End Chat don't run forever.
 * **The open-account workflow** `OpenInvestmentAccountWorkflow`
   ([workflows/open-account.ts](workflows/open-account.ts)) is a child workflow, one per account opening:
   KYC, compliance approval, then a saga. It reports each state change to the chat workflow with the

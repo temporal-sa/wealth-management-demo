@@ -6,6 +6,7 @@ import {
   workflowInfo,
   log,
 } from '@temporalio/workflow';
+import { CHAT_IDLE_TIMEOUT, waitForCustomer } from '../../../common/chat-idle';
 import type {
   ProcessUserMessageInput,
   UpdateAccountOpeningStateInput,
@@ -91,7 +92,11 @@ export async function WealthManagementWorkflow(): Promise<void> {
   await delete_conversation(workflowId);
 
   while (!done) {
-    await condition(() => pendingMessages.length > 0 || pendingStatuses.length > 0 || done);
+    if (!(await waitForCustomer(() => pendingMessages.length > 0 || pendingStatuses.length > 0 || done))) {
+      // Nobody has used this chat for a while (e.g. the tab was closed without End Chat)
+      log.info(`Ending chat: idle for ${CHAT_IDLE_TIMEOUT}`);
+      break;
+    }
 
     while (pendingStatuses.length > 0) {
       const statusUpdate: StatusUpdate = { status: pendingStatuses.shift()! };

@@ -23,6 +23,8 @@ Setup (Python, dependencies and the Gemini key in `scripts/setgeminikey.sh`) is 
   agents per customer message. Agents hand the conversation to each other with ADK's `transfer_to_agent`
   (see [How the agents work](#how-the-agents-work)). Each agent's `TemporalModel` runs its model calls as
   activities on the LLM task queue; tools call activities on the main task queue.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat_idle.py`), so chats abandoned without End Chat don't run forever.
 - **Open-account workflow** (`OpenInvestmentAccountWorkflow`, `workflows/open_account_workflow.py`). A child
   workflow that runs KYC, waits for compliance approval and then runs a saga to create, fund and register
   the account. It can also run in Java.

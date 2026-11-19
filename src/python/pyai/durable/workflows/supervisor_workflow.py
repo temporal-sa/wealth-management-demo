@@ -42,6 +42,7 @@ from durable.activities.local_activities import LocalActivities
 from durable.retry_policies import LLM_RETRY_POLICY, TOOL_RETRY_POLICY
 
 with workflow.unsafe.imports_passed_through():
+    from common.chat_idle import CHAT_IDLE_TIMEOUT, chat_idle_timeout
     from durable.model_config import LLM_TASK_QUEUE
 
 # States the account opening workflows (Python and Java) end in
@@ -116,9 +117,15 @@ class WealthManagementWorkflow(PydanticAIWorkflow):
             workflow.logger.info("At the top of the loop - waiting for messages or status updates")
 
             # wait for a queue item or end workflow
-            await workflow.wait_condition(
-                lambda: not self.pending_chat_messages.empty() or not self.pending_status_updates.empty() or self.exit_workflow
-            )
+            try:
+                await workflow.wait_condition(
+                    lambda: not self.pending_chat_messages.empty() or not self.pending_status_updates.empty() or self.exit_workflow,
+                    timeout=chat_idle_timeout(),
+                )
+            except asyncio.TimeoutError:
+                # Nobody has used this chat for a while (e.g. the tab was closed without End Chat)
+                workflow.logger.info(f"Ending chat: idle for {CHAT_IDLE_TIMEOUT}")
+                return
 
             if self.exit_workflow:
                 workflow.logger.info("Ending workflow.")

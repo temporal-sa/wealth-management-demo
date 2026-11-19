@@ -26,6 +26,8 @@ dependencies and the model key are in the [framework README](../README.md).
   conversation (messages, active agent, client ID, account openings) is workflow state, so it survives
   replay. After each turn, the reply is appended to the Redis list `events:<workflow ID>` by a local
   activity.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat_idle.py`), so chats abandoned without End Chat don't run forever.
 * **The open-account workflow** `OpenInvestmentAccountWorkflow` is a child workflow, one per account
   opening: KYC, compliance approval, then a saga. It reports each state change to the chat workflow with
   the `update_account_opening_state` signal.

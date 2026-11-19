@@ -24,6 +24,8 @@ Setup (Python, dependencies and the Gemini key in `scripts/setgeminikey.sh`) is 
   `TemporalAgent` delegates each request to specialist agents exposed to it as tools (see
   [How the agents work](#how-the-agents-work)). The `StrandsPlugin` runs every model call as an activity on
   the LLM task queue and every activity tool as an activity on the main task queue.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat_idle.py`), so chats abandoned without End Chat don't run forever.
 - **Open-account workflow** (`OpenInvestmentAccountWorkflow`, `workflows/open_account_workflow.py`). A child
   workflow that runs KYC, waits for compliance approval and then runs a saga to create, fund and register
   the account. It can also run in Java.

@@ -27,6 +27,8 @@ The agents are built with the [Google Agent Development Kit for TypeScript](http
   integration's `adk-invokeModel` activity on the model task queue. The tools are ADK `FunctionTool`s in
   workflow code that run the tool activities. After each turn the workflow appends a `chat_interaction`
   event to the chat's Redis event stream.
+  A chat with no customer message and no account-opening status update for an hour ends by itself, as on
+  End Chat (`common/chat-idle.ts`), so chats abandoned without End Chat don't run forever.
 * **Open-account workflow** (`OpenInvestmentAccountWorkflow`, [`workflows/open-account.ts`](workflows/open-account.ts)):
   a child workflow per account opening. It signals every state change to the chat workflow, which records
   it for the agent's `get_account_opening_status` tool and appends a `status_update` event to the stream.
