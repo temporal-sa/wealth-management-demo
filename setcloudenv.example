@@ -1,7 +1,0 @@
-# Copy this file to setcloudenv.sh and fill in your Temporal Cloud namespace.
-# setcloudenv.sh is git-ignored: never commit it.
-# mTLS: the client certificate and key for your namespace.
-export TEMPORAL_ADDRESS=<namespace>.<accountID>.tmprl.cloud:7233
-export TEMPORAL_NAMESPACE=<namespace>.<accountID>
-export TEMPORAL_TLS_CLIENT_CERT_PATH="/path/to/cert.pem"
-export TEMPORAL_TLS_CLIENT_KEY_PATH="/path/to/key.key"

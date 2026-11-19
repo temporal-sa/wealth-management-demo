@@ -1,7 +1,0 @@
-# Copy this file to setclaimcheck.sh to turn on the claim-check codec: each payload is stored
-# in Redis and only its key goes in Temporal's event history. The worker, the API, the scripts
-# and the Java worker all read this file, so they all use the codec.
-# Run ./scripts/startcodecserver.sh so the Temporal UI can show the payloads.
-export USE_CLAIM_CHECK=true
-export REDIS_HOST=localhost
-export REDIS_PORT=6379
