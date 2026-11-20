@@ -33,6 +33,7 @@ FRAMEWORKS = {
         Framework("strands_agents", "Strands Agents", "Python", "Strands Agents", "Strands-Supervisor", "strands-temporal-agent-"),
         Framework("google_adk", "Google ADK", "Python", "Google ADK", "ADK-Supervisor", "adk-temporal-agent-"),
         Framework("pure", "Pure Python (LiteLLM)", "Python", "Pure Python (LiteLLM)", "Pure-Supervisor", "pure-temporal-agent-"),
+        Framework("langgraph_agents", "LangGraph", "Python", "LangGraph", "LangGraph-Supervisor", "langgraph-temporal-agent-"),
         Framework("vercel_ai", "Vercel AI SDK (TypeScript)", "TypeScript", "Vercel AI SDK", "VAI-Supervisor", "vai-temporal-agent-"),
         Framework("google_adk_ts", "Google ADK (TypeScript)", "TypeScript", "Google ADK", "ADK-TS-Supervisor", "adk-ts-temporal-agent-"),
         Framework("google_adk_go", "Google ADK (Go)", "Go", "Google ADK", "ADK-Go-Supervisor", "adk-go-temporal-agent-"),

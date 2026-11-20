@@ -21,6 +21,7 @@ cd src/python/api
 ./startlocalapi.sh strands_agents  # Strands Agents: strands-temporal-agent-session-<session>-chat-<random> on Strands-Supervisor
 ./startlocalapi.sh google_adk      # Google ADK: adk-temporal-agent-session-<session>-chat-<random> on ADK-Supervisor
 ./startlocalapi.sh pure            # Pure Python (LiteLLM): pure-temporal-agent-session-<session>-chat-<random> on Pure-Supervisor
+./startlocalapi.sh langgraph_agents  # LangGraph: langgraph-temporal-agent-session-<session>-chat-<random> on LangGraph-Supervisor
 ./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-session-<session>-chat-<random> on VAI-Supervisor
 ./startlocalapi.sh google_adk_ts   # Google ADK (TypeScript): adk-ts-temporal-agent-session-<session>-chat-<random> on ADK-TS-Supervisor
 ./startlocalapi.sh google_adk_go   # Google ADK (Go): adk-go-temporal-agent-session-<session>-chat-<random> on ADK-Go-Supervisor
