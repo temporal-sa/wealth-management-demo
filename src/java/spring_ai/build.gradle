@@ -1,0 +1,57 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.1'
+}
+
+group = 'io.temporal.demo'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+ext {
+    temporalVersion = '1.41.1'
+    temporalSpringAiVersion = '0.1.1'
+    springAiVersion = '2.0.3'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation platform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
+    implementation platform("org.springframework.ai:spring-ai-bom:$springAiVersion")
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation "io.temporal:temporal-sdk:$temporalVersion"
+    implementation "io.temporal:spring-ai:$temporalSpringAiVersion"
+    implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation "io.temporal:temporal-testing:$temporalVersion"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// The worker, and the standalone command-line chat (no Temporal)
+tasks.register('runWorker', JavaExec) {
+    dependsOn 'classes'
+    mainClass = 'io.temporal.demo.springai.worker.WorkerApp'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+tasks.register('runStandalone', JavaExec) {
+    dependsOn 'classes'
+    mainClass = 'io.temporal.demo.springai.standalone.StandaloneApp'
+    classpath = sourceSets.main.runtimeClasspath
+    standardInput = System.in
+}
+
+springBoot {
+    mainClass = 'io.temporal.demo.springai.worker.WorkerApp'
+}
