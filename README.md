@@ -58,16 +58,23 @@ src/<language>/
 5. **Register it with the API:** add the framework to `src/python/api/frameworks.py` (its name, label, language, short
    label, task queue and chat workflow ID prefix) and to `EVERY_FRAMEWORK` in `src/python/api/tests/test_api.py`, so
    `./src/python/api/startlocalapi.sh <ai-framework>` serves it. One API serves every framework, whatever its language.
-6. **Document it** like the other frameworks:
+   The web UI needs no change: its sidebar lists every framework the API serves, grouped by language (a new language
+   gets its own group), and labels it with the short label.
+6. **Add it to `scripts/startdemo.sh`:** its worker folder in `worker_dir` and its model key file in `key_file`. The
+   worker folder needs `startlocalworker.sh` and `startcloudworker.sh`, which `startdemo.sh` runs with no arguments.
+7. **Document it** like the other frameworks:
    - The framework's `README.md`: what it is, prerequisites, setup and the model key, running the demo, tests, layout.
    - Its Temporal README (`durable/README.md`), with the same sections as the other frameworks' Temporal READMEs.
    - Its images in `docs/images/<folder>/`: `application-architecture.png`, the three web UI screenshots
      (`ux-waiting-kyc.png`, `ux-waiting-compliance-review.png`, `ux-open-account-complete.png`) and
      `temporal-ui-open-account.png`.
-7. **List it** in this README's [Frameworks](#frameworks) and [Task queues](#task-queues) tables, and in the API, web UI
-   (`frontend/README.md`), Java worker and `scripts/` READMEs.
-8. **Test it:** the framework's unit tests, an end-to-end chat through the API and web UI that opens an account through
-   KYC and compliance approval, and the same with the Java worker (`startlocalworker.sh java`).
+8. **List it** in this README's [Frameworks](#frameworks) and [Task queues](#task-queues) tables, and in the API, web UI
+   (`frontend/README.md`), Java worker and `scripts/` READMEs (including the framework list in `startdemo.sh`'s usage
+   comment).
+9. **Test it:** the framework's unit tests, an end-to-end chat through the API and web UI that opens an account through
+   KYC and compliance approval, and the same with the Java worker (`startlocalworker.sh java`). Also start it with
+   `scripts/startdemo.sh all`: it should appear in the sidebar beside the others, and
+   `scripts/startdemo.sh restart <ai-framework>` should restart its worker.
 
 ## Task queues
 
