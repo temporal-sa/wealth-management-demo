@@ -3,10 +3,10 @@
 Exposes the Temporal chat workflow (`WealthManagementWorkflow`) with an easy to use API. The
 [web application](../../../frontend/README.md) uses it; you can also call it with curl.
 
-It is the one API in this repository: it serves every AI framework, Python, TypeScript (the Vercel AI SDK and Google ADK TypeScript frameworks) or Go (the Google ADK Go framework), because their chat workflows keep the same contract. It uses only the Temporal contracts (the workflow and signal
+It is the one API in this repository: it serves every AI framework, Python, TypeScript (the Vercel AI SDK and Google ADK TypeScript frameworks) or Go (the Google ADK Go framework), because their chat workflows keep the same contract. One running API can serve several frameworks at once, and the web application then lists them all in its sidebar. It uses only the Temporal contracts (the workflow and signal
 names as strings, plain JSON payloads through the Pydantic data converter, and the claim-check codec
 when enabled), never a framework's workflow class or framework plugin. The start scripts' required argument
-(`AI_FRAMEWORK`) picks the AI framework: it sets the task queue that framework's worker listens on and the
+(`AI_FRAMEWORK`) picks the AI frameworks: it sets the task queue each framework's worker listens on and the
 prefix of its chat workflow IDs (see [`frameworks.py`](frameworks.py)). The Temporal calls are in
 [`client.py`](client.py); [`main.py`](main.py) is the HTTP layer.
 
@@ -26,8 +26,8 @@ Operations (all parameters are query parameters)
 | Method | Endpoint | Parameters | Description |
 |---|---|---|---|
 | GET | `/` | | Health check |
-| GET | `/api/config` | | The AI framework the API serves: `framework`, `label`, `task_queue` and `workflow_id_prefix` |
-| POST | `/api/start-workflow` | | Starts a chat workflow for this browser session on the framework's task queue. Returns `{"message": "Workflow started.", "workflow_id": <its ID>}` |
+| GET | `/api/config` | | The AI frameworks the API serves, in order: `{"frameworks": [...]}`, each with `framework`, `label`, `language` (`Python`, `TypeScript` or `Go`), `short_label` (its name within that language), `task_queue`, `workflow_id_prefix` and `available` (whether a worker polls its task queue) |
+| POST | `/api/start-workflow` | `framework` (optional when the API serves one) | Starts a chat workflow for this browser session on the framework's task queue. Returns `{"message": "Workflow started.", "workflow_id": <its ID>}`. 400 for a framework the API doesn't serve |
 | POST | `/api/send-prompt` | `workflow_id`, `prompt` | Sends the customer's message to the workflow (`process_user_message` signal) |
 | GET | `/api/get-chat-history` | `workflow_id`, `from_index` (default `0`) | Returns the conversation events (chat messages and account-opening status updates) stored in Redis, starting at `from_index` |
 | POST | `/api/end-chat` | `workflow_id` | Sends the `end_workflow` signal |
@@ -36,7 +36,8 @@ Operations (all parameters are query parameters)
 | POST | `/api/chaos` | `flag`, `enabled` (`true` / `false`) | Turns a flag on or off for this session. Flags: `tool_down`, `llm_down`, `llm_rate_limited`, `custodian_rejects`, `slow_saga`, `workflow_bug` |
 | POST | `/api/chaos/reset` | | Turns every flag off and clears the failure log, for this session |
 
-The endpoints that take a `workflow_id` answer 404 unless it is one of this session's chats.
+The endpoints that take a `workflow_id` answer 404 unless it is one of this session's chats. They need no framework:
+the chat's workflow ID starts with its framework's prefix.
 
 ## Prerequisites
 
@@ -60,6 +61,29 @@ The endpoints that take a `workflow_id` answer 404 unless it is one of this sess
 There is no default framework: without a valid one, the scripts stop and list every framework.
 `TEMPORAL_TASK_QUEUE` and `CHAT_WORKFLOW_ID_PREFIX` override the framework's values. The API prints the
 framework, queue and prefix it uses when it starts.
+
+### Several frameworks at once
+
+Give the scripts several frameworks separated by commas, or `all`:
+
+```bash
+./startlocalapi.sh strands_agents,vercel_ai,google_adk_go
+./startlocalapi.sh all
+```
+
+Or start the workers, the API and the web UI together with
+[`scripts/startdemo.sh`](../../../scripts/README.md#start-the-demo-with-one-command), for example
+`scripts/startdemo.sh strands_agents,vercel_ai,google_adk_go`.
+
+The web application then lists them in its sidebar, grouped by language, and each keeps its own live chat, so you can
+put the same questions to several frameworks and switch between them. Start each framework's worker as its README says; they
+can all run against one Temporal service, because each has its own task queue. A framework with no worker
+polling its task queue is greyed out and can't start a chat. Temporal keeps listing a stopped worker for a few minutes,
+so it stays available for a while.
+
+All the chats are one browser session: a chaos flag affects every framework's chat, and every chat sees the same sample
+data, so an account opened in one framework's chat shows up in the others. With several frameworks, `TEMPORAL_TASK_QUEUE` and
+`CHAT_WORKFLOW_ID_PREFIX` are ignored, because they would give every framework the same queue and prefix.
 
 See each framework's Temporal README (linked above) for setting these up.
 
@@ -97,7 +121,7 @@ curl http://127.0.0.1:8000
 ```
 
 Start a workflow. The cookie jar (`-b`/`-c`) keeps your session for the calls that follow; the response gives the
-chat's workflow ID:
+chat's workflow ID. When the API serves several frameworks, name one (`?framework=pyai`):
 ```bash
 curl -b /tmp/wm-cookies -c /tmp/wm-cookies -X POST 'http://127.0.0.1:8000/api/start-workflow'
 ```

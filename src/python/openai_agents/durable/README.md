@@ -23,7 +23,7 @@ Setup (prerequisites, `uv sync`, the OpenAI key in `scripts/setoaikey.sh`) is in
   `Runner.run`, handoffs included. Model and tool calls run as activities. The conversation stays in
   one workflow run (production would use continue-as-new; see the TODO in the workflow).
   A chat with no customer message and no account-opening status update for an hour ends by itself, as on
-  End Chat (`common/chat_idle.py`), so chats abandoned without End Chat don't run forever.
+  End chat (`common/chat_idle.py`), so chats abandoned without End chat don't run forever.
 - **Open-account workflow** (`OpenInvestmentAccountWorkflow`, `workflows/open_account_workflow.py`).
   A child workflow per account opening: KYC, compliance approval, then a saga that opens the
   account. It runs in Python by default, or in [Java](#java-open-account-worker-optional).
@@ -97,11 +97,11 @@ other frameworks' workers on the same Temporal service.
 cd frontend && npm install && npm start
 ```
 
-Click **Start Chat** in the browser window that opens. Client ID `123` has demo data.
+Click **Start chat** in the browser window that opens. Client ID `123` has demo data.
 
 ### Approve compliance
 
-The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+The quickest way: while the status line says **Waiting Compliance Review**, click **Approve compliance review**
 in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
 them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
 script below.
@@ -231,7 +231,7 @@ workflow calls by name on `OAI-Supervisor`.
 
 ## Failure scenarios (chaos panel)
 
-The chaos panel (**Chaos** in the chat header) injects failures at runtime: activities and the model
+The chaos panel (**Show chaos panel** at the bottom of the web UI's sidebar) injects failures at runtime: activities and the model
 read its flags from Redis on every attempt, so a failure can be turned on and off mid-conversation. It
 lists each injected failure; the Temporal UI shows the pending activity, its attempts and last
 failure. **Reset all** clears every flag. Flags belong to your browser session: they fail only that browser's chats, in any framework (see

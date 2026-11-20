@@ -28,7 +28,7 @@ The agents are built with the [Google Agent Development Kit for TypeScript](http
   workflow code that run the tool activities. After each turn the workflow appends a `chat_interaction`
   event to the chat's Redis event stream.
   A chat with no customer message and no account-opening status update for an hour ends by itself, as on
-  End Chat (`common/chat-idle.ts`), so chats abandoned without End Chat don't run forever.
+  End chat (`common/chat-idle.ts`), so chats abandoned without End chat don't run forever.
 * **Open-account workflow** (`OpenInvestmentAccountWorkflow`, [`workflows/open-account.ts`](workflows/open-account.ts)):
   a child workflow per account opening. It signals every state change to the chat workflow, which records
   it for the agent's `get_account_opening_status` tool and appends a `status_update` event to the stream.
@@ -103,13 +103,13 @@ endpoints.
 cd frontend && npm install && npm start
 ```
 
-Open http://localhost:3000. **Start Chat** starts a chat workflow with the ID
+Open http://localhost:3000. **Start chat** starts a chat workflow with the ID
 `adk-ts-temporal-agent-session-<session>-chat-<random>`. For example: "Who are my beneficiaries?", "123", "What investments do I
 have?", then "Open Vacation with $13,000" and "Yes" when the agent shows your details.
 
 ### Approve compliance
 
-The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+The quickest way: while the status line says **Waiting Compliance Review**, click **Approve compliance review**
 in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
 them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
 script below.

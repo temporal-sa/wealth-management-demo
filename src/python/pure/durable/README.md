@@ -27,7 +27,7 @@ dependencies and the model key are in the [framework README](../README.md).
   replay. After each turn, the reply is appended to the Redis list `events:<workflow ID>` by a local
   activity.
   A chat with no customer message and no account-opening status update for an hour ends by itself, as on
-  End Chat (`common/chat_idle.py`), so chats abandoned without End Chat don't run forever.
+  End chat (`common/chat_idle.py`), so chats abandoned without End chat don't run forever.
 * **The open-account workflow** `OpenInvestmentAccountWorkflow` is a child workflow, one per account
   opening: KYC, compliance approval, then a saga. It reports each state change to the chat workflow with
   the `update_account_opening_state` signal.
@@ -107,7 +107,7 @@ Open http://localhost:3000 for the chat, and http://localhost:8233 for the Tempo
 
 ### Approve compliance
 
-The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+The quickest way: while the status line says **Waiting Compliance Review**, click **Approve compliance review**
 in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
 them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
 script below.
@@ -240,7 +240,7 @@ the Java worker's `startcloudworker.sh`.
 
 ## Failure scenarios (chaos panel)
 
-Click **Chaos** in the web UI's chat header to open the chaos panel. Activities and the model call read
+Click **Show chaos panel** at the bottom of the web UI's sidebar to open the chaos panel. Activities and the model call read
 the flags from the Redis hash `chaos:<session>:flags` (your browser session's, found from the workflow ID;
 see `common/session_scope.py`) on every attempt, so you can turn a failure on and off
 mid-conversation with no restart. If Redis can't be reached, the flags read as off. Each injected failure

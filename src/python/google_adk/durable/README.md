@@ -24,7 +24,7 @@ Setup (Python, dependencies and the Gemini key in `scripts/setgeminikey.sh`) is 
   (see [How the agents work](#how-the-agents-work)). Each agent's `TemporalModel` runs its model calls as
   activities on the LLM task queue; tools call activities on the main task queue.
   A chat with no customer message and no account-opening status update for an hour ends by itself, as on
-  End Chat (`common/chat_idle.py`), so chats abandoned without End Chat don't run forever.
+  End chat (`common/chat_idle.py`), so chats abandoned without End chat don't run forever.
 - **Open-account workflow** (`OpenInvestmentAccountWorkflow`, `workflows/open_account_workflow.py`). A child
   workflow that runs KYC, waits for compliance approval and then runs a saga to create, fund and register
   the account. It can also run in Java.
@@ -109,11 +109,11 @@ cd frontend && npm install && npm start
 ```
 
 The web UI opens at http://localhost:3000. Click
-**Start Chat**, then use client ID `123` or `234`.
+**Start chat**, then use client ID `123` or `234`.
 
 ### Approve compliance
 
-The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+The quickest way: while the status line says **Waiting Compliance Review**, click **Approve compliance review**
 in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
 them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
 script below.
@@ -256,7 +256,7 @@ Java worker's `startcloudworker.sh`.
 
 ## Failure scenarios (chaos panel)
 
-Click **Chaos** in the chat header to open the chaos panel. Its switches inject failures at runtime: the
+Click **Show chaos panel** at the bottom of the web UI's sidebar to open the chaos panel. Its switches inject failures at runtime: the
 activities and the model read the flags from Redis on every attempt, so you can turn a failure on and off
 mid-conversation without restarting anything. The panel lists each injected failure as it happens. Open
 the [Temporal UI](http://localhost:8233) alongside it to show the pending activity, its attempt count and

@@ -64,18 +64,18 @@ To help you with your beneficiaries, could you please provide your client ID?
 [Supervisor Agent] Enter your message: 123
 Here are your current beneficiaries:
 
-1. John Doe (son)
-2. Jane Doe (daughter)
-3. Joan Doe (spouse)
+1. **John Doe** - Son
+2. **Jane Doe** - Daughter
+3. **Joan Doe** - Spouse
 
 Would you like to add, delete or list your beneficiaries?
 
 [Beneficiary Agent] Enter your message: What investments do I have?
 Here are your current investment accounts:
 
-1. Checking: $1,000.00
-2. Savings: $2,312.08
-3. 401K: $11,070.89
+1. **Checking:** $1,000.00
+2. **Savings:** $2,312.08
+3. **401K:** $11,070.89
 
 Would you like to open, close or list your investment accounts?
 

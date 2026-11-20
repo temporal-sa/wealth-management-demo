@@ -27,7 +27,10 @@ function parseArgs(): string {
   return args[idx + 1];
 }
 
-approve(parseArgs()).catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+approve(parseArgs())
+  // Exit explicitly: with the claim check on, the data converter keeps a Redis connection open
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });

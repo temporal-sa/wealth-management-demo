@@ -30,7 +30,7 @@ Prerequisites, installing the dependencies and the Gemini key are in the [framew
   touches a system calls an activity. After each turn, the reply is appended to the Redis list
   `events:<workflow ID>`.
   A chat with no customer message and no account-opening status update for an hour ends by itself, as on
-  End Chat (`common/chat-idle.ts`), so chats abandoned without End Chat don't run forever.
+  End chat (`common/chat-idle.ts`), so chats abandoned without End chat don't run forever.
 * **The open-account workflow** `OpenInvestmentAccountWorkflow`
   ([workflows/open-account.ts](workflows/open-account.ts)) is a child workflow, one per account opening:
   KYC, compliance approval, then a saga. It reports each state change to the chat workflow with the
@@ -109,7 +109,7 @@ Open http://localhost:3000 for the chat, and http://localhost:8233 for the Tempo
 
 ### Approve compliance
 
-The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+The quickest way: while the status line says **Waiting Compliance Review**, click **Approve compliance review**
 in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
 them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
 script below.
@@ -256,7 +256,7 @@ the Java worker's `startcloudworker.sh`.
 
 ## Failure scenarios (chaos panel)
 
-Click **Chaos** in the web UI's chat header to open the chaos panel. Activities and the model read the
+Click **Show chaos panel** at the bottom of the web UI's sidebar to open the chaos panel. Activities and the model read the
 flags from Redis (`chaos:<session>:flags`, one set per browser session, found from the workflow ID) on every
 attempt, so you can turn a failure on and off mid-conversation with no restart. If Redis can't be reached, the flags read as off. The panel lists each injected failure
 (activity and attempt number); **Reset all** turns every flag off and clears the log. Open the Temporal

@@ -539,12 +539,12 @@ async def respond_about_account_opening(ctx: RunContext[AgentDependencies], resp
             # 3. Format response with actual KYC info
             response = f"""I've started opening your {account_info.account_name} account. Let me verify your information:
 
-- First Name: {client.first_name}
-- Last Name: {client.last_name}
-- Address: {client.address}
-- Phone: {client.phone}
-- Email: {client.email}
-- Marital Status: {client.marital_status}
+- **First Name:** {client.first_name}
+- **Last Name:** {client.last_name}
+- **Address:** {client.address}
+- **Phone:** {client.phone}
+- **Email:** {client.email}
+- **Marital Status:** {client.marital_status}
 
 Is this information correct and up to date? Please confirm.
 
