@@ -68,9 +68,9 @@ You: 123
 
 Assistant: Here are your beneficiaries:
 
-1. John Doe (son)
-2. Jane Doe (daughter)
-3. Joan Doe (spouse)
+1. **John Doe** - Son
+2. **Jane Doe** - Daughter
+3. **Joan Doe** - Spouse
 
 What would you like to do: add, delete, or list beneficiaries?
 
@@ -78,9 +78,9 @@ You: What investments do I have?
 
 Assistant: Here are your investment accounts:
 
-1. Checking: $1,000.00
-2. Savings: $2,312.08
-3. 401K: $11,070.89
+1. **Checking:** $1,000.00
+2. **Savings:** $2,312.08
+3. **401K:** $11,070.89
 
 What would you like to do: open, close, or list investment accounts?
 

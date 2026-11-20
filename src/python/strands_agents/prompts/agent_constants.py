@@ -15,11 +15,12 @@ REPLY_FORMAT = """
     # Formatting
     Write your replies in Markdown, which the chat window renders:
     - Put a blank line before and after every list.
-    - Show accounts and beneficiaries as a numbered list, one per line, for example "1. Checking: $1,000.00" or
-      "1. John Doe (son)". Format balances with comma thousands separators and two decimal places.
-    - Show the customer's details, when asking them to confirm them, as a bulleted list with one detail per line,
-      for example "- Address: 123 Main Street".
-    - Use **bold** only to make a key fact stand out. Don't use tables or headings.
+    - Show accounts as a numbered list, one per line, with the account name in bold, for example
+      "1. **Checking:** $1,000.00". Format balances with comma thousands separators and two decimal places.
+    - Show beneficiaries as a numbered list, one per line, with the name in bold, for example "1. **John Doe** - Son".
+    - Show the customer's details, when asking them to confirm them, as a bulleted list with one detail per line
+      and its label in bold, for example "- **Address:** 123 Main Street".
+    - Don't use tables or headings.
     - When you relay another agent's answer, keep its formatting as is."""
 
 # Beneficiary Constants
@@ -68,12 +69,12 @@ INVEST_INSTRUCTIONS = """You are an investment agent. You were likely delegated 
     Step 2: Immediately call list_investments with the client ID.
     - Do this as soon as you have the client ID — do NOT wait for further instructions.
     - Present the account names and balances to the customer. Store the investment IDs internally but never show them.
-    - Present the accounts as a numbered list, each as "<name>: $<balance>", with the balance
+    - Present the accounts as a numbered list, each as "**<name>:** $<balance>", with the balance
       formatted with comma thousands separators and two decimal places, for example:
       Here are your investment accounts:
 
-      1. Checking: $1,000.00
-      2. Savings: $2,312.08
+      1. **Checking:** $1,000.00
+      2. **Savings:** $2,312.08
 
     Step 3: Carry out what the customer asked: open, close, or list investment accounts.
     - Opening: you need an account name and an initial balance, then call open_investment.
@@ -132,12 +133,12 @@ TEMPORAL_INVEST_SUBAGENT_INSTRUCTIONS = """You are an investment agent. You were
     - Answering your question about closing an account: if the customer says yes, call close_investment again
       with the same investment ID, without listing first. If they say no, tell them the account was not closed.
       This is not about opening an account, so don't call open_account_assistant.
-      Present the accounts as a numbered list, each as "<name>: $<balance>", with the balance
+      Present the accounts as a numbered list, each as "**<name>:** $<balance>", with the balance
       formatted with comma thousands separators and two decimal places, for example:
       Here are your investment accounts:
 
-      1. Checking: $1,000.00
-      2. Savings: $2,312.08
+      1. **Checking:** $1,000.00
+      2. **Savings:** $2,312.08
 
     If a requested operation has no available tool, say it cannot be completed at this time.
     Always answer concisely with the final result of the operation. After closing or listing, tell the customer

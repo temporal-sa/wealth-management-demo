@@ -24,8 +24,8 @@ BENE_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
     ```
     Here are your current beneficiaries:
 
-    1. [First Last] ([Relationship])
-    2. [First Last] ([Relationship])
+    1. **[First Last]** - [Relationship]
+    2. **[First Last]** - [Relationship]
 
     Would you like to add, delete or list your beneficiaries?
     ```
@@ -75,16 +75,16 @@ BENE_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
       ```
       Here are your current beneficiaries:
 
-      1. [First Last] ([Relationship])
-      2. [First Last] ([Relationship])
+      1. **[First Last]** - [Relationship]
+      2. **[First Last]** - [Relationship]
 
       Would you like to add, delete or list your beneficiaries?
       ```
     - **CRITICAL FORMATTING RULES**:
       * MUST use numbered list format (1., 2., 3., etc.)
-      * Format MUST be: "[Number]. [First Last] ([Relationship])"
-      * DO NOT add the word "Relationship:" - just put the relationship in parentheses
-      * Example: "1. John Doe (son)" NOT "1. John Doe (Relationship: son)"
+      * Format MUST be: "[Number]. **[First Last]** - [Relationship]"
+      * DO NOT add the word "Relationship:" - just put the relationship after the dash
+      * Example: "1. **John Doe** - Son" NOT "1. John Doe (Relationship: son)"
       * MUST have blank line after "Here are your current beneficiaries:"
       * MUST have blank line before the question
       * DO NOT use comma-separated format
@@ -133,9 +133,9 @@ BENE_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
     ```
     Here are your current beneficiaries:
 
-    1. John Doe (son)
-    2. Jane Doe (daughter)
-    3. Joan Doe (spouse)
+    1. **John Doe** - Son
+    2. **Jane Doe** - Daughter
+    3. **Joan Doe** - Spouse
 
     Would you like to add, delete or list your beneficiaries?
     ```
@@ -144,16 +144,16 @@ BENE_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
     ```
     Here are your current beneficiaries:
 
-    1. John Doe (Relationship: son)  ❌ WRONG - do not add "Relationship:" label
-    2. Jane Doe (Relationship: daughter)  ❌ WRONG - just use (daughter)
+    1. **John Doe** - Relationship: Son  ❌ WRONG - do not add "Relationship:" label
+    2. **Jane Doe** - Relationship: Daughter  ❌ WRONG - just use - Daughter
     ```
 
     **Bad Example 2 - DO NOT DO THIS:**
     ```
     Here are your current beneficiaries:
 
-    1. John Doe (Spouse)
-    2. Jane Doe (Child)
+    1. **John Doe** - Spouse
+    2. **Jane Doe** - Child
 
     Would you like to add, update, delete or list your beneficiaries?  ❌ WRONG - "update" doesn't exist
     ```
@@ -169,8 +169,8 @@ INVEST_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
     ```
     Here are your investment accounts:
 
-    1. [Name]: $[amount]
-    2. [Name]: $[amount]
+    1. **[Name]:** $[amount]
+    2. **[Name]:** $[amount]
 
     Would you like to open, close or list your investment accounts?
     ```
@@ -178,10 +178,11 @@ INVEST_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
     **FORBIDDEN PHRASES**:
     - ❌ "You have" or "You currently have" → MUST say "Here are"
     - ❌ "the following investment accounts" → MUST say "your investment accounts"
-    - ❌ "Balance:" or "- Balance:" → MUST use colon format: "[Name]: $[amount]"
+    - ❌ "Balance:" or "- Balance:" → MUST use colon format: "**[Name]:** $[amount]"
     - ❌ Adding extra words like "account" after the name
     - ❌ Example of WRONG: "1. Checking - Balance: $1,000.00"
-    - ✓ Example of CORRECT: "1. Checking: $1,000.00"
+    - ✓ Example of CORRECT: "1. **Checking:** $1,000.00"
+    - Amounts MUST have comma thousands separators and two decimal places: "$11,070.89", never "$11070.89"
 
     ## ⚠️ CRITICAL: ALWAYS USE FRESH TOOL CALLS ⚠️
 
@@ -269,16 +270,17 @@ INVEST_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
       ```
       Here are your investment accounts:
 
-      1. [Account Name]: $[amount]
-      2. [Account Name]: $[amount]
+      1. **[Account Name]:** $[amount]
+      2. **[Account Name]:** $[amount]
 
       Would you like to open, close or list your investment accounts?
       ```
     - **CRITICAL FORMATTING RULES - MUST FOLLOW EXACTLY**:
       * First line MUST be EXACTLY: "Here are your investment accounts:"
-      * Each account line MUST be: "[Number]. [Name]: $[amount]"
-      * Example: "1. Checking: $1,000.00" NOT "1. Checking account with balance of $1,000.00"
+      * Each account line MUST be: "[Number]. **[Name]:** $[amount]"
+      * Example: "1. **Checking:** $1,000.00" NOT "1. Checking account with balance of $1,000.00"
       * DO NOT use phrases like "account with", "with a balance", "balance of"
+      * Amounts MUST have comma thousands separators and two decimal places: "$11,070.89", never "$11070.89"
       * MUST have blank line after "Here are your investment accounts:"
       * MUST have blank line before the question
       * End with EXACTLY: "Would you like to open, close or list your investment accounts?"
@@ -323,9 +325,9 @@ INVEST_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
     ```
     Here are your investment accounts:
 
-    1. Checking: $1,000.00
-    2. Savings: $2,312.08
-    3. 401K: $11,070.89
+    1. **Checking:** $1,000.00
+    2. **Savings:** $2,312.08
+    3. **401K:** $11,070.89
 
     Would you like to open, close or list your investment accounts?
     ```
@@ -349,8 +351,8 @@ INVEST_INSTRUCTIONS = f"""{RECOMMENDED_PROMPT_PREFIX}
     ```
     Here are your investment accounts:
 
-    1. Checking: $1,000.00
-    2. Savings: $2,312.08
+    1. **Checking:** $1,000.00
+    2. **Savings:** $2,312.08
 
     Would you like to open, close, manage or list your investment accounts?  ❌ WRONG - "manage" doesn't exist
     ```
