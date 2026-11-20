@@ -3,6 +3,7 @@ import App from './App';
 
 afterEach(() => {
   jest.restoreAllMocks();
+  localStorage.clear();
 });
 
 // A fetch that answers /config with the given body (or fails it) and records every URL.
@@ -23,6 +24,9 @@ function mockApi(config, history = []) {
     if (url.endsWith('/config')) {
       if (config === null) throw new Error('no /config');
       return { ok: true, json: async () => config };
+    }
+    if (url.endsWith('/chaos')) {
+      return { ok: true, json: async () => ({ flags: [], events: [] }) };
     }
     if (url.includes('/start-workflow')) {
       const framework = new URL(url, 'http://localhost').searchParams.get('framework');
@@ -228,4 +232,24 @@ test('shows how many chaos flags are on in the sidebar', async () => {
   render(<App />);
   expect(await screen.findByText('2 on')).toBeInTheDocument();
   expect(original).toBeDefined();
+});
+
+test('the chaos button says what clicking it does', async () => {
+  mockApi(TWO);
+  render(<App />);
+  await screen.findByRole('tab', { name: 'Strands' });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Show chaos panel' }));
+  expect(await screen.findByText('Chaos panel')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Hide chaos panel' }));
+  expect(screen.queryByText('Chaos panel')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Show chaos panel' })).toBeInTheDocument();
+});
+
+test('with no chaos flags on, the chaos button shows no count', async () => {
+  mockApi(TWO);
+  render(<App />);
+  await screen.findByRole('tab', { name: 'Strands' });
+  expect(screen.getByRole('button', { name: 'Show chaos panel' })).toHaveTextContent(/^Show chaos panel$/);
 });

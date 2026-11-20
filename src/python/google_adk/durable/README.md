@@ -256,7 +256,7 @@ Java worker's `startcloudworker.sh`.
 
 ## Failure scenarios (chaos panel)
 
-Click **Chaos** in the chat header to open the chaos panel. Its switches inject failures at runtime: the
+Click **Show chaos panel** at the bottom of the web UI's sidebar to open the chaos panel. Its switches inject failures at runtime: the
 activities and the model read the flags from Redis on every attempt, so you can turn a failure on and off
 mid-conversation without restarting anything. The panel lists each injected failure as it happens. Open
 the [Temporal UI](http://localhost:8233) alongside it to show the pending activity, its attempt count and

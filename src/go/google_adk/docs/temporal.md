@@ -246,7 +246,7 @@ The chat workflow, the tool activities and the model calls stay on the Go worker
 
 ## Failure scenarios (chaos panel)
 
-Open the chaos panel with the **Chaos** button in the web UI. Each switch takes effect at once, with no
+Open the chaos panel with **Show chaos panel** at the bottom of the web UI's sidebar. Each switch takes effect at once, with no
 restart: activities and every model call read the flags from the Redis hash `chaos:<session>:flags` on each attempt.
 If Redis can't be reached, the flags read as off. Each injected failure is logged to the Redis list
 `chaos:<session>:events` for the panel. Watch the retries in the Temporal UI.

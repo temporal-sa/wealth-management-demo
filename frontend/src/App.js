@@ -188,10 +188,8 @@ function App() {
             onClick={handleToggleChaos}
             aria-pressed={showChaos}
           >
-            <span>Chaos</span>
-            <span className={`chaos-count ${chaosCount ? 'on' : ''}`}>
-              {chaosCount ? `${chaosCount} on` : 'off'}
-            </span>
+            <span>{showChaos ? 'Hide chaos panel' : 'Show chaos panel'}</span>
+            {chaosCount > 0 && <span className="chaos-count on">{chaosCount} on</span>}
           </button>
         </nav>
         <main className="chat-area">

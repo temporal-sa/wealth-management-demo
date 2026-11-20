@@ -74,7 +74,7 @@ at http://127.0.0.1:8000 (`"proxy"` in `package.json`). That way the browser kee
 keeps each browser's chats, chaos flags and (with `DEMO_DATA_STORE=redis`) sample data apart from other browsers'. See
 [Browser sessions](../src/python/api/README.md#browser-sessions).
 
-Click **Chaos** at the bottom of the sidebar to open the chaos panel, which turns failure scenarios on and off
+Click **Show chaos panel** at the bottom of the sidebar to open the chaos panel (**Hide chaos panel** closes it), which turns failure scenarios on and off
 at runtime and lists the failures as they happen. See
 [Failure scenarios](../src/python/openai_agents/durable/README.md#failure-scenarios-chaos-panel).
 
@@ -107,7 +107,8 @@ npm test
 ## Example
 
 Here's the web application with three frameworks, a chat running in each, and the chaos panel open. The sidebar
-lists the frameworks the API serves (from its `GET /api/config`), and **Chaos** at its bottom opens or hides the chaos
-panel, which turns failures on and off while you chat. The sidebar shows how many flags are on:
+lists the frameworks the API serves (from its `GET /api/config`), and **Show chaos panel** / **Hide chaos panel** at its bottom
+opens or hides the chaos panel, which turns failures on and off while you chat. Next to it, the sidebar shows how many
+flags are on:
 
 ![](../docs/images/webui.png)

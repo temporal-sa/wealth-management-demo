@@ -239,7 +239,7 @@ workflow calls by name on `PYAI-Supervisor`.
 
 ## Failure scenarios (chaos panel)
 
-The chaos panel (**Chaos** in the chat header) injects failures at runtime: activities, agent tools
+The chaos panel (**Show chaos panel** at the bottom of the web UI's sidebar) injects failures at runtime: activities, agent tools
 and the model read its flags from Redis on every attempt, so a failure can be turned on and off
 mid-conversation. It lists each injected failure; the Temporal UI shows the pending activity, its
 attempts and last failure. **Reset all** clears every flag. Flags belong to your browser session: they fail only that browser's chats, in any framework (see

@@ -240,7 +240,7 @@ the Java worker's `startcloudworker.sh`.
 
 ## Failure scenarios (chaos panel)
 
-Click **Chaos** in the web UI's chat header to open the chaos panel. Activities and the model call read
+Click **Show chaos panel** at the bottom of the web UI's sidebar to open the chaos panel. Activities and the model call read
 the flags from the Redis hash `chaos:<session>:flags` (your browser session's, found from the workflow ID;
 see `common/session_scope.py`) on every attempt, so you can turn a failure on and off
 mid-conversation with no restart. If Redis can't be reached, the flags read as off. Each injected failure
