@@ -10,8 +10,9 @@ It uses the [API](../src/python/api/README.md) to interact with Temporal.
 The web application relies on the API to communicate with Temporal. 
 Be sure to follow the instructions to run the API, which can be found [here](../src/python/api/README.md).
 The one API serves every framework, including the TypeScript and Go ones.
-Start it for the framework whose worker you're running, because that decides which task queue chats start on
-and how their workflow IDs are named:
+Start it for the frameworks whose workers you're running, because that decides which task queue chats start on
+and how their workflow IDs are named. Name several separated by commas, or `all`, for a tab for each
+(see [Several frameworks at once](../src/python/api/README.md#several-frameworks-at-once)):
 
 ```bash
 cd src/python/api
@@ -23,6 +24,8 @@ cd src/python/api
 ./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-session-<session>-chat-<random> on VAI-Supervisor
 ./startlocalapi.sh google_adk_ts   # Google ADK (TypeScript): adk-ts-temporal-agent-session-<session>-chat-<random> on ADK-TS-Supervisor
 ./startlocalapi.sh google_adk_go   # Google ADK (Go): adk-go-temporal-agent-session-<session>-chat-<random> on ADK-Go-Supervisor
+./startlocalapi.sh strands_agents,vercel_ai,google_adk_go   # a tab for each of these three
+./startlocalapi.sh all             # a tab for every framework
 ```
 
 Note that the web application communicates directly with the API and the API is what 
@@ -45,10 +48,17 @@ cd frontend
 npm start
 ```
 
-A browser window opens at http://localhost:3000. The header shows the AI framework the API serves
+A browser window opens at http://localhost:3000. The header shows the AI framework
 (for example "AI framework: Google ADK"). Click **Start Chat** to start a conversation. Each
-chat starts a new chat workflow; the API picks its ID, named after the AI framework it serves and carrying your browser
+chat starts a new chat workflow; the API picks its ID, named after the AI framework and carrying your browser
 session, for example `oai-temporal-agent-session-<session>-chat-<random>`. **End Chat** ends it.
+
+When the API serves several frameworks, a tab for each sits under the header, and the header names the selected one.
+Each tab keeps its own chat: start a chat in one tab, switch to another and start one there, and both keep running.
+A green dot marks a tab with a running chat, a red dot a tab that got a reply or status update while hidden. A grey tab
+has no worker running its chats, and its **Start Chat** button is off until one starts.
+
+![Framework tabs](../docs/images/webui-tabs.png)
 
 The web app calls the API on its own origin, at `/api` (`src/config.js`): the dev server proxies those calls to the API
 at http://127.0.0.1:8000 (`"proxy"` in `package.json`). That way the browser keeps the API's session cookie, which
