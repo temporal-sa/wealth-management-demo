@@ -59,6 +59,7 @@ For another framework, start its worker with `java` and the Java worker with tha
 | Vercel AI SDK (TypeScript) | `TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh` | `VAI-Supervisor-open-account` |
 | Google ADK (TypeScript) | `TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor ./startlocalworker.sh` | `ADK-TS-Supervisor-open-account` |
 | Google ADK (Go) | `TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./startlocalworker.sh` | `ADK-Go-Supervisor-open-account` |
+| Spring AI (Java) | `TEMPORAL_TASK_QUEUE=SpringAI-Supervisor ./startlocalworker.sh` | `SpringAI-Supervisor-open-account` |
 
 An argument to the Java script names another open-account queue (`TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT`);
 pass the same name to the framework's worker script instead of `java`.

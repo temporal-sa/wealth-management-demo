@@ -1,0 +1,115 @@
+package io.temporal.demo.springai.claimcheck;
+
+import com.google.protobuf.ByteString;
+import io.temporal.api.common.v1.Payload;
+import io.temporal.common.converter.DataConverterException;
+import io.temporal.common.converter.EncodingKeys;
+import io.temporal.payload.codec.PayloadCodec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.Nonnull;
+import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+/**
+ * Stores each payload in Redis under a new UUID, in the same format as the frameworks' codecs.
+ * Stored payloads expire after CLAIM_CHECK_TTL_SECONDS (default 7 days; 0 keeps them forever), so
+ * they don't pile up in Redis. A workflow needs its payloads to replay, and the Temporal UI needs
+ * them to show its history, so keep the expiry well beyond how long a workflow runs.
+ */
+@Component
+public class ClaimCheckCodec implements PayloadCodec {
+    static final long DEFAULT_TTL_SECONDS = 7L * 24 * 60 * 60;
+
+    Logger logger = LoggerFactory.getLogger(ClaimCheckCodec.class);
+    private final ByteString METADATA_ENCODING = ByteString.copyFromUtf8("claim-checked");
+    private final String CLAIM_CHECK_CODEC_KEY = "temporal.io/claim-check-codec";
+    private final String CLAIM_CHECK_CODEC_VERSION = "v1";
+
+    private final RedisTemplate<String, Payload> redisTemplate;
+    private final long ttlSeconds;
+
+    @Autowired
+    ClaimCheckCodec(RedisTemplate<String, Payload> redisTemplate) {
+        this(redisTemplate, ttlSeconds(System.getenv("CLAIM_CHECK_TTL_SECONDS")));
+    }
+
+    ClaimCheckCodec(RedisTemplate<String, Payload> redisTemplate, long ttlSeconds) {
+        logger.info("Constructing ClaimCheckCodec. RedisTemplate is {}, payloads expire after {}", redisTemplate,
+                ttlSeconds > 0 ? ttlSeconds + " seconds" : "never");
+        this.redisTemplate = redisTemplate;
+        this.ttlSeconds = ttlSeconds;
+    }
+
+    /** How long stored payloads are kept, from a CLAIM_CHECK_TTL_SECONDS value; 0 keeps them forever. */
+    static long ttlSeconds(String value) {
+        if (value == null || value.isBlank()) {
+            return DEFAULT_TTL_SECONDS;
+        }
+        try {
+            return Math.max(0, Long.parseLong(value.trim()));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    @Nonnull
+    @Override
+    public List<Payload> encode(@Nonnull List<Payload> payloads) {
+        return payloads.stream().map(this::encodePayload).collect(Collectors.toList());
+    }
+
+    @Nonnull
+    @Override
+    public List<Payload> decode(@Nonnull List<Payload> payloads) {
+        return payloads.stream().map(this::decodePayload).collect(Collectors.toList());
+    }
+
+    private Payload encodePayload(Payload payload) {
+        String id = UUID.randomUUID().toString();
+
+        if (ttlSeconds > 0) {
+            redisTemplate.opsForValue().set(id, payload, Duration.ofSeconds(ttlSeconds));
+        } else {
+            redisTemplate.opsForValue().set(id, payload);
+        }
+
+        return Payload.newBuilder()
+                .putMetadata(EncodingKeys.METADATA_ENCODING_KEY,METADATA_ENCODING)
+                .putMetadata(CLAIM_CHECK_CODEC_KEY,ByteString.copyFromUtf8(CLAIM_CHECK_CODEC_VERSION))
+                .setData(ByteString.copyFromUtf8(id))
+                .build();
+    }
+
+    private Payload decodePayload(Payload source) {
+        // Payloads that weren't claim-checked pass through unchanged. A claim-checked payload has the
+        // encoding claim-checked or the codec version key (the frameworks' codecs write both).
+        boolean claimChecked = METADATA_ENCODING.equals(source.getMetadataOrDefault(EncodingKeys.METADATA_ENCODING_KEY, null))
+                || ByteString.copyFromUtf8(CLAIM_CHECK_CODEC_VERSION).equals(source.getMetadataOrDefault(CLAIM_CHECK_CODEC_KEY, null));
+        if (!claimChecked) {
+            return source;
+        }
+        // Log only the key: the claim check keeps payload data out of Temporal, so don't put it in the log
+        String key = source.getData().toStringUtf8();
+        logger.debug("Decoding claim check {}", key);
+        Payload original;
+        try {
+            original = redisTemplate.opsForValue().get(key);
+        } catch (Exception ex) {
+            logger.error("Error reading claim check {} from Redis", key, ex);
+            throw new DataConverterException(ex);
+        }
+        if (original == null) {
+            throw new DataConverterException(
+                    "Claim check " + key + " not found in Redis (it may have expired, see CLAIM_CHECK_TTL_SECONDS):"
+                            + " the payload can't be decoded", (Throwable) null);
+        }
+        return original;
+    }
+}

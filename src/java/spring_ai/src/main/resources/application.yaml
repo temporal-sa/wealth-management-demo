@@ -1,0 +1,20 @@
+spring:
+  main:
+    web-application-type: none
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:${GOOGLE_API_KEY:}}
+        chat:
+          options:
+            model: ${GEMINI_MODEL:gemini-3.8-flash}
+    retry:
+      max-attempts: 1
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+logging:
+  level:
+    io.netty.resolver.dns: ERROR

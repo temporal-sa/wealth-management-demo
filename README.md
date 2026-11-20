@@ -1,6 +1,6 @@
 # Wealth Management Agent Demo
 
-A multi-agent banking chat that shows what Temporal adds to an agent framework, built with nine frameworks in three languages. Each framework has a standalone version (the framework alone) and a Temporal version (every model and tool call durable).
+A multi-agent banking chat that shows what Temporal adds to an agent framework, built with ten frameworks in four languages. Each framework has a standalone version (the framework alone) and a Temporal version (every model and tool call durable).
 
 ## Layout
 
@@ -37,6 +37,7 @@ src/<language>/
 | [Vercel AI SDK](src/typescript/vercel_ai/README.md) | TypeScript | `src/typescript/vercel_ai` |
 | [Google ADK](src/typescript/google_adk/README.md) | TypeScript | `src/typescript/google_adk` |
 | [Google ADK](src/go/google_adk/README.md) | Go | `src/go/google_adk` |
+| [Spring AI](src/java/spring_ai/README.md) | Java | `src/java/spring_ai` |
 
 ## Adding an integration
 
@@ -47,6 +48,8 @@ src/<language>/
      one set of npm workspaces with one `node_modules` and one Temporal SDK version.
    - **Go:** the framework belongs to the one Go module, `src/go/go.mod`, and keeps Go conventions inside its folder
      (`cmd/`, `internal/`, `scripts/`).
+   - **Java:** the framework is its own Gradle project with its own wrapper (see `src/java/spring_ai`). Java has no
+     shared `common/` folder: Spring AI's `common/` package has Java versions of the shared pieces to copy.
 2. **Reuse the shared code:** that language's `common/` (data managers, Redis event stream, chaos flags, claim
    check, client settings), the demo data in `data/`, and the settings files in `scripts/`. Worker and approval
    scripts `cd` to their own folder and source `scripts/*.sh`, so they run from anywhere.
@@ -94,6 +97,7 @@ run on `<queue>-open-account`.
 | Vercel AI SDK (TypeScript) | `vercel_ai` | `VAI-Supervisor` |
 | Google ADK (TypeScript) | `google_adk_ts` | `ADK-TS-Supervisor` |
 | Google ADK (Go) | `google_adk_go` | `ADK-Go-Supervisor` |
+| Spring AI (Java) | `spring_ai` | `SpringAI-Supervisor` |
 
 - **The API:** `./src/python/api/startlocalapi.sh <ai-framework>` starts chats on that framework's queue (see
   `src/python/api/frameworks.py`). Several frameworks separated by commas, or `all`, are all listed in the web UI's sidebar.

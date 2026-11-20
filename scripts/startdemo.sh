@@ -4,7 +4,7 @@
 #
 # Usage: scripts/startdemo.sh [--cloud] [--java] <ai-framework>
 #   <ai-framework>  one of openai_agents, pyai, strands_agents, google_adk, pure, langgraph_agents, vercel_ai,
-#                   google_adk_ts, google_adk_go; several separated by commas (strands_agents,vercel_ai); or all
+#                   google_adk_ts, google_adk_go, spring_ai; several separated by commas (strands_agents,vercel_ai); or all
 #   --cloud         connect to Temporal Cloud (scripts/setcloudenv.sh) instead of a local Temporal service
 #   --java          run the open-account workflow on the Java worker (interop/open_account/java): one Java worker
 #                   per framework, on <its task queue>-open-account, named java-<ai-framework>. Needs a JDK.
@@ -117,6 +117,7 @@ worker_dir() {
     vercel_ai) echo "src/typescript/vercel_ai/durable" ;;
     google_adk_ts) echo "src/typescript/google_adk/durable" ;;
     google_adk_go) echo "src/go/google_adk/scripts" ;;
+    spring_ai) echo "src/java/spring_ai/scripts" ;;
   esac
 }
 key_file() {
@@ -172,6 +173,9 @@ for name in $requested; do
   case "$name" in
     vercel_ai|google_adk_ts)
       [ -d "$ROOT/src/typescript/node_modules" ] || die "The TypeScript frameworks' dependencies aren't installed: cd src/typescript && npm install" ;;
+    spring_ai)
+      command -v java >/dev/null 2>&1 && java -version >/dev/null 2>&1 \
+        || die "Spring AI needs a JDK (25, see src/java/spring_ai/README.md), and java isn't on the PATH." ;;
   esac
   frameworks="$frameworks $name"
 done
