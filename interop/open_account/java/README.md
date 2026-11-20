@@ -55,6 +55,7 @@ For another framework, start its worker with `java` and the Java worker with tha
 | Strands Agents | `TEMPORAL_TASK_QUEUE=Strands-Supervisor ./startlocalworker.sh` | `Strands-Supervisor-open-account` |
 | Google ADK (Python) | `TEMPORAL_TASK_QUEUE=ADK-Supervisor ./startlocalworker.sh` | `ADK-Supervisor-open-account` |
 | Pure Python (LiteLLM) | `TEMPORAL_TASK_QUEUE=Pure-Supervisor ./startlocalworker.sh` | `Pure-Supervisor-open-account` |
+| LangGraph | `TEMPORAL_TASK_QUEUE=LangGraph-Supervisor ./startlocalworker.sh` | `LangGraph-Supervisor-open-account` |
 | Vercel AI SDK (TypeScript) | `TEMPORAL_TASK_QUEUE=VAI-Supervisor ./startlocalworker.sh` | `VAI-Supervisor-open-account` |
 | Google ADK (TypeScript) | `TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor ./startlocalworker.sh` | `ADK-TS-Supervisor-open-account` |
 | Google ADK (Go) | `TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./startlocalworker.sh` | `ADK-Go-Supervisor-open-account` |

@@ -411,7 +411,7 @@ async def test_with_several_frameworks_the_override_settings_are_ignored(tempora
         (TASK_QUEUE, "oai-temporal-agent-"), ("PYAI-Supervisor", "pyai-temporal-agent-")]
 
 
-EVERY_FRAMEWORK = ("openai_agents", "pyai", "strands_agents", "google_adk", "pure", "vercel_ai", "google_adk_ts", "google_adk_go")
+EVERY_FRAMEWORK = ("openai_agents", "pyai", "strands_agents", "google_adk", "pure", "langgraph_agents", "vercel_ai", "google_adk_ts", "google_adk_go")
 
 
 @pytest.mark.parametrize("ai_framework", [None, "", "nope"])

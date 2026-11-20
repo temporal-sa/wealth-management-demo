@@ -3,8 +3,8 @@
 # them all, and the web UI, which lists them in its sidebar.
 #
 # Usage: scripts/startdemo.sh [--cloud] <ai-framework>
-#   <ai-framework>  one of openai_agents, pyai, strands_agents, google_adk, pure, vercel_ai, google_adk_ts,
-#                   google_adk_go; several separated by commas (strands_agents,vercel_ai); or all
+#   <ai-framework>  one of openai_agents, pyai, strands_agents, google_adk, pure, langgraph_agents, vercel_ai,
+#                   google_adk_ts, google_adk_go; several separated by commas (strands_agents,vercel_ai); or all
 #   --cloud         connect to Temporal Cloud (scripts/setcloudenv.sh) instead of a local Temporal service
 #
 # While it runs, from another terminal:
@@ -103,7 +103,7 @@ requested=$(uv run python -c "import sys; from api.frameworks import names; prin
 # A framework's worker folder and model key file
 worker_dir() {
   case "$1" in
-    openai_agents|pyai|strands_agents|google_adk|pure) echo "src/python/$1/durable" ;;
+    openai_agents|pyai|strands_agents|google_adk|pure|langgraph_agents) echo "src/python/$1/durable" ;;
     vercel_ai) echo "src/typescript/vercel_ai/durable" ;;
     google_adk_ts) echo "src/typescript/google_adk/durable" ;;
     google_adk_go) echo "src/go/google_adk/scripts" ;;
