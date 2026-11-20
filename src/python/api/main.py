@@ -15,7 +15,7 @@ from common.client_helper import ClientHelper
 from common.session_scope import is_session_id, new_chat_workflow_id, new_session_id, owns_workflow
 
 temporal_client: Optional[Client] = None
-# The frameworks the API serves (AI_FRAMEWORK), by name, in the order the web UI shows their tabs
+# The frameworks the API serves (AI_FRAMEWORK), by name, in the order the web UI lists them
 frameworks: dict[str, Framework] = {}
 
 
@@ -83,7 +83,7 @@ def root():
 
 @api.get("/config")
 async def get_config():
-    """The AI frameworks this API serves, for the web UI's tabs, and whether a worker runs each one's chats."""
+    """The AI frameworks this API serves, for the web UI's sidebar, and whether a worker runs each one's chats."""
     available = await asyncio.gather(
         *(chat.has_workers(temporal_client, framework.task_queue) for framework in frameworks.values()))
     return {
@@ -91,7 +91,8 @@ async def get_config():
             {
                 "framework": framework.name,
                 "label": framework.label,
-                "tab_label": framework.tab_label,
+                "language": framework.language,
+                "short_label": framework.short_label,
                 "task_queue": framework.task_queue,
                 "workflow_id_prefix": framework.workflow_id_prefix,
                 "available": has_workers,

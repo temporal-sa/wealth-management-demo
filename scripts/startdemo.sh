@@ -1,6 +1,6 @@
 #!/bin/bash
 # Starts the demo for one or more AI frameworks in one terminal: each framework's worker, the API serving
-# them all, and the web UI, which shows a tab for each framework.
+# them all, and the web UI, which lists them in its sidebar.
 #
 # Usage: scripts/startdemo.sh [--cloud] <ai-framework>
 #   <ai-framework>  one of openai_agents, pyai, strands_agents, google_adk, pure, vercel_ai, google_adk_ts,

@@ -3,7 +3,7 @@
 Exposes the Temporal chat workflow (`WealthManagementWorkflow`) with an easy to use API. The
 [web application](../../../frontend/README.md) uses it; you can also call it with curl.
 
-It is the one API in this repository: it serves every AI framework, Python, TypeScript (the Vercel AI SDK and Google ADK TypeScript frameworks) or Go (the Google ADK Go framework), because their chat workflows keep the same contract. One running API can serve several frameworks at once, and the web application then shows a tab for each. It uses only the Temporal contracts (the workflow and signal
+It is the one API in this repository: it serves every AI framework, Python, TypeScript (the Vercel AI SDK and Google ADK TypeScript frameworks) or Go (the Google ADK Go framework), because their chat workflows keep the same contract. One running API can serve several frameworks at once, and the web application then lists them all in its sidebar. It uses only the Temporal contracts (the workflow and signal
 names as strings, plain JSON payloads through the Pydantic data converter, and the claim-check codec
 when enabled), never a framework's workflow class or framework plugin. The start scripts' required argument
 (`AI_FRAMEWORK`) picks the AI frameworks: it sets the task queue each framework's worker listens on and the
@@ -26,7 +26,7 @@ Operations (all parameters are query parameters)
 | Method | Endpoint | Parameters | Description |
 |---|---|---|---|
 | GET | `/` | | Health check |
-| GET | `/api/config` | | The AI frameworks the API serves, in tab order: `{"frameworks": [...]}`, each with `framework`, `label`, `tab_label`, `task_queue`, `workflow_id_prefix` and `available` (whether a worker polls its task queue) |
+| GET | `/api/config` | | The AI frameworks the API serves, in order: `{"frameworks": [...]}`, each with `framework`, `label`, `language` (`Python`, `TypeScript` or `Go`), `short_label` (its name within that language), `task_queue`, `workflow_id_prefix` and `available` (whether a worker polls its task queue) |
 | POST | `/api/start-workflow` | `framework` (optional when the API serves one) | Starts a chat workflow for this browser session on the framework's task queue. Returns `{"message": "Workflow started.", "workflow_id": <its ID>}`. 400 for a framework the API doesn't serve |
 | POST | `/api/send-prompt` | `workflow_id`, `prompt` | Sends the customer's message to the workflow (`process_user_message` signal) |
 | GET | `/api/get-chat-history` | `workflow_id`, `from_index` (default `0`) | Returns the conversation events (chat messages and account-opening status updates) stored in Redis, starting at `from_index` |
@@ -75,14 +75,14 @@ Or start the workers, the API and the web UI together with
 [`scripts/startdemo.sh`](../../../scripts/README.md#start-the-demo-with-one-command), for example
 `scripts/startdemo.sh strands_agents,vercel_ai,google_adk_go`.
 
-The web application then shows a tab for each, in that order, and each tab keeps its own live chat, so you can put the
-same questions to several frameworks and switch between them. Start each framework's worker as its README says; they
-can all run against one Temporal service, because each has its own task queue. A tab whose framework has no worker
+The web application then lists them in its sidebar, grouped by language, and each keeps its own live chat, so you can
+put the same questions to several frameworks and switch between them. Start each framework's worker as its README says; they
+can all run against one Temporal service, because each has its own task queue. A framework with no worker
 polling its task queue is greyed out and can't start a chat. Temporal keeps listing a stopped worker for a few minutes,
-so its tab stays available for a while.
+so it stays available for a while.
 
-All tabs are one browser session: a chaos flag affects every tab's chat, and every tab sees the same sample data, so an
-account opened in one tab shows up in the others. With several frameworks, `TEMPORAL_TASK_QUEUE` and
+All the chats are one browser session: a chaos flag affects every framework's chat, and every chat sees the same sample
+data, so an account opened in one framework's chat shows up in the others. With several frameworks, `TEMPORAL_TASK_QUEUE` and
 `CHAT_WORKFLOW_ID_PREFIX` are ignored, because they would give every framework the same queue and prefix.
 
 See each framework's Temporal README (linked above) for setting these up.

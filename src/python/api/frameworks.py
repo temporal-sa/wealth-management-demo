@@ -4,7 +4,7 @@ Each framework is one version of the demo (src/python/<framework>, or src/typesc
 src/go/<framework> for a TypeScript or Go one, whose chat workflows follow the same Temporal contract). AI_FRAMEWORK picks
 them: one framework (e.g. google_adk), several separated by commas (strands_agents,vercel_ai), or all. It has no default:
 the start scripts require it as their argument (e.g. ./startlocalapi.sh google_adk) and, without a valid one, stop and
-list every framework. The web application shows a tab for each framework the API serves.
+list every framework. The web application lists every framework the API serves in its sidebar, grouped by language.
 
 With one framework, TEMPORAL_TASK_QUEUE and CHAT_WORKFLOW_ID_PREFIX override its values. With several, they would
 give every framework the same queue and prefix, so they are ignored (the API says so when it starts).
@@ -19,7 +19,8 @@ from dataclasses import dataclass, replace
 class Framework:
     name: str
     label: str
-    tab_label: str  # short, for the web UI's tabs
+    language: str  # Python, TypeScript or Go: the web UI's sidebar groups frameworks by it
+    short_label: str  # the name within its language group, for the web UI's sidebar
     task_queue: str  # the framework's default chat task queue (its worker's default)
     workflow_id_prefix: str
 
@@ -27,14 +28,14 @@ class Framework:
 FRAMEWORKS = {
     framework.name: framework
     for framework in [
-        Framework("openai_agents", "OpenAI Agents SDK", "OpenAI Agents", "OAI-Supervisor", "oai-temporal-agent-"),
-        Framework("pyai", "Pydantic AI", "Pydantic AI", "PYAI-Supervisor", "pyai-temporal-agent-"),
-        Framework("strands_agents", "Strands Agents", "Strands", "Strands-Supervisor", "strands-temporal-agent-"),
-        Framework("google_adk", "Google ADK", "Google ADK", "ADK-Supervisor", "adk-temporal-agent-"),
-        Framework("pure", "Pure Python (LiteLLM)", "Pure Python", "Pure-Supervisor", "pure-temporal-agent-"),
-        Framework("vercel_ai", "Vercel AI SDK (TypeScript)", "Vercel AI", "VAI-Supervisor", "vai-temporal-agent-"),
-        Framework("google_adk_ts", "Google ADK (TypeScript)", "ADK TS", "ADK-TS-Supervisor", "adk-ts-temporal-agent-"),
-        Framework("google_adk_go", "Google ADK (Go)", "ADK Go", "ADK-Go-Supervisor", "adk-go-temporal-agent-"),
+        Framework("openai_agents", "OpenAI Agents SDK", "Python", "OpenAI Agents SDK", "OAI-Supervisor", "oai-temporal-agent-"),
+        Framework("pyai", "Pydantic AI", "Python", "Pydantic AI", "PYAI-Supervisor", "pyai-temporal-agent-"),
+        Framework("strands_agents", "Strands Agents", "Python", "Strands Agents", "Strands-Supervisor", "strands-temporal-agent-"),
+        Framework("google_adk", "Google ADK", "Python", "Google ADK", "ADK-Supervisor", "adk-temporal-agent-"),
+        Framework("pure", "Pure Python (LiteLLM)", "Python", "Pure Python (LiteLLM)", "Pure-Supervisor", "pure-temporal-agent-"),
+        Framework("vercel_ai", "Vercel AI SDK (TypeScript)", "TypeScript", "Vercel AI SDK", "VAI-Supervisor", "vai-temporal-agent-"),
+        Framework("google_adk_ts", "Google ADK (TypeScript)", "TypeScript", "Google ADK", "ADK-TS-Supervisor", "adk-ts-temporal-agent-"),
+        Framework("google_adk_go", "Google ADK (Go)", "Go", "Google ADK", "ADK-Go-Supervisor", "adk-go-temporal-agent-"),
     ]
 }
 

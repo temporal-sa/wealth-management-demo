@@ -4,15 +4,15 @@ import { API_BASE_URL } from './config';
 
 const defaultHeaderText = 'Chat session started.';
 
-// One framework's chat: its own chat workflow, messages, status bar and polling. The web UI keeps one
-// of these per tab, all mounted, so a chat keeps running (and its replies keep arriving) while another
-// tab is shown.
+// One framework's chat: its own chat workflow, messages, status line and polling. The web UI keeps one
+// of these per framework, all mounted, so a chat keeps running (and its replies keep arriving) while
+// another framework's chat is shown.
 //
 // framework: the framework's entry in GET /api/config, or null when the API's config couldn't be read
 //   (the chat then starts without naming a framework, which works when the API serves just one).
-// visible: whether this tab is the one shown.
-// onChange: called with {active} when a chat starts or ends, and {unseen: true} when a reply
-//   arrives while the tab is hidden.
+// visible: whether this chat is the one shown.
+// onChange: called with {active} when a chat starts or ends, and {unseen: <count>} when replies or
+//   status updates arrive while the chat isn't shown.
 function ChatPane({ framework, visible, onChange = () => {} }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -39,7 +39,7 @@ function ChatPane({ framework, visible, onChange = () => {} }) {
     onChangeRef.current({ active: isChatActive });
   }, [isChatActive]);
 
-  // Scroll to the newest message, and again when the tab is shown (a hidden chat window has no height)
+  // Scroll to the newest message, and again when the chat is shown (a hidden chat window has no height)
   useEffect(() => {
     if (visible && chatWindowRef.current) {
       chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
@@ -218,7 +218,7 @@ function ChatPane({ framework, visible, onChange = () => {} }) {
       setIsWaitingForAIResponse(false);
     }
     if (!visibleRef.current && data.length > 0) {
-      onChangeRef.current({ unseen: true });
+      onChangeRef.current({ unseen: data.length });
     }
     if (newMessages.length > 0) {
       setMessages((prev) => {
@@ -234,11 +234,28 @@ function ChatPane({ framework, visible, onChange = () => {} }) {
   };
   fetchChatHistoryRef.current = fetchChatHistory;
 
+  const tone = statusTone(statusContent);
+
   return (
     <div className="chat-pane" hidden={!visible}>
+      <div className="chat-header">
+        <div className="chat-title">
+          <div className="framework">{framework ? framework.label : 'Wealth Management Chatbot'}</div>
+          {framework && (
+            <div className="chat-subtitle">{framework.language} · {framework.task_queue}</div>
+          )}
+        </div>
+        <button
+          onClick={handleToggleChatState}
+          className={`end-chat-button ${!isChatActive ? 'start-chat-button' : ''}`}
+          disabled={!isChatActive && unavailable}
+        >
+          {isChatActive ? 'End chat' : 'Start chat'}
+        </button>
+      </div>
       {statusContent && (
-        <div className="status-area">
-          {statusContent}
+        <div className={`status-area tone-${tone}`}>
+          <span className="status-text">{statusContent}</span>
           {isWaitingComplianceReview && (
             <button
               className="approve-compliance-button"
@@ -251,10 +268,21 @@ function ChatPane({ framework, visible, onChange = () => {} }) {
         </div>
       )}
       <div className="chat-window" ref={chatWindowRef}>
-        {unavailable && !isChatActive && (
-          <div className="no-worker">
-            No worker is running {framework.label} chats (task queue {framework.task_queue}).
-            Start its worker to chat with it.
+        {messages.length === 0 && (
+          <div className="chat-empty">
+            {unavailable ? (
+              <>
+                <div className="chat-empty-title">No worker is running {framework.label} chats</div>
+                <div>Start its worker (task queue {framework.task_queue}) to chat with it.</div>
+              </>
+            ) : (
+              <>
+                <div className="chat-empty-title">
+                  {framework ? `Chat with the ${framework.label} agents` : 'Chat with the wealth management agents'}
+                </div>
+                <div>Click Start chat, then ask about your beneficiaries or investment accounts.</div>
+              </>
+            )}
           </div>
         )}
         {messages.map((msg, index) => (
@@ -278,20 +306,22 @@ function ChatPane({ framework, visible, onChange = () => {} }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="Type a message..."
+          placeholder={framework ? `Message ${framework.label}` : 'Type a message...'}
+          aria-label="Message"
           disabled={!isChatActive}
         />
         <button onClick={handleSend} disabled={!isChatActive}>Send</button>
       </div>
-      <button
-        onClick={handleToggleChatState}
-        className={`end-chat-button ${!isChatActive ? 'start-chat-button' : ''}`}
-        disabled={!isChatActive && unavailable}
-      >
-        {isChatActive ? 'End Chat' : 'Start Chat'}
-      </button>
     </div>
   );
+}
+
+// How the status line is colored: waiting (amber), complete (green), rolled back or failed (red)
+export function statusTone(status) {
+  if (/complete/i.test(status)) return 'success';
+  if (/rolled back|fail|reject|cancel/i.test(status)) return 'danger';
+  if (/waiting/i.test(status)) return 'warning';
+  return 'neutral';
 }
 
 export default ChatPane;

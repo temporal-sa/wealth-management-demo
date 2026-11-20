@@ -55,8 +55,8 @@ src/<language>/
 4. **Give the framework its own task queue,** `<short name>-Supervisor`, with model calls on `<queue>-llm`, and turn a
    worker script argument of `java` into `<queue>-open-account` using the shared rule (`common/task_queues.py`,
    `common/task-queues.ts`, or the Go framework's `internal/config`). See [Task queues](#task-queues).
-5. **Register it with the API:** add the framework to `src/python/api/frameworks.py` (its name, label, tab label, task
-   queue and chat workflow ID prefix) and to `EVERY_FRAMEWORK` in `src/python/api/tests/test_api.py`, so
+5. **Register it with the API:** add the framework to `src/python/api/frameworks.py` (its name, label, language, short
+   label, task queue and chat workflow ID prefix) and to `EVERY_FRAMEWORK` in `src/python/api/tests/test_api.py`, so
    `./src/python/api/startlocalapi.sh <ai-framework>` serves it. One API serves every framework, whatever its language.
 6. **Document it** like the other frameworks:
    - The framework's `README.md`: what it is, prerequisites, setup and the model key, running the demo, tests, layout.
@@ -87,7 +87,7 @@ run on `<queue>-open-account`.
 | Google ADK (Go) | `google_adk_go` | `ADK-Go-Supervisor` |
 
 - **The API:** `./src/python/api/startlocalapi.sh <ai-framework>` starts chats on that framework's queue (see
-  `src/python/api/frameworks.py`). Several frameworks separated by commas, or `all`, give the web UI a tab for each.
+  `src/python/api/frameworks.py`). Several frameworks separated by commas, or `all`, are all listed in the web UI's sidebar.
   With one framework, `TEMPORAL_TASK_QUEUE` overrides its queue; the worker and the API must then agree.
 - **The Java worker:** start the framework's worker with the argument `java` (for example
   `src/python/pure/durable/startlocalworker.sh java`), then the Java worker with that framework's queue
@@ -121,7 +121,7 @@ API doesn't, so it needs no setting.
 
 **What counts as one browser:** the session lives in the browser's cookie. Tabs and windows of the same browser
 profile share a session, and so the same copy of the data. Another browser, a private window or another profile gets
-a new session; so does clearing cookies. The web UI's framework tabs are one session too. Restarting the API or the
+a new session; so does clearing cookies. The web UI's frameworks are one session too. Restarting the API or the
 workers doesn't change anyone's session. Workflows
 started without the web UI (the scripts, the CLI, the tests) use a shared `default` session.
 
@@ -151,20 +151,20 @@ started without the web UI (the scripts, the CLI, the tests) use a shared `defau
   `TEMPORAL_API_KEY` is set), unit tests for the claim check codec (with a clear error for a missing payload, and no
   payload contents in the log), `TEMPORAL_ADDRESS` and `TEMPORAL_NAMESPACE` in the local profile, and startup log lines.
 - **One UI for every framework:** done. Start the API with several frameworks (`startlocalapi.sh strands_agents,vercel_ai`)
-  or `all`, and the web UI shows a tab for each, every tab with its own live chat. See
+  or `all`, and the web UI lists them in a sidebar grouped by language, each with its own live chat. See
   [Several frameworks at once](src/python/api/README.md#several-frameworks-at-once). Notes:
-  - *Queue names are a contract.* The API's list in `src/python/api/frameworks.py` is the only thing that maps a tab to
-    a queue, so keep each framework's default queue. With several frameworks, `TEMPORAL_TASK_QUEUE` and
+  - *Queue names are a contract.* The API's list in `src/python/api/frameworks.py` is the only thing that maps a framework
+    to a queue, so keep each framework's default queue. With several frameworks, `TEMPORAL_TASK_QUEUE` and
     `CHAT_WORKFLOW_ID_PREFIX` are ignored.
   - *Only starting a chat needs the framework.* Sending a message, approving, ending a chat and reading its history find
     the framework from the chat's workflow ID prefix.
-  - *A tab without a worker is greyed out.* The API asks Temporal whether a worker polls the framework's chat queue
+  - *A framework without a worker is greyed out.* The API asks Temporal whether a worker polls the framework's chat queue
     (`GET /api/config`). It doesn't check `<queue>-llm` or `<queue>-open-account`, and Temporal keeps listing a stopped
     worker for a few minutes.
   - *Still one Java worker per framework.* One Java worker could poll every `<queue>-open-account` and call the
     activities on the queue name without `-open-account`; not done.
-  - *Shared state.* The tabs are one browser session, so a chaos flag affects every tab's chat, and every tab sees the
-    same sample data: an account opened in one tab shows up in the others.
+  - *Shared state.* All the chats are one browser session, so a chaos flag affects every framework's chat, and they all
+    see the same sample data: an account opened in one framework's chat shows up in the others.
   - *Running it:* `scripts/startdemo.sh <frameworks>` starts the frameworks' workers, the API and the web UI in one
     terminal, after checking Temporal and Redis are up (see [`scripts/README.md`](scripts/README.md#start-the-demo-with-one-command)).
     It doesn't start the Java worker.

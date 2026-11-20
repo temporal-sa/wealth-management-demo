@@ -16,8 +16,8 @@ Other frameworks add their key files here too, so frameworks that use the same p
 
 ## Start the demo with one command
 
-`startdemo.sh` starts everything but Temporal and Redis, for one framework, several, or all of them. The web UI shows a
-tab for each framework:
+`startdemo.sh` starts everything but Temporal and Redis, for one framework, several, or all of them. The web UI lists
+them in its sidebar:
 
 ```bash
 scripts/startdemo.sh strands_agents,vercel_ai,google_adk_go
@@ -35,7 +35,7 @@ Every line of output is prefixed with where it came from (`[strands_agents] ...`
 saved to `logs/<name>.log`, replaced on each run. Ctrl-C stops everything the script started.
 
 Order: Temporal and Redis must be up first, because the workers and the API connect when they start. After that the
-order doesn't matter: a framework's tab stays grey until its worker polls, and the web UI notices within 10 seconds.
+order doesn't matter: a framework stays greyed out in the sidebar until its worker polls, and the web UI notices within 10 seconds.
 
 The script doesn't start the Java open-account worker or the codec server. For the Java worker, start that
 framework's worker with `java` and the Java worker yourself (see `interop/open_account/java`).

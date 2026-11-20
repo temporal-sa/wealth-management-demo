@@ -318,7 +318,8 @@ async def test_config_reports_the_framework_and_that_its_worker_runs(http):
     assert await config_of(http) == [{
         "framework": "openai_agents",
         "label": "OpenAI Agents SDK",
-        "tab_label": "OpenAI Agents",
+        "language": "Python",
+        "short_label": "OpenAI Agents SDK",
         "task_queue": TASK_QUEUE,
         "workflow_id_prefix": "oai-temporal-agent-",
         "available": True,
@@ -330,7 +331,8 @@ async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal
         assert await config_of(client) == [{
             "framework": "pyai",
             "label": "Pydantic AI",
-            "tab_label": "Pydantic AI",
+            "language": "Python",
+            "short_label": "Pydantic AI",
             "task_queue": "PYAI-Supervisor",
             "workflow_id_prefix": "pyai-temporal-agent-",
             "available": False,  # no worker polls PYAI-Supervisor here

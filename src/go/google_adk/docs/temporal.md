@@ -28,7 +28,7 @@ Gemini key).
   [Temporal contracts](#temporal-contracts). After each turn the workflow appends a `chat_interaction` event
   to Redis.
   A chat with no customer message and no account-opening status update for an hour ends by itself, as on
-  End Chat (`ChatIdleTimeout` in `chat.go`), so chats abandoned without End Chat don't run forever.
+  End chat (`ChatIdleTimeout` in `chat.go`), so chats abandoned without End chat don't run forever.
 * **Open-account workflow** (`OpenInvestmentAccountWorkflow`,
   [`internal/workflows/openaccount.go`](../internal/workflows/openaccount.go)): reads the client's details,
   waits for KYC and then for compliance approval, and runs the saga. It signals every state change to the
@@ -98,7 +98,7 @@ endpoints.
 cd frontend && npm install && npm start
 ```
 
-Open http://localhost:3000. **Start Chat** starts a chat workflow with the ID
+Open http://localhost:3000. **Start chat** starts a chat workflow with the ID
 `adk-go-temporal-agent-session-<session>-chat-<random>`. Then, for example:
 
 1. *Who are my beneficiaries?* The supervisor hands off to the Beneficiary Agent, which asks for your client ID.
@@ -110,7 +110,7 @@ Open http://localhost:3000. **Start Chat** starts a chat workflow with the ID
 
 ### Approve compliance
 
-The quickest way: while the status bar says **Waiting Compliance Review**, click **Approve compliance review**
+The quickest way: while the status line says **Waiting Compliance Review**, click **Approve compliance review**
 in it. The API (`POST /approve-compliance`) finds the chat's account openings that wait for review and sends
 them the `compliance_approved` signal. To send the signal yourself, as a compliance system would, use the
 script below.

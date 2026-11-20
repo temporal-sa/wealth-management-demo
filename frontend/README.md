@@ -11,7 +11,7 @@ The web application relies on the API to communicate with Temporal.
 Be sure to follow the instructions to run the API, which can be found [here](../src/python/api/README.md).
 The one API serves every framework, including the TypeScript and Go ones.
 Start it for the frameworks whose workers you're running, because that decides which task queue chats start on
-and how their workflow IDs are named. Name several separated by commas, or `all`, for a tab for each
+and how their workflow IDs are named. Name several separated by commas, or `all`, to chat with each
 (see [Several frameworks at once](../src/python/api/README.md#several-frameworks-at-once)):
 
 ```bash
@@ -24,8 +24,8 @@ cd src/python/api
 ./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-session-<session>-chat-<random> on VAI-Supervisor
 ./startlocalapi.sh google_adk_ts   # Google ADK (TypeScript): adk-ts-temporal-agent-session-<session>-chat-<random> on ADK-TS-Supervisor
 ./startlocalapi.sh google_adk_go   # Google ADK (Go): adk-go-temporal-agent-session-<session>-chat-<random> on ADK-Go-Supervisor
-./startlocalapi.sh strands_agents,vercel_ai,google_adk_go   # a tab for each of these three
-./startlocalapi.sh all             # a tab for every framework
+./startlocalapi.sh strands_agents,vercel_ai,google_adk_go   # these three, side by side
+./startlocalapi.sh all             # every framework
 ```
 
 Note that the web application communicates directly with the API and the API is what 
@@ -48,17 +48,22 @@ cd frontend
 npm start
 ```
 
-A browser window opens at http://localhost:3000. The header shows the AI framework
-(for example "AI framework: Google ADK"). Click **Start Chat** to start a conversation. Each
-chat starts a new chat workflow; the API picks its ID, named after the AI framework and carrying your browser
-session, for example `oai-temporal-agent-session-<session>-chat-<random>`. **End Chat** ends it.
+A browser window opens at http://localhost:3000. The sidebar on the left lists the AI frameworks the API serves,
+grouped by language (Python, TypeScript, Go); click one to show its chat. The chat's header names the framework, its
+language and its task queue. Click **Start chat** to start a conversation. Each chat starts a new chat workflow; the
+API picks its ID, named after the AI framework and carrying your browser session, for example
+`oai-temporal-agent-session-<session>-chat-<random>`. **End chat** ends it.
 
-When the API serves several frameworks, a tab for each sits under the header, and the header names the selected one.
-Each tab keeps its own chat: start a chat in one tab, switch to another and start one there, and both keep running.
-A green dot marks a tab with a running chat, a red dot a tab that got a reply or status update while hidden. A grey tab
-has no worker running its chats, and its **Start Chat** button is off until one starts.
+Each framework keeps its own chat: start a chat with one, pick another and start one there, and both keep running, so
+you can ask several frameworks the same questions and compare. In the sidebar, a green dot marks a framework with a
+running chat, and a red count shows replies and status updates that arrived while its chat wasn't shown. A greyed-out
+framework, marked "no worker", has no worker running its chats, and its **Start chat** button is off until one starts.
+With more than six frameworks, a filter box above the list narrows it down.
 
-![Framework tabs](../docs/images/webui-tabs.png)
+While an account opening runs, a status line under the chat header shows its state: amber while it waits, green when
+it's complete, red if it was rolled back.
+
+![Several frameworks in the sidebar](../docs/images/webui-frameworks.png)
 
 To start the workers, the API and the web app in one terminal, use
 [`scripts/startdemo.sh`](../scripts/README.md#start-the-demo-with-one-command), for example
@@ -69,11 +74,11 @@ at http://127.0.0.1:8000 (`"proxy"` in `package.json`). That way the browser kee
 keeps each browser's chats, chaos flags and (with `DEMO_DATA_STORE=redis`) sample data apart from other browsers'. See
 [Browser sessions](../src/python/api/README.md#browser-sessions).
 
-Click **Chaos** in the chat header to open the chaos panel, which turns failure scenarios on and off
+Click **Chaos** at the bottom of the sidebar to open the chaos panel, which turns failure scenarios on and off
 at runtime and lists the failures as they happen. See
 [Failure scenarios](../src/python/openai_agents/durable/README.md#failure-scenarios-chaos-panel).
 
-When you open a new investment account, it waits for compliance review after KYC. While the status bar says
+When you open a new investment account, it waits for compliance review after KYC. While the status line says
 **Waiting Compliance Review**, click **Approve compliance review** in it, or send the approval from a terminal to
 the Open Account child workflow (see
 [How to find the Child Workflow ID](../src/python/openai_agents/durable/README.md#approve-compliance)).
@@ -101,8 +106,8 @@ npm test
 
 ## Example
 
-Here's the web application running against the Pydantic AI framework, with the chaos panel open. The header
-shows the AI framework the API serves (from its `GET /config`), and **Chaos** opens or hides the chaos panel,
-which turns failures on and off while you chat:
+Here's the web application with three frameworks, a chat running in each, and the chaos panel open. The sidebar
+lists the frameworks the API serves (from its `GET /api/config`), and **Chaos** at its bottom opens or hides the chaos
+panel, which turns failures on and off while you chat. The sidebar shows how many flags are on:
 
 ![](../docs/images/webui.png)
