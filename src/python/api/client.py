@@ -10,9 +10,13 @@ Kept apart from main.py, with no FastAPI dependency, so a framework's tests can 
 these exact calls against its real workflow.
 """
 
+from temporalio.api.enums.v1 import TaskQueueKind, TaskQueueType
+from temporalio.api.taskqueue.v1 import TaskQueue
+from temporalio.api.workflowservice.v1 import DescribeTaskQueueRequest
 from temporalio.client import Client
 from temporalio.common import WorkflowIDReusePolicy
 from temporalio.contrib.pydantic import pydantic_data_converter
+from temporalio.service import RPCError
 
 from common.claim_check.claim_check_plugin import ClaimCheckPlugin
 from common.user_message import ProcessUserMessageInput
@@ -75,3 +79,21 @@ async def approve_compliance(client: Client, chat_workflow_id: str) -> list[str]
             await handle.signal(COMPLIANCE_APPROVED_SIGNAL)
             approved.append(execution.id)
     return approved
+
+
+async def has_workers(client: Client, task_queue: str) -> bool:
+    """True if a worker polls the task queue for workflow tasks, so a chat started there will run.
+
+    Temporal lists a poller for a few minutes after its last poll, so a worker that just stopped
+    still counts for a while. False if the task queue can't be described.
+    """
+    request = DescribeTaskQueueRequest(
+        namespace=client.namespace,
+        task_queue=TaskQueue(name=task_queue, kind=TaskQueueKind.TASK_QUEUE_KIND_NORMAL),
+        task_queue_type=TaskQueueType.TASK_QUEUE_TYPE_WORKFLOW,
+    )
+    try:
+        response = await client.workflow_service.describe_task_queue(request)
+    except RPCError:
+        return False
+    return len(response.pollers) > 0

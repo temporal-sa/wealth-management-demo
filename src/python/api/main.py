@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from typing import Optional, AsyncGenerator
 
@@ -7,28 +8,31 @@ from temporalio.exceptions import TemporalError
 from temporalio.service import RPCError
 
 from api import client as chat
-from api.frameworks import Framework, selected_framework
+from api.frameworks import Framework, ignored_overrides, selected_frameworks
 from common.chaos_manager import CHAOS_FLAGS, ChaosFlag, ChaosManager
 from common.event_stream_manager import EventStreamManager
 from common.client_helper import ClientHelper
 from common.session_scope import is_session_id, new_chat_workflow_id, new_session_id, owns_workflow
 
 temporal_client: Optional[Client] = None
-task_queue: Optional[str] = None
-framework: Optional[Framework] = None
+# The frameworks the API serves (AI_FRAMEWORK), by name, in the order the web UI shows their tabs
+frameworks: dict[str, Framework] = {}
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # app startup
     print("API is starting up...")
     global temporal_client
-    global task_queue
-    global framework
-    framework = selected_framework()
-    client_helper = ClientHelper(default_task_queue=framework.task_queue)
-    task_queue = client_helper.taskQueue
-    print(f"Serving the {framework.label} AI framework (AI_FRAMEWORK={framework.name}): chat workflows start "
-          f"on task queue {task_queue} with IDs starting {framework.workflow_id_prefix}")
+    global frameworks
+    served = selected_frameworks()
+    frameworks = {framework.name: framework for framework in served}
+    for framework in served:
+        print(f"Serving the {framework.label} AI framework ({framework.name}): chat workflows start "
+              f"on task queue {framework.task_queue} with IDs starting {framework.workflow_id_prefix}")
+    for name in ignored_overrides(served):
+        print(f"Ignoring {name}: it applies only when the API serves one AI framework")
+    client_helper = ClientHelper(default_task_queue=served[0].task_queue)
     temporal_client = await chat.connect(**client_helper.client_config)
     yield
     print("API is shutting down...")
@@ -57,11 +61,16 @@ async def browser_session(request: Request, call_next):
     return response
 
 
-def own_chat(request: Request, workflow_id: str) -> str:
-    """The workflow ID, if it is one of this browser session's chats; 404 otherwise."""
-    if not owns_workflow(framework.workflow_id_prefix, request.state.session_id, workflow_id):
-        raise HTTPException(status_code=404, detail="No such chat in this browser session")
-    return workflow_id
+def own_chat(request: Request, workflow_id: str) -> Framework:
+    """The framework of the chat, if it is one of this browser session's chats; 404 otherwise.
+
+    A chat's workflow ID starts with its framework's prefix, then the session, so the ID alone
+    says which framework runs it.
+    """
+    for framework in frameworks.values():
+        if owns_workflow(framework.workflow_id_prefix, request.state.session_id, workflow_id):
+            return framework
+    raise HTTPException(status_code=404, detail="No such chat in this browser session")
 
 
 api = APIRouter(prefix="/api")
@@ -73,13 +82,22 @@ def root():
 
 
 @api.get("/config")
-def get_config():
-    """The AI framework this API serves, for the web UI's header."""
+async def get_config():
+    """The AI frameworks this API serves, for the web UI's tabs, and whether a worker runs each one's chats."""
+    available = await asyncio.gather(
+        *(chat.has_workers(temporal_client, framework.task_queue) for framework in frameworks.values()))
     return {
-        "framework": framework.name,
-        "label": framework.label,
-        "task_queue": task_queue,
-        "workflow_id_prefix": framework.workflow_id_prefix,
+        "frameworks": [
+            {
+                "framework": framework.name,
+                "label": framework.label,
+                "tab_label": framework.tab_label,
+                "task_queue": framework.task_queue,
+                "workflow_id_prefix": framework.workflow_id_prefix,
+                "available": has_workers,
+            }
+            for framework, has_workers in zip(frameworks.values(), available)
+        ]
     }
 
 
@@ -156,11 +174,21 @@ async def approve_compliance(request: Request, workflow_id: str):
 
 
 @api.post("/start-workflow")
-async def start_workflow(request: Request):
+async def start_workflow(
+    request: Request,
+    framework: Optional[str] = Query(None, description="The AI framework to run the chat; optional if the API serves one"),
+):
     """Starts a chat for this browser session, with a workflow ID the API picks, and returns the ID."""
-    workflow_id = new_chat_workflow_id(framework.workflow_id_prefix, request.state.session_id)
+    if framework is None and len(frameworks) == 1:
+        framework = next(iter(frameworks))
+    if framework not in frameworks:
+        served = ", ".join(frameworks)
+        detail = (f"Unknown AI framework {framework!r}." if framework else "No AI framework given.")
+        raise HTTPException(status_code=400, detail=f"{detail} This API serves: {served}")
+    chosen = frameworks[framework]
+    workflow_id = new_chat_workflow_id(chosen.workflow_id_prefix, request.state.session_id)
     try:
-        await chat.start_chat(temporal_client, workflow_id, task_queue)
+        await chat.start_chat(temporal_client, workflow_id, chosen.task_queue)
         return {"message": "Workflow started.", "workflow_id": workflow_id}
     except Exception as e:
         print(f"Exception occurred starting workflow {e}")

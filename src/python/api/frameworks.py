@@ -1,11 +1,13 @@
-"""Which AI framework the API serves: its task queue and the prefix of its chat workflow IDs.
+"""Which AI frameworks the API serves: their task queues and the prefixes of their chat workflow IDs.
 
 Each framework is one version of the demo (src/python/<framework>, or src/typescript/<framework> or
-src/go/<framework> for a TypeScript or Go one, whose chat workflows follow the same Temporal contract). AI_FRAMEWORK picks it.
-It has no default: the start scripts require the framework as their argument (e.g.
-./startlocalapi.sh google_adk) and, without a valid one, stop and list every framework.
-TEMPORAL_TASK_QUEUE and CHAT_WORKFLOW_ID_PREFIX override that framework's values. The web
-application reads the prefix from GET /config, so each chat's workflow ID names the SDK that runs it.
+src/go/<framework> for a TypeScript or Go one, whose chat workflows follow the same Temporal contract). AI_FRAMEWORK picks
+them: one framework (e.g. google_adk), several separated by commas (strands_agents,vercel_ai), or all. It has no default:
+the start scripts require it as their argument (e.g. ./startlocalapi.sh google_adk) and, without a valid one, stop and
+list every framework. The web application shows a tab for each framework the API serves.
+
+With one framework, TEMPORAL_TASK_QUEUE and CHAT_WORKFLOW_ID_PREFIX override its values. With several, they would
+give every framework the same queue and prefix, so they are ignored (the API says so when it starts).
 """
 
 import os
@@ -17,6 +19,7 @@ from dataclasses import dataclass, replace
 class Framework:
     name: str
     label: str
+    tab_label: str  # short, for the web UI's tabs
     task_queue: str  # the framework's default chat task queue (its worker's default)
     workflow_id_prefix: str
 
@@ -24,14 +27,14 @@ class Framework:
 FRAMEWORKS = {
     framework.name: framework
     for framework in [
-        Framework("openai_agents", "OpenAI Agents SDK", "OAI-Supervisor", "oai-temporal-agent-"),
-        Framework("pyai", "Pydantic AI", "PYAI-Supervisor", "pyai-temporal-agent-"),
-        Framework("strands_agents", "Strands Agents", "Strands-Supervisor", "strands-temporal-agent-"),
-        Framework("google_adk", "Google ADK", "ADK-Supervisor", "adk-temporal-agent-"),
-        Framework("pure", "Pure Python (LiteLLM)", "Pure-Supervisor", "pure-temporal-agent-"),
-        Framework("vercel_ai", "Vercel AI SDK (TypeScript)", "VAI-Supervisor", "vai-temporal-agent-"),
-        Framework("google_adk_ts", "Google ADK (TypeScript)", "ADK-TS-Supervisor", "adk-ts-temporal-agent-"),
-        Framework("google_adk_go", "Google ADK (Go)", "ADK-Go-Supervisor", "adk-go-temporal-agent-"),
+        Framework("openai_agents", "OpenAI Agents SDK", "OpenAI Agents", "OAI-Supervisor", "oai-temporal-agent-"),
+        Framework("pyai", "Pydantic AI", "Pydantic AI", "PYAI-Supervisor", "pyai-temporal-agent-"),
+        Framework("strands_agents", "Strands Agents", "Strands", "Strands-Supervisor", "strands-temporal-agent-"),
+        Framework("google_adk", "Google ADK", "Google ADK", "ADK-Supervisor", "adk-temporal-agent-"),
+        Framework("pure", "Pure Python (LiteLLM)", "Pure Python", "Pure-Supervisor", "pure-temporal-agent-"),
+        Framework("vercel_ai", "Vercel AI SDK (TypeScript)", "Vercel AI", "VAI-Supervisor", "vai-temporal-agent-"),
+        Framework("google_adk_ts", "Google ADK (TypeScript)", "ADK TS", "ADK-TS-Supervisor", "adk-ts-temporal-agent-"),
+        Framework("google_adk_go", "Google ADK (Go)", "ADK Go", "ADK-Go-Supervisor", "adk-go-temporal-agent-"),
     ]
 }
 
@@ -42,30 +45,53 @@ def valid_frameworks() -> str:
     return "\n".join(f"  {f.name:<{width}}  {f.label} (task queue {f.task_queue})" for f in FRAMEWORKS.values())
 
 
-def problem(name: str) -> str | None:
-    """Why ``name`` isn't a framework, or None if it is."""
-    if not name:
+ALL = "all"
+OVERRIDES = ("TEMPORAL_TASK_QUEUE", "CHAT_WORKFLOW_ID_PREFIX")
+
+
+def names(value: str) -> list[str]:
+    """The framework names in an AI_FRAMEWORK value: one name, names separated by commas, or all."""
+    if value.strip().lower() == ALL:
+        return list(FRAMEWORKS)
+    return list(dict.fromkeys(name.strip() for name in value.split(",") if name.strip()))
+
+
+def problem(value: str) -> str | None:
+    """Why ``value`` doesn't name frameworks, or None if it does."""
+    if not names(value):
         return "No AI framework given."
-    if name not in FRAMEWORKS:
-        return f"Unknown AI framework {name!r}."
+    unknown = [name for name in names(value) if name not in FRAMEWORKS]
+    if unknown:
+        return f"Unknown AI framework {', '.join(repr(name) for name in unknown)}."
     return None
 
 
-def selected_framework() -> Framework:
-    """The framework named by AI_FRAMEWORK, with CHAT_WORKFLOW_ID_PREFIX applied."""
-    name = os.getenv("AI_FRAMEWORK", "")
-    if error := problem(name):
-        raise ValueError(f"{error} Set AI_FRAMEWORK to one of:\n{valid_frameworks()}")
-    framework = FRAMEWORKS[name]
-    prefix = os.getenv("CHAT_WORKFLOW_ID_PREFIX")
-    return replace(framework, workflow_id_prefix=prefix) if prefix else framework
+def selected_frameworks() -> list[Framework]:
+    """The frameworks AI_FRAMEWORK names, in its order. With just one, TEMPORAL_TASK_QUEUE and
+    CHAT_WORKFLOW_ID_PREFIX override its task queue and prefix."""
+    value = os.getenv("AI_FRAMEWORK", "")
+    if error := problem(value):
+        raise ValueError(f"{error} Set AI_FRAMEWORK to one of these, several separated by commas, or {ALL}:\n"
+                         f"{valid_frameworks()}")
+    frameworks = [FRAMEWORKS[name] for name in names(value)]
+    if len(frameworks) == 1:
+        framework = frameworks[0]
+        queue, prefix = os.getenv("TEMPORAL_TASK_QUEUE"), os.getenv("CHAT_WORKFLOW_ID_PREFIX")
+        frameworks = [replace(framework, task_queue=queue or framework.task_queue,
+                              workflow_id_prefix=prefix or framework.workflow_id_prefix)]
+    return frameworks
+
+
+def ignored_overrides(frameworks: list[Framework]) -> list[str]:
+    """The override settings that are set but ignored, because the API serves several frameworks."""
+    return [name for name in OVERRIDES if os.getenv(name)] if len(frameworks) > 1 else []
 
 
 if __name__ == "__main__":
-    # python -m api.frameworks <script> <framework>: the start scripts check their argument here,
+    # python -m api.frameworks <script> <frameworks>: the start scripts check their argument here,
     # before starting uvicorn, and stop with the list of frameworks if it isn't one.
     script, name = sys.argv[1], (sys.argv[2] if len(sys.argv) > 2 else "")
     if error := problem(name):
-        print(f"{error} Usage: {script} <ai-framework>, where <ai-framework> is one of:\n{valid_frameworks()}",
-              file=sys.stderr)
+        print(f"{error} Usage: {script} <ai-framework>, where <ai-framework> is one of these, several separated "
+              f"by commas, or {ALL}:\n{valid_frameworks()}", file=sys.stderr)
         sys.exit(2)

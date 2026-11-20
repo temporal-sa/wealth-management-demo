@@ -17,6 +17,7 @@ import subprocess
 import sys
 import uuid
 from contextlib import contextmanager
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 
@@ -309,25 +310,31 @@ async def test_set_chaos_rejects_an_unknown_flag(http):
     assert response.status_code == 400
 
 
-async def test_config_reports_the_framework(http):
-    response = await asyncio.to_thread(http.get, "/api/config")
-    assert response.json() == {
+async def config_of(client) -> list[dict]:
+    return (await asyncio.to_thread(client.get, "/api/config")).json()["frameworks"]
+
+
+async def test_config_reports_the_framework_and_that_its_worker_runs(http):
+    assert await config_of(http) == [{
         "framework": "openai_agents",
         "label": "OpenAI Agents SDK",
+        "tab_label": "OpenAI Agents",
         "task_queue": TASK_QUEUE,
         "workflow_id_prefix": "oai-temporal-agent-",
-    }
+        "available": True,
+    }]
 
 
 async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal_env, tmp_path_factory):
     with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="pyai") as client:
-        config = (await asyncio.to_thread(client.get, "/api/config")).json()
-        assert config == {
+        assert await config_of(client) == [{
             "framework": "pyai",
             "label": "Pydantic AI",
+            "tab_label": "Pydantic AI",
             "task_queue": "PYAI-Supervisor",
             "workflow_id_prefix": "pyai-temporal-agent-",
-        }
+            "available": False,  # no worker polls PYAI-Supervisor here
+        }]
 
         workflow_id = await start_chat(client)
         assert workflow_id.startswith("pyai-temporal-agent-session-")
@@ -340,8 +347,66 @@ async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal
 async def test_settings_override_the_frameworks_values(temporal_env, tmp_path_factory):
     with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="pyai", TEMPORAL_TASK_QUEUE="my-queue",
              CHAT_WORKFLOW_ID_PREFIX="demo-") as client:
-        config = (await asyncio.to_thread(client.get, "/api/config")).json()
+        [config] = await config_of(client)
     assert (config["task_queue"], config["workflow_id_prefix"]) == ("my-queue", "demo-")
+
+
+@contextmanager
+def two_frameworks(temporal_env, tmp_path_factory, **settings):
+    """The API serving OpenAI Agents and Pydantic AI, whose test worker polls TASK_QUEUE as OpenAI Agents' queue
+    would. The override settings don't apply to several frameworks, so the stub queue is patched in."""
+    from api import frameworks
+    stub = replace(frameworks.FRAMEWORKS["openai_agents"], task_queue=TASK_QUEUE)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setitem(frameworks.FRAMEWORKS, "openai_agents", stub)
+        with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="openai_agents, pyai", **settings) as client:
+            yield client
+
+
+async def test_several_frameworks_are_listed_in_order_with_their_workers(temporal_env, tmp_path_factory):
+    with two_frameworks(temporal_env, tmp_path_factory) as client:
+        config = await config_of(client)
+    assert [(f["framework"], f["task_queue"], f["available"]) for f in config] == [
+        ("openai_agents", TASK_QUEUE, True), ("pyai", "PYAI-Supervisor", False)]
+
+
+async def test_with_several_frameworks_a_chat_starts_on_the_one_asked_for(temporal_env, tmp_path_factory):
+    with two_frameworks(temporal_env, tmp_path_factory) as client:
+        pyai = (await post(client, "/api/start-workflow", framework="pyai"))["workflow_id"]
+        oai = (await post(client, "/api/start-workflow", framework="openai_agents"))["workflow_id"]
+        assert pyai.startswith("pyai-temporal-agent-session-") and oai.startswith("oai-temporal-agent-session-")
+        assert session_from(pyai) == session_from(oai)  # one browser, one session, a chat in each tab
+
+        # Each chat's ID says which framework it is: both are reachable through the same endpoints
+        assert await post(client, "/api/send-prompt", workflow_id=oai, prompt="Hi") == {"response": "Message sent"}
+        assert await post(client, "/api/end-chat", workflow_id=oai) == {"message": "End chat signal sent."}
+        assert (await asyncio.to_thread(client.post, "/api/approve-compliance",
+                                        params={"workflow_id": pyai})).json() == {"approved": []}
+        with other_browser(client):
+            response = await asyncio.to_thread(client.post, "/api/end-chat", params={"workflow_id": pyai})
+            assert response.status_code == 404
+
+    assert (await temporal_env.client.get_workflow_handle(pyai).describe()).task_queue == "PYAI-Supervisor"
+    assert await asyncio.wait_for(temporal_env.client.get_workflow_handle(oai).result(), timeout=10) == [
+        {"user_input": "Hi"}]
+    await temporal_env.client.get_workflow_handle(pyai).terminate()
+
+
+@pytest.mark.parametrize("framework", [None, "google_adk", "nope"])
+async def test_with_several_frameworks_starting_a_chat_needs_one_of_them(temporal_env, tmp_path_factory, framework):
+    with two_frameworks(temporal_env, tmp_path_factory) as client:
+        params = {"framework": framework} if framework else {}
+        response = await asyncio.to_thread(client.post, "/api/start-workflow", params=params)
+    assert response.status_code == 400
+    assert "This API serves: openai_agents, pyai" in response.json()["detail"]
+
+
+async def test_with_several_frameworks_the_override_settings_are_ignored(temporal_env, tmp_path_factory):
+    with two_frameworks(temporal_env, tmp_path_factory, TEMPORAL_TASK_QUEUE="my-queue",
+                        CHAT_WORKFLOW_ID_PREFIX="demo-") as client:
+        config = await config_of(client)
+    assert [(f["task_queue"], f["workflow_id_prefix"]) for f in config] == [
+        (TASK_QUEUE, "oai-temporal-agent-"), ("PYAI-Supervisor", "pyai-temporal-agent-")]
 
 
 EVERY_FRAMEWORK = ("openai_agents", "pyai", "strands_agents", "google_adk", "pure", "vercel_ai", "google_adk_ts", "google_adk_go")
@@ -349,17 +414,32 @@ EVERY_FRAMEWORK = ("openai_agents", "pyai", "strands_agents", "google_adk", "pur
 
 @pytest.mark.parametrize("ai_framework", [None, "", "nope"])
 def test_the_api_needs_a_known_ai_framework_and_lists_every_framework(monkeypatch, ai_framework):
-    from api.frameworks import selected_framework
+    from api.frameworks import selected_frameworks
     if ai_framework is None:
         monkeypatch.delenv("AI_FRAMEWORK", raising=False)
     else:
         monkeypatch.setenv("AI_FRAMEWORK", ai_framework)
     with pytest.raises(ValueError) as error:
-        selected_framework()
+        selected_frameworks()
     assert all(f"  {name} " in str(error.value) for name in EVERY_FRAMEWORK)
 
 
-@pytest.mark.parametrize("args", [[], [""], ["nope"]])
+@pytest.mark.parametrize("value, expected", [
+    ("all", list(EVERY_FRAMEWORK)), (" ALL ", list(EVERY_FRAMEWORK)), ("pyai", ["pyai"]),
+    ("strands_agents,vercel_ai", ["strands_agents", "vercel_ai"]), (" go_first , pyai, pyai ", None),
+    ("google_adk_go, pyai, google_adk_go", ["google_adk_go", "pyai"]),
+])
+def test_ai_framework_names_one_several_or_all(monkeypatch, value, expected):
+    from api.frameworks import selected_frameworks
+    monkeypatch.setenv("AI_FRAMEWORK", value)
+    if expected is None:
+        with pytest.raises(ValueError, match="Unknown AI framework 'go_first'"):
+            selected_frameworks()
+    else:
+        assert [f.name for f in selected_frameworks()] == expected
+
+
+@pytest.mark.parametrize("args", [[], [""], ["nope"], ["pyai,nope"], [","]])
 def test_the_start_scripts_check_stops_without_a_known_framework_and_lists_every_framework(args):
     """startlocalapi.sh and startcloudapi.sh run this check before starting uvicorn."""
     result = subprocess.run([sys.executable, "-m", "api.frameworks", "startlocalapi.sh", *args],
@@ -369,8 +449,8 @@ def test_the_start_scripts_check_stops_without_a_known_framework_and_lists_every
     assert all(f"  {name} " in result.stderr for name in EVERY_FRAMEWORK)
 
 
-@pytest.mark.parametrize("name", EVERY_FRAMEWORK)
-def test_the_start_scripts_check_accepts_every_framework(name):
+@pytest.mark.parametrize("name", [*EVERY_FRAMEWORK, "all", "strands_agents,vercel_ai,google_adk_go"])
+def test_the_start_scripts_check_accepts_every_framework_several_or_all(name):
     result = subprocess.run([sys.executable, "-m", "api.frameworks", "startlocalapi.sh", name],
                             capture_output=True, text=True, cwd=Path(__file__).parents[2])
     assert (result.returncode, result.stderr) == (0, "")
@@ -380,10 +460,7 @@ async def test_the_strands_framework_needs_nothing_extra(temporal_env, tmp_path_
     """Like the other frameworks, the Strands Agents version confirms deletes in the chat, so the
     API serves it with the same endpoints: only its task queue and prefix differ."""
     with api(temporal_env, tmp_path_factory, AI_FRAMEWORK="strands_agents") as client:
-        assert (await asyncio.to_thread(client.get, "/api/config")).json() == {
-            "framework": "strands_agents",
-            "label": "Strands Agents",
-            "task_queue": "Strands-Supervisor",
-            "workflow_id_prefix": "strands-temporal-agent-",
-        }
+        [config] = await config_of(client)
+        assert (config["framework"], config["task_queue"], config["workflow_id_prefix"]) == (
+            "strands_agents", "Strands-Supervisor", "strands-temporal-agent-")
         assert (await asyncio.to_thread(client.get, "/api/pending-approval", params={"workflow_id": "x"})).status_code == 404
