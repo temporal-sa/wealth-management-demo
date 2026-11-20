@@ -60,6 +60,10 @@ has no worker running its chats, and its **Start Chat** button is off until one 
 
 ![Framework tabs](../docs/images/webui-tabs.png)
 
+To start the workers, the API and the web app in one terminal, use
+[`scripts/startdemo.sh`](../scripts/README.md#start-the-demo-with-one-command), for example
+`scripts/startdemo.sh all`.
+
 The web app calls the API on its own origin, at `/api` (`src/config.js`): the dev server proxies those calls to the API
 at http://127.0.0.1:8000 (`"proxy"` in `package.json`). That way the browser keeps the API's session cookie, which
 keeps each browser's chats, chaos flags and (with `DEMO_DATA_STORE=redis`) sample data apart from other browsers'. See

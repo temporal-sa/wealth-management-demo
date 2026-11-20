@@ -71,6 +71,10 @@ Give the scripts several frameworks separated by commas, or `all`:
 ./startlocalapi.sh all
 ```
 
+Or start the workers, the API and the web UI together with
+[`scripts/startdemo.sh`](../../../scripts/README.md#start-the-demo-with-one-command), for example
+`scripts/startdemo.sh strands_agents,vercel_ai,google_adk_go`.
+
 The web application then shows a tab for each, in that order, and each tab keeps its own live chat, so you can put the
 same questions to several frameworks and switch between them. Start each framework's worker as its README says; they
 can all run against one Temporal service, because each has its own task queue. A tab whose framework has no worker

@@ -31,3 +31,6 @@ interop/**/build/
 .DS_Store
 .idea/
 .vscode/
+
+# scripts/startdemo.sh output
+logs/

@@ -165,5 +165,7 @@ started without the web UI (the scripts, the CLI, the tests) use a shared `defau
     activities on the queue name without `-open-account`; not done.
   - *Shared state.* The tabs are one browser session, so a chaos flag affects every tab's chat, and every tab sees the
     same sample data: an account opened in one tab shows up in the others.
-  - *Running it:* each framework's workers still start on their own; there's no script that starts them all yet.
+  - *Running it:* `scripts/startdemo.sh <frameworks>` starts the frameworks' workers, the API and the web UI in one
+    terminal, after checking Temporal and Redis are up (see [`scripts/README.md`](scripts/README.md#start-the-demo-with-one-command)).
+    It doesn't start the Java worker.
 - **History:** import each repo the way the first two were: on a branch, `git mv` its files into place in rename-only commits, remove the files the monorepo already shares, then merge with `--allow-unrelated-histories`. The frameworks started from the same layout, so `git log --follow` on a moved file can show commits from more than one framework; `git log <path-in-the-original-repo>` on the import's second parent shows one framework's history.
