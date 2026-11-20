@@ -1,6 +1,6 @@
 # Wealth Management Agent Demo
 
-A multi-agent banking chat that shows what Temporal adds to an agent framework, built with ten frameworks in four languages. Each framework has a standalone version (the framework alone) and a Temporal version (every model and tool call durable).
+A multi-agent banking chat that shows what Temporal adds to an agent framework, built with eleven frameworks in four languages. Each framework has a standalone version (the framework alone) and a Temporal version (every model and tool call durable).
 
 ## Layout
 
@@ -36,6 +36,7 @@ src/<language>/
 | [LangGraph](src/python/langgraph_agents/README.md) | Python | `src/python/langgraph_agents` |
 | [Vercel AI SDK](src/typescript/vercel_ai/README.md) | TypeScript | `src/typescript/vercel_ai` |
 | [Google ADK](src/typescript/google_adk/README.md) | TypeScript | `src/typescript/google_adk` |
+| [Strands Agents](src/typescript/strands_agents/README.md) | TypeScript | `src/typescript/strands_agents` |
 | [Google ADK](src/go/google_adk/README.md) | Go | `src/go/google_adk` |
 | [Spring AI](src/java/spring_ai/README.md) | Java | `src/java/spring_ai` |
 
@@ -96,6 +97,7 @@ run on `<queue>-open-account`.
 | LangGraph | `langgraph_agents` | `LangGraph-Supervisor` |
 | Vercel AI SDK (TypeScript) | `vercel_ai` | `VAI-Supervisor` |
 | Google ADK (TypeScript) | `google_adk_ts` | `ADK-TS-Supervisor` |
+| Strands Agents (TypeScript) | `strands_agents_ts` | `Strands-TS-Supervisor` |
 | Google ADK (Go) | `google_adk_go` | `ADK-Go-Supervisor` |
 | Spring AI (Java) | `spring_ai` | `SpringAI-Supervisor` |
 

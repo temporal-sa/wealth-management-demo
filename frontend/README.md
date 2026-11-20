@@ -24,6 +24,7 @@ cd src/python/api
 ./startlocalapi.sh langgraph_agents  # LangGraph: langgraph-temporal-agent-session-<session>-chat-<random> on LangGraph-Supervisor
 ./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-session-<session>-chat-<random> on VAI-Supervisor
 ./startlocalapi.sh google_adk_ts   # Google ADK (TypeScript): adk-ts-temporal-agent-session-<session>-chat-<random> on ADK-TS-Supervisor
+./startlocalapi.sh strands_agents_ts  # Strands Agents (TypeScript): strands-ts-temporal-agent-session-<session>-chat-<random> on Strands-TS-Supervisor
 ./startlocalapi.sh google_adk_go   # Google ADK (Go): adk-go-temporal-agent-session-<session>-chat-<random> on ADK-Go-Supervisor
 ./startlocalapi.sh spring_ai       # Spring AI (Java): springai-temporal-agent-session-<session>-chat-<random> on SpringAI-Supervisor
 ./startlocalapi.sh strands_agents,vercel_ai,google_adk_go   # these three, side by side
