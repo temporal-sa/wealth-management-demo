@@ -169,6 +169,8 @@ frameworks="${frameworks# }"
 [ -n "$frameworks" ] || die "No framework left to start."
 
 # ---- Start everything
+# Output goes through a pipe (for the prefix and the log), so ask Python not to hold it back in a buffer
+export PYTHONUNBUFFERED=1
 mkdir -p "$LOGS"
 rm -rf "$CONTROL"
 mkdir -p "$CONTROL"
