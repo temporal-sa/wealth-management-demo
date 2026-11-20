@@ -346,6 +346,7 @@ cd src/java/spring_ai && ./gradlew test
 | Test class | Checks |
 |---|---|
 | `ChatWorkflowTest` | The real chat workflow through the real plugin: a handoff and a tool call answer the same message, every model call is the chat model activity on `SpringAI-Supervisor-llm` while the tool runs on the chat queue, the next message starts at the agent that answered last and is told the client ID; `approve_kyc` refuses until this opening's details were shown in an earlier turn |
+| `ModelChaosTest` | The chaos panel's model switches through the real plugin and interceptor, with flags looked up by browser session as in Redis: while "LLM API down" or "LLM rate limited" is on, the chat model activity fails and is retried (a rate-limited call after 15 s) and the turn waits; once it is off, the turn carries on |
 | `OpenAccountWorkflowTest` | The saga, its rollback in reverse after a custodian rejection, and the workflow bug pausing the workflow instead of failing it |
 | `CommonTest` | The data store keeps the files exactly as the Python frameworks write them, transfers are idempotent and can't overdraw, client updates, the session from a workflow ID, money formatting and the open-account queue rule |
 

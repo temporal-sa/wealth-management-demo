@@ -49,8 +49,10 @@ public class ModelCallInterceptor extends WorkerInterceptorBase {
                 if (!MODEL_ACTIVITY.equals(context.getInfo().getActivityType())) {
                     return super.execute(input);
                 }
-                chaos.inject(Chaos.LLM_DOWN, new IllegalStateException("Connection error: Gemini API unavailable"));
-                chaos.inject(Chaos.LLM_RATE_LIMITED, rateLimited("Gemini API rate limit exceeded (HTTP 429)"));
+                // The flags of this activity's session: the activity's context isn't set up yet, so it is passed
+                Chaos flags = chaos.forActivity(context.getInfo());
+                flags.inject(Chaos.LLM_DOWN, new IllegalStateException("Connection error: Gemini API unavailable"));
+                flags.inject(Chaos.LLM_RATE_LIMITED, rateLimited("Gemini API rate limit exceeded (HTTP 429)"));
                 try {
                     return super.execute(input);
                 } catch (RuntimeException e) {

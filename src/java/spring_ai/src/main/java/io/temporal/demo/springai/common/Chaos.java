@@ -33,6 +33,14 @@ public interface Chaos {
 
     void recordEvent(String flag);
 
+    /**
+     * The flags of the given activity's session. Inside an activity they come from its workflow ID by themselves;
+     * a worker interceptor runs before the activity's context is set up, so it passes the activity's info.
+     */
+    default Chaos forActivity(ActivityInfo info) {
+        return this;
+    }
+
     /** Throws {@code error} if the flag is on, after logging the failure for the chaos panel. */
     default void inject(String flag, RuntimeException error) {
         if (!isEnabled(flag)) {
@@ -71,20 +79,46 @@ public interface Chaos {
         }
     };
 
-    /** The flags of the running activity's session, in Redis. */
+    /** The flags of the running activity's session (or of the activity it was given), in Redis. */
     final class Redis implements Chaos {
         private static final Logger log = LoggerFactory.getLogger(Redis.class);
         private static final int MAX_EVENTS = 50;
         private final StringRedisTemplate redis;
+        private final ActivityInfo activity; // null: the running activity's
 
         public Redis(StringRedisTemplate redis) {
+            this(redis, null);
+        }
+
+        private Redis(StringRedisTemplate redis, ActivityInfo activity) {
             this.redis = redis;
+            this.activity = activity;
+        }
+
+        @Override
+        public Chaos forActivity(ActivityInfo info) {
+            return new Redis(redis, info);
+        }
+
+        private String session() {
+            return activity != null ? Session.fromWorkflowId(activity.getWorkflowId()) : Session.current();
+        }
+
+        private ActivityInfo info() {
+            if (activity != null) {
+                return activity;
+            }
+            try {
+                return Activity.getExecutionContext().getInfo();
+            } catch (RuntimeException notInAnActivity) {
+                return null;
+            }
         }
 
         @Override
         public boolean isEnabled(String flag) {
             try {
-                return "1".equals(redis.opsForHash().get("chaos:" + Session.current() + ":flags", flag));
+                return "1".equals(redis.opsForHash().get("chaos:" + session() + ":flags", flag));
             } catch (RuntimeException e) {
                 // Fail open: if Redis is unreachable, chaos is off rather than breaking the demo.
                 log.warn("Could not read chaos flag {}: {}", flag, e.getMessage());
@@ -97,17 +131,11 @@ public interface Chaos {
             Map<String, Object> event = new LinkedHashMap<>();
             event.put("timestamp", System.currentTimeMillis() / 1000.0);
             event.put("flag", flag);
-            try {
-                ActivityInfo info = Activity.getExecutionContext().getInfo();
-                event.put("source", info.getActivityType());
-                event.put("attempt", info.getAttempt());
-                event.put("workflow_id", info.getWorkflowId());
-            } catch (RuntimeException notInAnActivity) {
-                event.put("source", "");
-                event.put("attempt", 0);
-                event.put("workflow_id", "");
-            }
-            String key = "chaos:" + Session.current() + ":events";
+            ActivityInfo info = info();
+            event.put("source", info != null ? info.getActivityType() : "");
+            event.put("attempt", info != null ? info.getAttempt() : 0);
+            event.put("workflow_id", info != null ? info.getWorkflowId() : "");
+            String key = "chaos:" + session() + ":events";
             try {
                 redis.opsForList().leftPush(key, Json.compact(event));
                 redis.opsForList().trim(key, 0, MAX_EVENTS - 1);
