@@ -70,11 +70,11 @@ Enter your message: What investment accounts do I have?
 Handed off from Beneficiary Agent to Supervisor Agent
 Handed off from Supervisor Agent to Investment Agent
 
-Investment Agent: You have the following investment accounts:
+Investment Agent: Here are your investment accounts:
 
-Checking with a balance of $1,000.00
-Savings with a balance of $2,312.08
-401K with a balance of $11,070.89
+1. Checking: $1,000.00
+2. Savings: $2,312.08
+3. 401K: $11,070.89
 
 Would you like to open an account, close an account, or list your accounts?
 

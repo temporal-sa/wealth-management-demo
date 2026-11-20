@@ -66,19 +66,21 @@ Assistant: I can help with that. What is your client ID?
 
 You: 123
 
-Assistant: Your current beneficiaries are:
-John Doe (son)
-Jane Doe (daughter)
-Joan Doe (spouse)
+Assistant: Here are your beneficiaries:
+
+1. John Doe (son)
+2. Jane Doe (daughter)
+3. Joan Doe (spouse)
 
 What would you like to do: add, delete, or list beneficiaries?
 
 You: What investments do I have?
 
-Assistant: Your investment accounts are:
-Checking: $1000
-Savings: $2312.08
-401K: $11070.89
+Assistant: Here are your investment accounts:
+
+1. Checking: $1,000.00
+2. Savings: $2,312.08
+3. 401K: $11,070.89
 
 What would you like to do: open, close, or list investment accounts?
 
