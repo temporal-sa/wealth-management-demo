@@ -79,6 +79,13 @@ To try the Java workflow without the chat or an OpenAI key, run the open-account
 (with this worker running for `OAI-Supervisor`): `src/python/openai_agents/durable/startlocalopenaccount.sh java`. See
 "Testing the Open Account workflow on its own" in the [Temporal README](../../../src/python/openai_agents/durable/README.md).
 
+### With startdemo.sh
+
+`scripts/startdemo.sh --java <framework>` starts the framework's worker, the API, the web UI and one Java worker per
+framework in one terminal, with the right task queues (see the
+[scripts README](../../../scripts/README.md#run-account-openings-on-the-java-worker---java)). Restart a Java worker,
+for example after fixing the workflow bug below, with `scripts/startdemo.sh restart java-<framework>`.
+
 ## Running with Temporal Cloud
 
 Create `scripts/setcloudenv.sh` (copy `scripts/setcloudenv.example`)

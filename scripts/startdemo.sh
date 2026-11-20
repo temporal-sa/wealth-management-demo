@@ -2,15 +2,18 @@
 # Starts the demo for one or more AI frameworks in one terminal: each framework's worker, the API serving
 # them all, and the web UI, which lists them in its sidebar.
 #
-# Usage: scripts/startdemo.sh [--cloud] <ai-framework>
+# Usage: scripts/startdemo.sh [--cloud] [--java] <ai-framework>
 #   <ai-framework>  one of openai_agents, pyai, strands_agents, google_adk, pure, langgraph_agents, vercel_ai,
 #                   google_adk_ts, google_adk_go; several separated by commas (strands_agents,vercel_ai); or all
 #   --cloud         connect to Temporal Cloud (scripts/setcloudenv.sh) instead of a local Temporal service
+#   --java          run the open-account workflow on the Java worker (interop/open_account/java): one Java worker
+#                   per framework, on <its task queue>-open-account, named java-<ai-framework>. Needs a JDK.
 #
 # While it runs, from another terminal:
 #   scripts/startdemo.sh stop <ai-framework>     stops that framework's worker (the rest keep running)
 #   scripts/startdemo.sh start <ai-framework>    starts it again
 #   scripts/startdemo.sh restart <ai-framework>  both, for example to load a code fix
+# With --java, java-<ai-framework> names that framework's Java worker (for example restart java-strands_agents).
 # The worker's output stays in the first terminal, and Ctrl-C there still stops everything.
 #
 # Start Temporal (local) and Redis first; this script checks them but doesn't start them. It runs each
@@ -19,8 +22,7 @@
 # (scripts/set*key.sh) is missing is skipped. Every line of output is prefixed with where it came from,
 # and also saved to logs/<name>.log. Ctrl-C stops everything this script started.
 #
-# Not started here: the Java open-account worker (start a framework's worker with java and the Java worker
-# yourself, see interop/open_account/java) and the codec server.
+# Not started here: the codec server.
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$(basename "$0")"
@@ -92,8 +94,16 @@ case "$1" in
 esac
 
 cloud=false
-if [ "$1" = "--cloud" ]; then cloud=true; shift; fi
-[ $# -eq 1 ] || die "Usage: $SCRIPT [--cloud] <ai-framework>, where <ai-framework> is a framework, several separated by commas, or all; or $SCRIPT stop|start|restart <ai-framework> while it runs"
+java=false
+while [ $# -gt 1 ]; do
+  case "$1" in
+    --cloud) cloud=true ;;
+    --java) java=true ;;
+    *) break ;;
+  esac
+  shift
+done
+[ $# -eq 1 ] && [ "${1#--}" = "$1" ] || die "Usage: $SCRIPT [--cloud] [--java] <ai-framework>, where <ai-framework> is a framework, several separated by commas, or all; or $SCRIPT stop|start|restart <ai-framework> while it runs"
 
 # The frameworks named, checked by the API's own list (src/python/api/frameworks.py)
 cd "$ROOT/src/python/api" || exit 1
@@ -168,6 +178,16 @@ done
 frameworks="${frameworks# }"
 [ -n "$frameworks" ] || die "No framework left to start."
 
+# The Java open-account worker: each framework's task queue, which its Java worker serves, and one build up
+# front, so the Java workers don't all compile at once
+if $java; then
+  command -v java >/dev/null 2>&1 && java -version >/dev/null 2>&1 \
+    || die "--java needs a JDK (25, see interop/open_account/java/README.md), and java isn't on the PATH."
+  queues=$(uv run python -c "import sys; from api.frameworks import FRAMEWORKS; print(' '.join(FRAMEWORKS[n].task_queue for n in sys.argv[1:]))" $frameworks)
+  echo "*** Building the Java open-account worker..."
+  (cd "$ROOT/interop/open_account/java" && ./gradlew -q classes) || die "The Java open-account worker didn't build (see above)."
+fi
+
 # ---- Start everything
 # Output goes through a pipe (for the prefix and the log), so ask Python not to hold it back in a buffer
 export PYTHONUNBUFFERED=1
@@ -238,9 +258,21 @@ trap stop_all EXIT
 
 echo "*** Starting ($where): ${frameworks// /, }. Output is also in logs/. Ctrl-C stops everything."
 echo "*** To stop, start or restart one framework's worker, from another terminal: $SCRIPT stop|start|restart <ai-framework>"
+if $java; then
+  # Every framework's worker reads this: it leaves the open-account workflow to <its task queue>-open-account
+  export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java
+  echo "*** The open-account workflow runs on the Java worker; to restart one: $SCRIPT restart java-<ai-framework>"
+fi
 for name in $frameworks; do
   run_worker "$name" "$(worker_dir "$name")" "./start${where}worker.sh"
 done
+if $java; then
+  set -- $queues
+  for name in $frameworks; do
+    run_worker "java-$name" interop/open_account/java env TEMPORAL_TASK_QUEUE="$1" "./start${where}worker.sh"
+    shift
+  done
+fi
 run api src/python/api "./start${where}api.sh" "${frameworks// /,}"
 run webui frontend env PORT=$WEBUI_PORT npm start
 echo "*** The web UI opens at http://localhost:$WEBUI_PORT once it has compiled."

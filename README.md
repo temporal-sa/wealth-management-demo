@@ -102,7 +102,7 @@ run on `<queue>-open-account`.
   `src/python/pure/durable/startlocalworker.sh java`), then the Java worker with that framework's queue
   (`TEMPORAL_TASK_QUEUE=Pure-Supervisor interop/open_account/java/startlocalworker.sh`). Each framework's account
   openings go to its own `<queue>-open-account`, so several frameworks can each have a Java worker at once. The Java
-  worker has no default queue. The rule that turns `java` into the queue name is in `common/task_queues.py`,
+  worker has no default queue. `scripts/startdemo.sh --java <ai-framework>` does all of this in one terminal. The rule that turns `java` into the queue name is in `common/task_queues.py`,
   `common/task-queues.ts`, the Go framework's `internal/config` and the Java worker's `ServerInfo`.
 
 ## Sharing one demo
