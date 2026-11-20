@@ -10,7 +10,7 @@ Settings files that every framework's start scripts source, plus scripts that wo
 | `setclaimcheck.example` → `setclaimcheck.sh` | Optional claim check: `USE_CLAIM_CHECK`, and where Redis is: host and port, an optional `REDIS_PASSWORD`, or a `REDIS_URL` that wins over them; how long claim-checked payloads are kept (`CLAIM_CHECK_TTL_SECONDS`, default 7 days) |
 | `setcloudenv.example` → `setcloudenv.sh` | Temporal Cloud address, namespace, and either an mTLS cert and key or an API key |
 | `setsplitworkflows.sh` | Sourced by worker scripts: a queue argument moves the open-account workflow onto that queue (e.g. for the Java worker) |
-| `startdemo.sh` | Starts the demo for one or more frameworks in one terminal: each framework's worker, the API and the web UI. See [Start the demo with one command](#start-the-demo-with-one-command) |
+| `startdemo.sh` | Starts the demo for one or more frameworks in one terminal: each framework's worker, the API and the web UI, and with `--java` the Java open-account worker. See [Start the demo with one command](#start-the-demo-with-one-command) |
 
 Other frameworks add their key files here too, so frameworks that use the same provider share one key file.
 
@@ -23,6 +23,7 @@ them in its sidebar:
 scripts/startdemo.sh strands_agents,vercel_ai,google_adk_go
 scripts/startdemo.sh all
 scripts/startdemo.sh --cloud all     # Temporal Cloud, with scripts/setcloudenv.sh
+scripts/startdemo.sh --java strands_agents   # account openings on the Java worker
 ```
 
 Start Temporal (for a local demo, `temporal server start-dev`) and Redis first: the script checks that it can reach
@@ -33,6 +34,21 @@ the same frameworks, and `npm start` for the web UI. A framework whose key file 
 
 Every line of output is prefixed with where it came from (`[strands_agents] ...`, `[api] ...`, `[webui] ...`) and also
 saved to `logs/<name>.log`, replaced on each run. Ctrl-C stops everything the script started.
+
+### Run account openings on the Java worker (`--java`)
+
+With `--java`, the account-opening workflow runs on the shared
+[Java open-account worker](../interop/open_account/java/README.md) instead of each framework's own worker:
+
+```bash
+scripts/startdemo.sh --java strands_agents,vercel_ai
+```
+
+The script builds the Java worker first, then starts one Java worker per framework, named `java-<framework>`
+(`[java-strands_agents] ...`, `logs/java-strands_agents.log`). Each serves its framework's task queue: its account
+openings run on `<task queue>-open-account`, and its activities (client details, the saga steps) still run on the
+framework's own worker, which `--java` starts with `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT=java`. It needs a JDK (25), and
+each Java worker is a JVM of its own, so `--java all` starts nine. It combines with `--cloud`.
 
 ### Stop, start or restart one framework's worker
 
@@ -47,6 +63,8 @@ scripts/startdemo.sh restart strands_agents   # stop and start, for example to l
 The worker's output stays in the first terminal (`[strands_agents] *** stopped`, `*** restarting`, `*** starting`),
 its log keeps every run, and Ctrl-C there still stops everything. A worker that stops by itself, for example after a
 crash, waits for `start` too. The commands work only on workers this script started, by their framework name.
+With `--java`, `java-<framework>` names that framework's Java worker, for example
+`scripts/startdemo.sh restart java-strands_agents`.
 
 ### Demo the "Bug in workflow code" scenario
 
@@ -63,8 +81,11 @@ crash, waits for `start` too. The commands work only on workers this script star
    and the opening completes in the web UI.
 7. Turn the flag off, and `git checkout` the file to put the bug back for the next demo.
 
+With `--java`, the bug is in the Java workflow instead (a `NullPointerException` from `BONUS_RATES` in
+`OpenInvestmentAccountWorkflowImpl.java`, see the [Java worker's README](../interop/open_account/java/README.md#bug-in-the-workflow-code-chaos-panel)).
+Fix it there, then `scripts/startdemo.sh restart java-<framework>`: the Java worker compiles the fix when it starts.
+
 Order: Temporal and Redis must be up first, because the workers and the API connect when they start. After that the
 order doesn't matter: a framework stays greyed out in the sidebar until its worker polls, and the web UI notices within 10 seconds.
 
-The script doesn't start the Java open-account worker or the codec server. For the Java worker, start that
-framework's worker with `java` and the Java worker yourself (see `interop/open_account/java`).
+The script doesn't start the codec server.
