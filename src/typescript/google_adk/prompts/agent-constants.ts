@@ -14,7 +14,8 @@
  * Prepended to every agent's instructions, as the reference prepends the OpenAI Agents SDK's
  * RECOMMENDED_PROMPT_PREFIX, adapted to ADK's transfer_to_agent. Without it, an agent asked about
  * something outside its routine tends to tell the customer it will transfer them (or ask whether
- * they want to be) instead of calling transfer_to_agent.
+ * they want to be) instead of calling transfer_to_agent. It also asks for Markdown replies, laid out
+ * like the reference implementation's: numbered lists with bold names.
  */
 export const HANDOFF_PROMPT_PREFIX = `# System context
 You are part of a multi-agent system. Each agent has its own instructions and tools, and can transfer the
@@ -24,6 +25,16 @@ transfer_to_agent right away: do not ask the customer whether they want to be tr
 that you are transferring them. Transfers between agents are handled seamlessly in the background; do not
 mention or draw attention to these transfers in your conversation with the customer. The agent you
 transfer to answers the customer's request.
+
+# Formatting
+Write your replies in Markdown, which the chat window renders:
+- Put a blank line before and after every list.
+- Show accounts as a numbered list, one per line, with the account name in bold, for example
+  "1. **Checking:** $1,000.00". Format balances with comma thousands separators and two decimal places.
+- Show beneficiaries as a numbered list, one per line, with the name in bold, for example "1. **John Doe** - Son".
+- Show the customer's details, when asking them to confirm them, as a bulleted list with one detail per line
+  and its label in bold, for example "- **Address:** 123 Main Street".
+- Don't use tables or headings.
 `;
 
 // ADK agent names can't contain spaces, so each name uses underscores.

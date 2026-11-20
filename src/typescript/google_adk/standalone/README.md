@@ -42,8 +42,10 @@ Beneficiary_Agent: I can help with that. What is your client ID?
 Enter your message: 123
 
 Beneficiary_Agent: Here are your beneficiaries:
-* John Doe (son)
-* Jane Doe (daughter)
-* Joe Doe (spouse)
+
+1. **John Doe** - Son
+2. **Jane Doe** - Daughter
+3. **Joan Doe** - Spouse
+
 Would you like to add, delete or list your beneficiaries?
 ```
