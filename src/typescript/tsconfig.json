@@ -18,6 +18,7 @@
   "include": [
     "common/**/*.ts",
     "vercel_ai/**/*.ts",
-    "google_adk/**/*.ts"
+    "google_adk/**/*.ts",
+    "strands_agents/**/*.ts"
   ]
 }
