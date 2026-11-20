@@ -7,6 +7,12 @@
 #                   google_adk_go; several separated by commas (strands_agents,vercel_ai); or all
 #   --cloud         connect to Temporal Cloud (scripts/setcloudenv.sh) instead of a local Temporal service
 #
+# While it runs, from another terminal:
+#   scripts/startdemo.sh stop <ai-framework>     stops that framework's worker (the rest keep running)
+#   scripts/startdemo.sh start <ai-framework>    starts it again
+#   scripts/startdemo.sh restart <ai-framework>  both, for example to load a code fix
+# The worker's output stays in the first terminal, and Ctrl-C there still stops everything.
+#
 # Start Temporal (local) and Redis first; this script checks them but doesn't start them. It runs each
 # framework's own start script (startlocalworker.sh or startcloudworker.sh), then the API's
 # (startlocalapi.sh or startcloudapi.sh) and the web UI (npm start). A framework whose model key file
@@ -24,9 +30,70 @@ WEBUI_PORT=3000
 
 die() { echo "*** $*" >&2; exit 1; }
 
+# Kills a process, then its descendants (the parent first, so a worker's loop doesn't see its worker exit
+# and report it while everything stops)
+killtree() {
+  local children
+  children=$(pgrep -P "$1" 2>/dev/null)
+  kill "$1" 2>/dev/null
+  for child in $children; do killtree "$child"; done
+}
+
+# How a running startdemo.sh and the stop, start and restart commands talk: for each worker, the PID of
+# its loop (<name>.loop), of the running worker (<name>.worker), and what was asked of it (<name>.request)
+CONTROL="$LOGS/.control"
+
+running_workers() {
+  local file names=""
+  for file in "$CONTROL"/*.loop; do
+    [ -f "$file" ] && kill -0 "$(cat "$file")" 2>/dev/null && names="$names $(basename "$file" .loop)"
+  done
+  echo "${names# }"
+}
+
+# control <stop|start|restart> <ai-framework>
+control() {
+  local action=$1 name=$2 loop worker up=false
+  [ -n "$name" ] || die "Usage: $SCRIPT $action <ai-framework>"
+  loop=$(cat "$CONTROL/$name.loop" 2>/dev/null)
+  if [ -z "$loop" ] || ! kill -0 "$loop" 2>/dev/null; then
+    local running; running=$(running_workers)
+    [ -n "$running" ] || die "$SCRIPT isn't running. Start the demo first, for example: $SCRIPT all"
+    die "$SCRIPT isn't running a worker for $name. It runs: ${running// /, }"
+  fi
+  worker=$(cat "$CONTROL/$name.worker" 2>/dev/null)
+  [ -n "$worker" ] && kill -0 "$worker" 2>/dev/null && up=true
+  case "$action" in
+    stop)
+      $up || die "$name's worker is already stopped. Start it with: $SCRIPT start $name"
+      echo stop > "$CONTROL/$name.request"
+      killtree "$worker"
+      echo "*** Stopped $name's worker. Start it again with: $SCRIPT start $name" ;;
+    start)
+      $up && die "$name's worker is already running. To restart it: $SCRIPT restart $name"
+      echo start > "$CONTROL/$name.request"
+      echo "*** Starting $name's worker; its output is in the first terminal." ;;
+    restart)
+      if $up; then
+        echo restart > "$CONTROL/$name.request"
+        killtree "$worker"
+      else
+        echo start > "$CONTROL/$name.request"
+      fi
+      echo "*** Restarting $name's worker; its output is in the first terminal." ;;
+  esac
+}
+
+case "$1" in
+  stop|start|restart)
+    [ $# -eq 2 ] || die "Usage: $SCRIPT $1 <ai-framework>"
+    control "$1" "$2"
+    exit $? ;;
+esac
+
 cloud=false
 if [ "$1" = "--cloud" ]; then cloud=true; shift; fi
-[ $# -eq 1 ] || die "Usage: $SCRIPT [--cloud] <ai-framework>, where <ai-framework> is a framework, several separated by commas, or all"
+[ $# -eq 1 ] || die "Usage: $SCRIPT [--cloud] <ai-framework>, where <ai-framework> is a framework, several separated by commas, or all; or $SCRIPT stop|start|restart <ai-framework> while it runs"
 
 # The frameworks named, checked by the API's own list (src/python/api/frameworks.py)
 cd "$ROOT/src/python/api" || exit 1
@@ -103,6 +170,8 @@ frameworks="${frameworks# }"
 
 # ---- Start everything
 mkdir -p "$LOGS"
+rm -rf "$CONTROL"
+mkdir -p "$CONTROL"
 pids=""
 
 # run <name> <folder> <command...>: runs the command in the folder, its output prefixed with [name] and saved
@@ -117,10 +186,37 @@ run() {
   pids="$pids $!"
 }
 
-killtree() {
-  local child
-  for child in $(pgrep -P "$1" 2>/dev/null); do killtree "$child"; done
-  kill "$1" 2>/dev/null
+# run_worker <name> <folder> <command...>: like run, but in a loop that the stop, start and restart commands
+# drive. When the worker stops, the loop waits for a start (asked for, or after the worker stopped by itself).
+# The log keeps every run.
+run_worker() {
+  local name=$1 dir=$2; shift 2
+  local request="$CONTROL/$name.request"
+  : > "$LOGS/$name.log"
+  (
+    cd "$ROOT/$dir" || exit 1
+    while :; do
+      rm -f "$request"
+      ( "$@" 2>&1 | tee -a "$LOGS/$name.log" | awk -v p="[$name] " '{ print p $0; fflush() }' ) &
+      echo $! > "$CONTROL/$name.worker"
+      wait $!
+      status=$?
+      rm -f "$CONTROL/$name.worker"
+      # Ctrl-C reaches the worker too, and it may exit before this loop is stopped: stay quiet then
+      [ -e "$CONTROL/stopping" ] && exit 0
+      if [ ! -s "$request" ]; then sleep 1; [ -e "$CONTROL/stopping" ] && exit 0; fi
+      case "$(cat "$request" 2>/dev/null)" in
+        restart) echo "[$name] *** restarting"; continue ;;
+        stop) echo "[$name] *** stopped. Start it again with: $SCRIPT start $name" ;;
+        *) echo "[$name] *** stopped (exit status $status). Start it again with: $SCRIPT start $name" ;;
+      esac
+      rm -f "$request"
+      until [ "$(cat "$request" 2>/dev/null)" = start ]; do sleep 1; done
+      echo "[$name] *** starting"
+    done
+  ) &
+  echo $! > "$CONTROL/$name.loop"
+  pids="$pids $!"
 }
 
 stopping=false
@@ -129,16 +225,19 @@ stop_all() {
   stopping=true
   echo
   echo "*** Stopping everything this script started..."
+  touch "$CONTROL/stopping"
   for pid in $pids; do killtree "$pid"; done
   wait 2>/dev/null
+  rm -rf "$CONTROL"
   echo "*** Stopped."
 }
 trap 'stop_all; exit 0' INT TERM
 trap stop_all EXIT
 
 echo "*** Starting ($where): ${frameworks// /, }. Output is also in logs/. Ctrl-C stops everything."
+echo "*** To stop, start or restart one framework's worker, from another terminal: $SCRIPT stop|start|restart <ai-framework>"
 for name in $frameworks; do
-  run "$name" "$(worker_dir "$name")" "./start${where}worker.sh"
+  run_worker "$name" "$(worker_dir "$name")" "./start${where}worker.sh"
 done
 run api src/python/api "./start${where}api.sh" "${frameworks// /,}"
 run webui frontend env PORT=$WEBUI_PORT npm start

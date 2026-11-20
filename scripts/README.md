@@ -34,6 +34,35 @@ the same frameworks, and `npm start` for the web UI. A framework whose key file 
 Every line of output is prefixed with where it came from (`[strands_agents] ...`, `[api] ...`, `[webui] ...`) and also
 saved to `logs/<name>.log`, replaced on each run. Ctrl-C stops everything the script started.
 
+### Stop, start or restart one framework's worker
+
+While the demo runs, use a second terminal to stop, start or restart one framework's worker. The others keep running:
+
+```bash
+scripts/startdemo.sh stop strands_agents
+scripts/startdemo.sh start strands_agents
+scripts/startdemo.sh restart strands_agents   # stop and start, for example to load a code fix
+```
+
+The worker's output stays in the first terminal (`[strands_agents] *** stopped`, `*** restarting`, `*** starting`),
+its log keeps every run, and Ctrl-C there still stops everything. A worker that stops by itself, for example after a
+crash, waits for `start` too. The commands work only on workers this script started, by their framework name.
+
+### Demo the "Bug in workflow code" scenario
+
+1. `scripts/startdemo.sh all`, then pick a framework in the web UI.
+2. Click **Show chaos panel** and turn on **Bug in workflow code**.
+3. Open an account and approve compliance (the **Approve compliance review** button). The account opening pauses: its
+   workflow task fails on the bug and Temporal retries it, which the Temporal UI shows on the open-account workflow.
+   The other frameworks' chats keep working.
+4. Optionally, `scripts/startdemo.sh stop <framework>`: with no worker, the opening simply waits in Temporal.
+5. Fix the bug in that framework's open-account workflow. The chaos panel's "Demo scenarios" says where: for the
+   Python frameworks, `_welcome_bonus` in `durable/workflows/open_account_workflow.py` (`initial_deposit` →
+   `initial_amount`), and each framework has its own copy.
+6. `scripts/startdemo.sh restart <framework>` (or `start` after step 4). The worker replays the workflow with the fix,
+   and the opening completes in the web UI.
+7. Turn the flag off, and `git checkout` the file to put the bug back for the next demo.
+
 Order: Temporal and Redis must be up first, because the workers and the API connect when they start. After that the
 order doesn't matter: a framework stays greyed out in the sidebar until its worker polls, and the web UI notices within 10 seconds.
 
