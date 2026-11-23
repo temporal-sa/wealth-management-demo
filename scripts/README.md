@@ -4,7 +4,7 @@ Settings files that every framework's start scripts source, plus scripts that wo
 
 | File | Purpose |
 |---|---|
-| `setoaikey.example` → `setoaikey.sh` | OpenAI API key (`OPENAI_API_KEY`): OpenAI Agents and Pydantic AI frameworks |
+| `setoaikey.example` → `setoaikey.sh` | OpenAI API key (`OPENAI_API_KEY`): OpenAI Agents (Python and TypeScript) and Pydantic AI frameworks. The TypeScript OpenAI Agents framework also reads an optional `OPENAI_MODEL` (default `gpt-4o`) |
 | `setgeminikey.example` → `setgeminikey.sh` | Gemini API key (`GEMINI_API_KEY`): Strands Agents (Python and TypeScript), Google ADK (Python, TypeScript and Go), LangGraph, Vercel AI SDK and Spring AI frameworks. All of them also read an optional `GEMINI_MODEL` (default `gemini-3.8-flash`) |
 | `setllmkey.example` → `setllmkey.sh` | Pure Python framework: `LLM_MODEL` (a LiteLLM `<provider>/<model>` name) and that provider's key (Anthropic by default; OpenAI or Gemini also work) |
 | `setclaimcheck.example` → `setclaimcheck.sh` | Optional claim check: `USE_CLAIM_CHECK`, and where Redis is: host and port, an optional `REDIS_PASSWORD`, or a `REDIS_URL` that wins over them; how long claim-checked payloads are kept (`CLAIM_CHECK_TTL_SECONDS`, default 7 days) |
