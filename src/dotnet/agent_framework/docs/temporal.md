@@ -263,10 +263,22 @@ exists, and each prints at startup whether the claim check is on, with the `USE_
 cp scripts/setclaimcheck.example scripts/setclaimcheck.sh
 ```
 
-`USE_CLAIM_CHECK` accepts `true`, `yes` or `1`. Restart every component after changing it. This framework's codec
-([`Common/ClaimCheckCodec.cs`](../Common/ClaimCheckCodec.cs)) writes the same format as every other framework's, so to
-see the payloads in the Temporal UI, run any framework's codec server, for example the TypeScript one
-(`./src/typescript/vercel_ai/durable/startcodecserver.sh`), as described in its README.
+`USE_CLAIM_CHECK` accepts `true`, `yes` or `1`. Restart every component after changing it.
+
+This framework has no codec server of its own: its codec ([`Common/ClaimCheckCodec.cs`](../Common/ClaimCheckCodec.cs))
+writes the same format as every other framework's, so any of their codec servers decodes its payloads (the Python,
+TypeScript and Go ones are checked with it). To see the payloads in the Temporal UI, start one, for example:
+
+```bash
+./src/typescript/vercel_ai/durable/startcodecserver.sh
+```
+
+Then, in the Temporal UI at exactly http://localhost:8233 (the codec servers allow only that origin and
+https://cloud.temporal.io), open the data encoder settings and set the codec server to `http://127.0.0.1:8081`. Or
+start the local Temporal service with it already set:
+`temporal server start-dev --ui-codec-endpoint http://127.0.0.1:8081`.
+
+![Codec server settings](../../../../docs/images/config-codec-server.png)
 
 ## Running on Temporal Cloud
 
