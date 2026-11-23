@@ -7,7 +7,8 @@
     "common",
     "vercel_ai",
     "google_adk",
-    "strands_agents"
+    "strands_agents",
+    "openai_agents"
   ],
   "scripts": {
     "build": "tsc --build",

@@ -19,6 +19,7 @@
     "common/**/*.ts",
     "vercel_ai/**/*.ts",
     "google_adk/**/*.ts",
-    "strands_agents/**/*.ts"
+    "strands_agents/**/*.ts",
+    "openai_agents/**/*.ts"
   ]
 }

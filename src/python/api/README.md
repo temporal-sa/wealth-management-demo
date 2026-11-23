@@ -58,6 +58,7 @@ the chat's workflow ID starts with its framework's prefix.
 | [Vercel AI SDK (TypeScript)](../../typescript/vercel_ai/durable/README.md) | `./startlocalapi.sh vercel_ai` | `VAI-Supervisor` | `vai-temporal-agent-session-<session>-chat-<random>` |
 | [Google ADK (TypeScript)](../../typescript/google_adk/durable/README.md) | `./startlocalapi.sh google_adk_ts` | `ADK-TS-Supervisor` | `adk-ts-temporal-agent-session-<session>-chat-<random>` |
 | [Strands Agents (TypeScript)](../../typescript/strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents_ts` | `Strands-TS-Supervisor` | `strands-ts-temporal-agent-session-<session>-chat-<random>` |
+| [OpenAI Agents SDK (TypeScript)](../../typescript/openai_agents/durable/README.md) | `./startlocalapi.sh openai_agents_ts` | `OAI-TS-Supervisor` | `oai-ts-temporal-agent-session-<session>-chat-<random>` |
 | [Google ADK (Go)](../../go/google_adk/docs/temporal.md) | `./startlocalapi.sh google_adk_go` | `ADK-Go-Supervisor` | `adk-go-temporal-agent-session-<session>-chat-<random>` |
 | [Spring AI (Java)](../../java/spring_ai/docs/temporal.md) | `./startlocalapi.sh spring_ai` | `SpringAI-Supervisor` | `springai-temporal-agent-session-<session>-chat-<random>` |
 
@@ -115,7 +116,7 @@ cd src/python/api
 Be sure to have created scripts/setcloudenv.sh. See the [Temporal README](../openai_agents/durable/README.md#running-on-temporal-cloud) for more details.
 ```bash
 cd src/python/api
-./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk, pure, langgraph_agents, vercel_ai, google_adk_ts, google_adk_go, spring_ai, strands_agents_ts
+./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk, pure, langgraph_agents, vercel_ai, google_adk_ts, google_adk_go, spring_ai, strands_agents_ts, openai_agents_ts
 ```
 
 Test that the API is running:

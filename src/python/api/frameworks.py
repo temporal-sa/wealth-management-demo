@@ -39,6 +39,7 @@ FRAMEWORKS = {
         Framework("google_adk_go", "Google ADK (Go)", "Go", "Google ADK", "ADK-Go-Supervisor", "adk-go-temporal-agent-"),
         Framework("spring_ai", "Spring AI (Java)", "Java", "Spring AI", "SpringAI-Supervisor", "springai-temporal-agent-"),
         Framework("strands_agents_ts", "Strands Agents (TypeScript)", "TypeScript", "Strands Agents", "Strands-TS-Supervisor", "strands-ts-temporal-agent-"),
+        Framework("openai_agents_ts", "OpenAI Agents SDK (TypeScript)", "TypeScript", "OpenAI Agents SDK", "OAI-TS-Supervisor", "oai-ts-temporal-agent-"),
     ]
 }
 
