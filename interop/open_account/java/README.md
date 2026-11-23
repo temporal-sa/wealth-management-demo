@@ -60,6 +60,7 @@ For another framework, start its worker with `java` and the Java worker with tha
 | Google ADK (TypeScript) | `TEMPORAL_TASK_QUEUE=ADK-TS-Supervisor ./startlocalworker.sh` | `ADK-TS-Supervisor-open-account` |
 | Strands Agents (TypeScript) | `TEMPORAL_TASK_QUEUE=Strands-TS-Supervisor ./startlocalworker.sh` | `Strands-TS-Supervisor-open-account` |
 | OpenAI Agents SDK (TypeScript) | `TEMPORAL_TASK_QUEUE=OAI-TS-Supervisor ./startlocalworker.sh` | `OAI-TS-Supervisor-open-account` |
+| Microsoft Agent Framework (.NET), experimental | `TEMPORAL_TASK_QUEUE=MAF-Supervisor ./startlocalworker.sh` | `MAF-Supervisor-open-account` |
 | Google ADK (Go) | `TEMPORAL_TASK_QUEUE=ADK-Go-Supervisor ./startlocalworker.sh` | `ADK-Go-Supervisor-open-account` |
 | Spring AI (Java) | `TEMPORAL_TASK_QUEUE=SpringAI-Supervisor ./startlocalworker.sh` | `SpringAI-Supervisor-open-account` |
 

@@ -4,7 +4,7 @@ Settings files that every framework's start scripts source, plus scripts that wo
 
 | File | Purpose |
 |---|---|
-| `setoaikey.example` → `setoaikey.sh` | OpenAI API key (`OPENAI_API_KEY`): OpenAI Agents (Python and TypeScript) and Pydantic AI frameworks. The TypeScript OpenAI Agents framework also reads an optional `OPENAI_MODEL` (default `gpt-4o`) |
+| `setoaikey.example` → `setoaikey.sh` | OpenAI API key (`OPENAI_API_KEY`): OpenAI Agents (Python and TypeScript), Pydantic AI and Microsoft Agent Framework (.NET) frameworks. The TypeScript OpenAI Agents and the .NET frameworks also read an optional `OPENAI_MODEL` (default `gpt-4o`) |
 | `setgeminikey.example` → `setgeminikey.sh` | Gemini API key (`GEMINI_API_KEY`): Strands Agents (Python and TypeScript), Google ADK (Python, TypeScript and Go), LangGraph, Vercel AI SDK and Spring AI frameworks. All of them also read an optional `GEMINI_MODEL` (default `gemini-3.8-flash`) |
 | `setllmkey.example` → `setllmkey.sh` | Pure Python framework: `LLM_MODEL` (a LiteLLM `<provider>/<model>` name) and that provider's key (Anthropic by default; OpenAI or Gemini also work) |
 | `setclaimcheck.example` → `setclaimcheck.sh` | Optional claim check: `USE_CLAIM_CHECK`, and where Redis is: host and port, an optional `REDIS_PASSWORD`, or a `REDIS_URL` that wins over them; how long claim-checked payloads are kept (`CLAIM_CHECK_TTL_SECONDS`, default 7 days) |
@@ -24,7 +24,12 @@ scripts/startdemo.sh strands_agents,vercel_ai,google_adk_go
 scripts/startdemo.sh all
 scripts/startdemo.sh --cloud all     # Temporal Cloud, with scripts/setcloudenv.sh
 scripts/startdemo.sh --java strands_agents   # account openings on the Java worker
+scripts/startdemo.sh --experimental all      # all, with the experimental frameworks too
 ```
+
+`all` leaves out the experimental frameworks, which are built on pre-release Temporal integrations (today the
+Microsoft Agent Framework one, `agent_framework_dotnet`): add `--experimental`, or name the framework, which starts it
+with a warning that it's experimental. It needs the .NET 10 SDK, which the script checks only when it starts it.
 
 Start Temporal (for a local demo, `temporal server start-dev`) and Redis first: the script checks that it can reach
 them, and that ports 8000 (API) and 3000 (web UI) are free, before it starts anything. Then it runs each framework's

@@ -1,6 +1,6 @@
 # Wealth Management Agent Demo
 
-A multi-agent banking chat that shows what Temporal adds to an agent framework, built with twelve frameworks in four languages. Each framework has a standalone version (the framework alone) and a Temporal version (every model and tool call durable).
+A multi-agent banking chat that shows what Temporal adds to an agent framework, built with thirteen frameworks in five languages (one of them experimental). Each framework has a standalone version (the framework alone) and a Temporal version (every model and tool call durable).
 
 ## Layout
 
@@ -40,6 +40,7 @@ src/<language>/
 | [OpenAI Agents SDK](src/typescript/openai_agents/README.md) | TypeScript | `src/typescript/openai_agents` |
 | [Google ADK](src/go/google_adk/README.md) | Go | `src/go/google_adk` |
 | [Spring AI](src/java/spring_ai/README.md) | Java | `src/java/spring_ai` |
+| [Microsoft Agent Framework](src/dotnet/agent_framework/README.md) (experimental) | .NET (C#) | `src/dotnet/agent_framework` |
 
 ## Adding an integration
 
@@ -52,6 +53,10 @@ src/<language>/
      (`cmd/`, `internal/`, `scripts/`).
    - **Java:** the framework is its own Gradle project with its own wrapper (see `src/java/spring_ai`). Java has no
      shared `common/` folder: Spring AI's `common/` package has Java versions of the shared pieces to copy.
+   - **.NET:** the framework is its own solution (see `src/dotnet/agent_framework`), with the SDK pinned by
+     `src/dotnet/global.json`. Its `Common/` project has C# versions of the shared pieces.
+   - **A pre-release integration:** mark the framework `experimental=True` in `src/python/api/frameworks.py`, so `all`
+     leaves it out (`startdemo.sh --experimental all` includes it), and say so at the top of its README.
 2. **Reuse the shared code:** that language's `common/` (data managers, Redis event stream, chaos flags, claim
    check, client settings), the demo data in `data/`, and the settings files in `scripts/`. Worker and approval
    scripts `cd` to their own folder and source `scripts/*.sh`, so they run from anywhere.
@@ -100,6 +105,7 @@ run on `<queue>-open-account`.
 | Google ADK (TypeScript) | `google_adk_ts` | `ADK-TS-Supervisor` |
 | Strands Agents (TypeScript) | `strands_agents_ts` | `Strands-TS-Supervisor` |
 | OpenAI Agents SDK (TypeScript) | `openai_agents_ts` | `OAI-TS-Supervisor` |
+| Microsoft Agent Framework (.NET), experimental | `agent_framework_dotnet` | `MAF-Supervisor` |
 | Google ADK (Go) | `google_adk_go` | `ADK-Go-Supervisor` |
 | Spring AI (Java) | `spring_ai` | `SpringAI-Supervisor` |
 

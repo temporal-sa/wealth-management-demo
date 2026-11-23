@@ -1,10 +1,13 @@
 """Which AI frameworks the API serves: their task queues and the prefixes of their chat workflow IDs.
 
-Each framework is one version of the demo (src/python/<framework>, or src/typescript/<framework> or
-src/go/<framework> for a TypeScript or Go one, whose chat workflows follow the same Temporal contract). AI_FRAMEWORK picks
-them: one framework (e.g. google_adk), several separated by commas (strands_agents,vercel_ai), or all. It has no default:
+Each framework is one version of the demo (src/python/<framework>, or src/<language>/<framework> for another
+language, whose chat workflows follow the same Temporal contract). AI_FRAMEWORK picks them: one framework (e.g.
+google_adk), several separated by commas (strands_agents,vercel_ai), or all. It has no default:
 the start scripts require it as their argument (e.g. ./startlocalapi.sh google_adk) and, without a valid one, stop and
 list every framework. The web application lists every framework the API serves in its sidebar, grouped by language.
+
+An experimental framework, one built on a pre-release integration, is left out of all: name it to serve it
+(startdemo.sh --experimental adds it to all). Naming it works without any flag.
 
 With one framework, TEMPORAL_TASK_QUEUE and CHAT_WORKFLOW_ID_PREFIX override its values. With several, they would
 give every framework the same queue and prefix, so they are ignored (the API says so when it starts).
@@ -23,6 +26,7 @@ class Framework:
     short_label: str  # the name within its language group, for the web UI's sidebar
     task_queue: str  # the framework's default chat task queue (its worker's default)
     workflow_id_prefix: str
+    experimental: bool = False  # built on a pre-release integration: left out of "all"
 
 
 FRAMEWORKS = {
@@ -40,24 +44,28 @@ FRAMEWORKS = {
         Framework("spring_ai", "Spring AI (Java)", "Java", "Spring AI", "SpringAI-Supervisor", "springai-temporal-agent-"),
         Framework("strands_agents_ts", "Strands Agents (TypeScript)", "TypeScript", "Strands Agents", "Strands-TS-Supervisor", "strands-ts-temporal-agent-"),
         Framework("openai_agents_ts", "OpenAI Agents SDK (TypeScript)", "TypeScript", "OpenAI Agents SDK", "OAI-TS-Supervisor", "oai-ts-temporal-agent-"),
+        Framework("agent_framework_dotnet", "Microsoft Agent Framework (.NET)", ".NET", "Agent Framework", "MAF-Supervisor",
+                  "maf-temporal-agent-", experimental=True),
     ]
 }
 
 
 def valid_frameworks() -> str:
-    """Every framework, one per line: its name, label and task queue."""
+    """Every framework, one per line: its name, label and task queue, and whether it is experimental."""
     width = max(map(len, FRAMEWORKS))
-    return "\n".join(f"  {f.name:<{width}}  {f.label} (task queue {f.task_queue})" for f in FRAMEWORKS.values())
+    return "\n".join(f"  {f.name:<{width}}  {f.label} (task queue {f.task_queue})"
+                     f"{'  experimental: not in all' if f.experimental else ''}" for f in FRAMEWORKS.values())
 
 
 ALL = "all"
 OVERRIDES = ("TEMPORAL_TASK_QUEUE", "CHAT_WORKFLOW_ID_PREFIX")
 
 
-def names(value: str) -> list[str]:
-    """The framework names in an AI_FRAMEWORK value: one name, names separated by commas, or all."""
+def names(value: str, experimental: bool = False) -> list[str]:
+    """The framework names in an AI_FRAMEWORK value: one name, names separated by commas, or all, which leaves out
+    the experimental frameworks unless ``experimental`` is set."""
     if value.strip().lower() == ALL:
-        return list(FRAMEWORKS)
+        return [f.name for f in FRAMEWORKS.values() if experimental or not f.experimental]
     return list(dict.fromkeys(name.strip() for name in value.split(",") if name.strip()))
 
 
@@ -98,5 +106,5 @@ if __name__ == "__main__":
     script, name = sys.argv[1], (sys.argv[2] if len(sys.argv) > 2 else "")
     if error := problem(name):
         print(f"{error} Usage: {script} <ai-framework>, where <ai-framework> is one of these, several separated "
-              f"by commas, or {ALL}:\n{valid_frameworks()}", file=sys.stderr)
+              f"by commas, or {ALL} (the experimental ones are left out of {ALL}):\n{valid_frameworks()}", file=sys.stderr)
         sys.exit(2)
