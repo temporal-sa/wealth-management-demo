@@ -1,0 +1,32 @@
+{
+  "name": "@wealth-management/strands-agents",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Strands Agents TypeScript SDK framework of the wealth management agent",
+  "scripts": {
+    "strands": "ts-node standalone/main.ts",
+    "temporal:worker": "ts-node durable/worker.ts",
+    "start": "ts-node durable/worker.ts",
+    "codec-server": "ts-node durable/codec_server.ts",
+    "test": "mocha --exit --require ts-node/register --require source-map-support/register 'tests/*.test.ts'",
+    "compliance.approval": "ts-node durable/run_send_compliance_approval.ts",
+    "open-account.scenarios": "ts-node durable/run_open_account_workflow.ts"
+  },
+  "dependencies": {
+    "@strands-agents/sdk": "^1.26.0",
+    "@temporalio/activity": "^1.26.0",
+    "@temporalio/client": "^1.26.0",
+    "@temporalio/common": "^1.26.0",
+    "@temporalio/envconfig": "^1.26.0",
+    "@temporalio/strands-agents": "^2.0.0",
+    "@temporalio/worker": "^1.26.0",
+    "@temporalio/workflow": "^1.26.0",
+    "ioredis": "^5.10.1",
+    "long": "^5.3.2",
+    "protobufjs": "^8.8.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@temporalio/testing": "^1.26.0"
+  }
+}

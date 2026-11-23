@@ -24,6 +24,7 @@ cd src/python/api
 ./startlocalapi.sh langgraph_agents  # LangGraph: langgraph-temporal-agent-session-<session>-chat-<random> on LangGraph-Supervisor
 ./startlocalapi.sh vercel_ai       # Vercel AI SDK (TypeScript): vai-temporal-agent-session-<session>-chat-<random> on VAI-Supervisor
 ./startlocalapi.sh google_adk_ts   # Google ADK (TypeScript): adk-ts-temporal-agent-session-<session>-chat-<random> on ADK-TS-Supervisor
+./startlocalapi.sh strands_agents_ts  # Strands Agents (TypeScript): strands-ts-temporal-agent-session-<session>-chat-<random> on Strands-TS-Supervisor
 ./startlocalapi.sh google_adk_go   # Google ADK (Go): adk-go-temporal-agent-session-<session>-chat-<random> on ADK-Go-Supervisor
 ./startlocalapi.sh spring_ai       # Spring AI (Java): springai-temporal-agent-session-<session>-chat-<random> on SpringAI-Supervisor
 ./startlocalapi.sh strands_agents,vercel_ai,google_adk_go   # these three, side by side
@@ -108,7 +109,7 @@ npm test
 
 ## Example
 
-Here's the web application with three frameworks, a chat running in each, and the chaos panel open. The sidebar
+Here's the web application with six frameworks, a chat running in four of them, and the chaos panel open. The sidebar
 lists the frameworks the API serves (from its `GET /api/config`), and **Show chaos panel** / **Hide chaos panel** at its bottom
 opens or hides the chaos panel, which turns failures on and off while you chat. Next to it, the sidebar shows how many
 flags are on:

@@ -6,7 +6,8 @@
   "workspaces": [
     "common",
     "vercel_ai",
-    "google_adk"
+    "google_adk",
+    "strands_agents"
   ],
   "scripts": {
     "build": "tsc --build",
