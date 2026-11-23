@@ -7,7 +7,8 @@ the start scripts require it as their argument (e.g. ./startlocalapi.sh google_a
 list every framework. The web application lists every framework the API serves in its sidebar, grouped by language.
 
 An experimental framework, one built on a pre-release integration, is left out of all: name it to serve it
-(startdemo.sh --experimental adds it to all). Naming it works without any flag.
+(startdemo.sh --experimental adds it to all). Naming it works without any flag, and "experimental" names every
+experimental framework (what startdemo.sh --experimental starts on its own).
 
 With one framework, TEMPORAL_TASK_QUEUE and CHAT_WORKFLOW_ID_PREFIX override its values. With several, they would
 give every framework the same queue and prefix, so they are ignored (the API says so when it starts).
@@ -58,14 +59,17 @@ def valid_frameworks() -> str:
 
 
 ALL = "all"
+EXPERIMENTAL = "experimental"
 OVERRIDES = ("TEMPORAL_TASK_QUEUE", "CHAT_WORKFLOW_ID_PREFIX")
 
 
 def names(value: str, experimental: bool = False) -> list[str]:
-    """The framework names in an AI_FRAMEWORK value: one name, names separated by commas, or all, which leaves out
-    the experimental frameworks unless ``experimental`` is set."""
+    """The framework names in an AI_FRAMEWORK value: one name, names separated by commas, all, which leaves out
+    the experimental frameworks unless ``experimental`` is set, or experimental, the experimental frameworks only."""
     if value.strip().lower() == ALL:
         return [f.name for f in FRAMEWORKS.values() if experimental or not f.experimental]
+    if value.strip().lower() == EXPERIMENTAL:
+        return [f.name for f in FRAMEWORKS.values() if f.experimental]
     return list(dict.fromkeys(name.strip() for name in value.split(",") if name.strip()))
 
 
@@ -106,5 +110,5 @@ if __name__ == "__main__":
     script, name = sys.argv[1], (sys.argv[2] if len(sys.argv) > 2 else "")
     if error := problem(name):
         print(f"{error} Usage: {script} <ai-framework>, where <ai-framework> is one of these, several separated "
-              f"by commas, or {ALL} (the experimental ones are left out of {ALL}):\n{valid_frameworks()}", file=sys.stderr)
+              f"by commas, {ALL} (which leaves out the experimental ones), or {EXPERIMENTAL} (only those):\n{valid_frameworks()}", file=sys.stderr)
         sys.exit(2)

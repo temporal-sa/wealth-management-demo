@@ -449,6 +449,8 @@ def test_all_leaves_out_the_experimental_frameworks_unless_asked():
     assert names("all") == list(STABLE_FRAMEWORKS)
     assert names("all", experimental=True) == list(EVERY_FRAMEWORK)
     assert names("agent_framework_dotnet") == ["agent_framework_dotnet"]
+    assert names("experimental") == list(EXPERIMENTAL_FRAMEWORKS)
+    assert names(" Experimental ") == list(EXPERIMENTAL_FRAMEWORKS)
     listed = valid_frameworks().splitlines()
     assert [line.split()[0] for line in listed if line.endswith("experimental: not in all")] == list(EXPERIMENTAL_FRAMEWORKS)
 
@@ -463,7 +465,7 @@ def test_the_start_scripts_check_stops_without_a_known_framework_and_lists_every
     assert all(f"  {name} " in result.stderr for name in EVERY_FRAMEWORK)
 
 
-@pytest.mark.parametrize("name", [*EVERY_FRAMEWORK, "all", "strands_agents,vercel_ai,google_adk_go"])
+@pytest.mark.parametrize("name", [*EVERY_FRAMEWORK, "all", "experimental", "strands_agents,vercel_ai,google_adk_go"])
 def test_the_start_scripts_check_accepts_every_framework_several_or_all(name):
     result = subprocess.run([sys.executable, "-m", "api.frameworks", "startlocalapi.sh", name],
                             capture_output=True, text=True, cwd=Path(__file__).parents[2])

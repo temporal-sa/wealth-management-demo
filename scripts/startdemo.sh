@@ -2,15 +2,16 @@
 # Starts the demo for one or more AI frameworks in one terminal: each framework's worker, the API serving
 # them all, and the web UI, which lists them in its sidebar.
 #
-# Usage: scripts/startdemo.sh [--cloud] [--java] [--experimental] <ai-framework>
+# Usage: scripts/startdemo.sh [--cloud] [--java] [--experimental] [<ai-framework>]
 #   <ai-framework>  one of openai_agents, pyai, strands_agents, google_adk, pure, langgraph_agents, vercel_ai,
 #                   google_adk_ts, google_adk_go, spring_ai, strands_agents_ts, openai_agents_ts, or the experimental
 #                   agent_framework_dotnet; several separated by commas (strands_agents,vercel_ai); or all
 #   --cloud         connect to Temporal Cloud (scripts/setcloudenv.sh) instead of a local Temporal service
 #   --java          run the open-account workflow on the Java worker (interop/open_account/java): one Java worker
 #                   per framework, on <its task queue>-open-account, named java-<ai-framework>. Needs a JDK.
-#   --experimental  include the experimental frameworks in all. They are built on pre-release integrations, so
-#                   all leaves them out; naming one starts it without this flag.
+#   --experimental  with no <ai-framework>, start the experimental frameworks only (today agent_framework_dotnet);
+#                   with all, add them to it. They are built on pre-release integrations, so all leaves them out;
+#                   naming one starts it without this flag.
 #
 # While it runs, from another terminal:
 #   scripts/startdemo.sh stop <ai-framework>     stops that framework's worker (the rest keep running)
@@ -99,16 +100,20 @@ esac
 cloud=false
 java=false
 experimental=false
-while [ $# -gt 1 ]; do
+usage="Usage: $SCRIPT [--cloud] [--java] [--experimental] [<ai-framework>], where <ai-framework> is a framework, several separated by commas, or all (--experimental alone starts the experimental frameworks); or $SCRIPT stop|start|restart <ai-framework> while it runs"
+while [ $# -gt 0 ]; do
   case "$1" in
     --cloud) cloud=true ;;
     --java) java=true ;;
     --experimental) experimental=true ;;
+    --*) die "Unknown option $1. $usage" ;;
     *) break ;;
   esac
   shift
 done
-[ $# -eq 1 ] && [ "${1#--}" = "$1" ] || die "Usage: $SCRIPT [--cloud] [--java] [--experimental] <ai-framework>, where <ai-framework> is a framework, several separated by commas, or all; or $SCRIPT stop|start|restart <ai-framework> while it runs"
+# --experimental on its own: the experimental frameworks only
+[ $# -eq 0 ] && $experimental && set -- experimental
+[ $# -eq 1 ] || die "$usage"
 
 # The frameworks named, checked by the API's own list (src/python/api/frameworks.py)
 cd "$ROOT/src/python/api" || exit 1

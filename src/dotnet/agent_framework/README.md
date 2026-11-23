@@ -3,8 +3,8 @@
 > **Experimental.** This framework is built on Temporal's
 > [Microsoft Agent Framework integration](https://docs.temporal.io/develop/dotnet/integrations/microsoft-agent-framework)
 > (`Temporalio.Extensions.MicrosoftAgentFramework`), which is a pre-release (version 0.0.1): its interfaces may change
-> before General Availability. `startdemo.sh all` and the API's `all` leave it out; name it, or use
-> `startdemo.sh --experimental all`, to run it.
+> before General Availability. `startdemo.sh all` and the API's `all` leave it out: run it with
+> `startdemo.sh --experimental` (or by name), or with every other framework with `startdemo.sh --experimental all`.
 
 A multi-agent banking chat built with [Microsoft Agent Framework](https://github.com/microsoft/agent-framework)
 (`Microsoft.Agents.AI`) in C# and [Temporal](https://temporal.io), using Temporal's Microsoft Agent Framework
@@ -98,7 +98,7 @@ cd frontend && npm install && npm start
 Or, in one terminal, with Temporal and Redis running:
 
 ```bash
-scripts/startdemo.sh agent_framework_dotnet
+scripts/startdemo.sh --experimental
 ```
 
 Open http://localhost:3000 and chat. To approve an account opening as the compliance officer, click **Approve

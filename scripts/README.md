@@ -24,12 +24,13 @@ scripts/startdemo.sh strands_agents,vercel_ai,google_adk_go
 scripts/startdemo.sh all
 scripts/startdemo.sh --cloud all     # Temporal Cloud, with scripts/setcloudenv.sh
 scripts/startdemo.sh --java strands_agents   # account openings on the Java worker
+scripts/startdemo.sh --experimental          # the experimental frameworks only
 scripts/startdemo.sh --experimental all      # all, with the experimental frameworks too
 ```
 
 `all` leaves out the experimental frameworks, which are built on pre-release Temporal integrations (today the
-Microsoft Agent Framework one, `agent_framework_dotnet`): add `--experimental`, or name the framework, which starts it
-with a warning that it's experimental. It needs the .NET 10 SDK, which the script checks only when it starts it.
+Microsoft Agent Framework one, `agent_framework_dotnet`). `--experimental` on its own starts just them, and
+`--experimental all` adds them to all; naming one also starts it. Each starts with a warning that it's experimental. It needs the .NET 10 SDK, which the script checks only when it starts it.
 
 Start Temporal (for a local demo, `temporal server start-dev`) and Redis first: the script checks that it can reach
 them, and that ports 8000 (API) and 3000 (web UI) are free, before it starts anything. Then it runs each framework's

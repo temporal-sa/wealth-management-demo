@@ -56,7 +56,8 @@ src/<language>/
    - **.NET:** the framework is its own solution (see `src/dotnet/agent_framework`), with the SDK pinned by
      `src/dotnet/global.json`. Its `Common/` project has C# versions of the shared pieces.
    - **A pre-release integration:** mark the framework `experimental=True` in `src/python/api/frameworks.py`, so `all`
-     leaves it out (`startdemo.sh --experimental all` includes it), and say so at the top of its README.
+     leaves it out (`startdemo.sh --experimental` starts the experimental frameworks on their own, and
+     `startdemo.sh --experimental all` adds them to all), and say so at the top of its README.
 2. **Reuse the shared code:** that language's `common/` (data managers, Redis event stream, chaos flags, claim
    check, client settings), the demo data in `data/`, and the settings files in `scripts/`. Worker and approval
    scripts `cd` to their own folder and source `scripts/*.sh`, so they run from anywhere.

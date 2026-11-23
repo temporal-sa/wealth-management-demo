@@ -117,8 +117,8 @@ Open http://localhost:3000. **Start chat** starts a chat workflow with the ID
 `maf-temporal-agent-session-<session>-chat-<random>`. For example: "Who are my beneficiaries?", "123", "What investments
 do I have?", then "Open Vacation with $13,000" and "Yes" when the agent shows your details.
 
-`scripts/startdemo.sh agent_framework_dotnet` starts the worker, the API and the web UI in one terminal, and
-`scripts/startdemo.sh --experimental all` runs it with every other framework.
+`scripts/startdemo.sh --experimental` (or `scripts/startdemo.sh agent_framework_dotnet`) starts the worker, the API
+and the web UI in one terminal, and `scripts/startdemo.sh --experimental all` runs it with every other framework.
 
 ### Approve compliance
 
