@@ -3,7 +3,7 @@
 Exposes the Temporal chat workflow (`WealthManagementWorkflow`) with an easy to use API. The
 [web application](../../../frontend/README.md) uses it; you can also call it with curl.
 
-It is the one API in this repository: it serves every AI framework, Python, TypeScript (the Vercel AI SDK and Google ADK TypeScript frameworks) or Go (the Google ADK Go framework), because their chat workflows keep the same contract. One running API can serve several frameworks at once, and the web application then lists them all in its sidebar. It uses only the Temporal contracts (the workflow and signal
+It is the one API in this repository: it serves every AI framework, in any language (Python, TypeScript, Go, Java or .NET), because their chat workflows keep the same contract. One running API can serve several frameworks at once, and the web application then lists them all in its sidebar. It uses only the Temporal contracts (the workflow and signal
 names as strings, plain JSON payloads through the Pydantic data converter, and the claim-check codec
 when enabled), never a framework's workflow class or framework plugin. The start scripts' required argument
 (`AI_FRAMEWORK`) picks the AI frameworks: it sets the task queue each framework's worker listens on and the
@@ -59,6 +59,7 @@ the chat's workflow ID starts with its framework's prefix.
 | [Google ADK (TypeScript)](../../typescript/google_adk/durable/README.md) | `./startlocalapi.sh google_adk_ts` | `ADK-TS-Supervisor` | `adk-ts-temporal-agent-session-<session>-chat-<random>` |
 | [Strands Agents (TypeScript)](../../typescript/strands_agents/durable/README.md) | `./startlocalapi.sh strands_agents_ts` | `Strands-TS-Supervisor` | `strands-ts-temporal-agent-session-<session>-chat-<random>` |
 | [OpenAI Agents SDK (TypeScript)](../../typescript/openai_agents/durable/README.md) | `./startlocalapi.sh openai_agents_ts` | `OAI-TS-Supervisor` | `oai-ts-temporal-agent-session-<session>-chat-<random>` |
+| [Microsoft Agent Framework (.NET)](../../dotnet/agent_framework/docs/temporal.md), experimental: not in `all` | `./startlocalapi.sh agent_framework_dotnet` | `MAF-Supervisor` | `maf-temporal-agent-session-<session>-chat-<random>` |
 | [Google ADK (Go)](../../go/google_adk/docs/temporal.md) | `./startlocalapi.sh google_adk_go` | `ADK-Go-Supervisor` | `adk-go-temporal-agent-session-<session>-chat-<random>` |
 | [Spring AI (Java)](../../java/spring_ai/docs/temporal.md) | `./startlocalapi.sh spring_ai` | `SpringAI-Supervisor` | `springai-temporal-agent-session-<session>-chat-<random>` |
 
@@ -68,7 +69,7 @@ framework, queue and prefix it uses when it starts.
 
 ### Several frameworks at once
 
-Give the scripts several frameworks separated by commas, or `all`:
+Give the scripts several frameworks separated by commas, or `all` (which leaves out the experimental frameworks; name one to serve it):
 
 ```bash
 ./startlocalapi.sh strands_agents,vercel_ai,google_adk_go
@@ -116,7 +117,7 @@ cd src/python/api
 Be sure to have created scripts/setcloudenv.sh. See the [Temporal README](../openai_agents/durable/README.md#running-on-temporal-cloud) for more details.
 ```bash
 cd src/python/api
-./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk, pure, langgraph_agents, vercel_ai, google_adk_ts, google_adk_go, spring_ai, strands_agents_ts, openai_agents_ts
+./startcloudapi.sh openai_agents   # or pyai, strands_agents, google_adk, pure, langgraph_agents, vercel_ai, google_adk_ts, google_adk_go, spring_ai, strands_agents_ts, openai_agents_ts, agent_framework_dotnet
 ```
 
 Test that the API is running:

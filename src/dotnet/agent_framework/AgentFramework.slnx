@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Common/Common.csproj" />
+  <Project Path="Durable/Durable.csproj" />
+  <Project Path="Standalone/Standalone.csproj" />
+  <Project Path="Tests/Tests.csproj" />
+</Solution>

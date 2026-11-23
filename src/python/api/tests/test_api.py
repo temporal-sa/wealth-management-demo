@@ -411,7 +411,9 @@ async def test_with_several_frameworks_the_override_settings_are_ignored(tempora
         (TASK_QUEUE, "oai-temporal-agent-"), ("PYAI-Supervisor", "pyai-temporal-agent-")]
 
 
-EVERY_FRAMEWORK = ("openai_agents", "pyai", "strands_agents", "google_adk", "pure", "langgraph_agents", "vercel_ai", "google_adk_ts", "google_adk_go", "spring_ai", "strands_agents_ts", "openai_agents_ts")
+STABLE_FRAMEWORKS = ("openai_agents", "pyai", "strands_agents", "google_adk", "pure", "langgraph_agents", "vercel_ai", "google_adk_ts", "google_adk_go", "spring_ai", "strands_agents_ts", "openai_agents_ts")
+EXPERIMENTAL_FRAMEWORKS = ("agent_framework_dotnet",)
+EVERY_FRAMEWORK = STABLE_FRAMEWORKS + EXPERIMENTAL_FRAMEWORKS
 
 
 @pytest.mark.parametrize("ai_framework", [None, "", "nope"])
@@ -427,7 +429,8 @@ def test_the_api_needs_a_known_ai_framework_and_lists_every_framework(monkeypatc
 
 
 @pytest.mark.parametrize("value, expected", [
-    ("all", list(EVERY_FRAMEWORK)), (" ALL ", list(EVERY_FRAMEWORK)), ("pyai", ["pyai"]),
+    ("all", list(STABLE_FRAMEWORKS)), (" ALL ", list(STABLE_FRAMEWORKS)), ("pyai", ["pyai"]),
+    ("agent_framework_dotnet", ["agent_framework_dotnet"]), ("pyai,agent_framework_dotnet", ["pyai", "agent_framework_dotnet"]),
     ("strands_agents,vercel_ai", ["strands_agents", "vercel_ai"]), (" go_first , pyai, pyai ", None),
     ("google_adk_go, pyai, google_adk_go", ["google_adk_go", "pyai"]),
 ])
@@ -441,6 +444,17 @@ def test_ai_framework_names_one_several_or_all(monkeypatch, value, expected):
         assert [f.name for f in selected_frameworks()] == expected
 
 
+def test_all_leaves_out_the_experimental_frameworks_unless_asked():
+    from api.frameworks import names, valid_frameworks
+    assert names("all") == list(STABLE_FRAMEWORKS)
+    assert names("all", experimental=True) == list(EVERY_FRAMEWORK)
+    assert names("agent_framework_dotnet") == ["agent_framework_dotnet"]
+    assert names("experimental") == list(EXPERIMENTAL_FRAMEWORKS)
+    assert names(" Experimental ") == list(EXPERIMENTAL_FRAMEWORKS)
+    listed = valid_frameworks().splitlines()
+    assert [line.split()[0] for line in listed if line.endswith("experimental: not in all")] == list(EXPERIMENTAL_FRAMEWORKS)
+
+
 @pytest.mark.parametrize("args", [[], [""], ["nope"], ["pyai,nope"], [","]])
 def test_the_start_scripts_check_stops_without_a_known_framework_and_lists_every_framework(args):
     """startlocalapi.sh and startcloudapi.sh run this check before starting uvicorn."""
@@ -451,7 +465,7 @@ def test_the_start_scripts_check_stops_without_a_known_framework_and_lists_every
     assert all(f"  {name} " in result.stderr for name in EVERY_FRAMEWORK)
 
 
-@pytest.mark.parametrize("name", [*EVERY_FRAMEWORK, "all", "strands_agents,vercel_ai,google_adk_go"])
+@pytest.mark.parametrize("name", [*EVERY_FRAMEWORK, "all", "experimental", "strands_agents,vercel_ai,google_adk_go"])
 def test_the_start_scripts_check_accepts_every_framework_several_or_all(name):
     result = subprocess.run([sys.executable, "-m", "api.frameworks", "startlocalapi.sh", name],
                             capture_output=True, text=True, cwd=Path(__file__).parents[2])

@@ -2,12 +2,16 @@
 # Starts the demo for one or more AI frameworks in one terminal: each framework's worker, the API serving
 # them all, and the web UI, which lists them in its sidebar.
 #
-# Usage: scripts/startdemo.sh [--cloud] [--java] <ai-framework>
+# Usage: scripts/startdemo.sh [--cloud] [--java] [--experimental] [<ai-framework>]
 #   <ai-framework>  one of openai_agents, pyai, strands_agents, google_adk, pure, langgraph_agents, vercel_ai,
-#                   google_adk_ts, google_adk_go, spring_ai, strands_agents_ts, openai_agents_ts; several separated by commas (strands_agents,vercel_ai); or all
+#                   google_adk_ts, google_adk_go, spring_ai, strands_agents_ts, openai_agents_ts, or the experimental
+#                   agent_framework_dotnet; several separated by commas (strands_agents,vercel_ai); or all
 #   --cloud         connect to Temporal Cloud (scripts/setcloudenv.sh) instead of a local Temporal service
 #   --java          run the open-account workflow on the Java worker (interop/open_account/java): one Java worker
 #                   per framework, on <its task queue>-open-account, named java-<ai-framework>. Needs a JDK.
+#   --experimental  with no <ai-framework>, start the experimental frameworks only (today agent_framework_dotnet);
+#                   with all, add them to it. They are built on pre-release integrations, so all leaves them out;
+#                   naming one starts it without this flag.
 #
 # While it runs, from another terminal:
 #   scripts/startdemo.sh stop <ai-framework>     stops that framework's worker (the rest keep running)
@@ -95,20 +99,28 @@ esac
 
 cloud=false
 java=false
-while [ $# -gt 1 ]; do
+experimental=false
+usage="Usage: $SCRIPT [--cloud] [--java] [--experimental] [<ai-framework>], where <ai-framework> is a framework, several separated by commas, or all (--experimental alone starts the experimental frameworks); or $SCRIPT stop|start|restart <ai-framework> while it runs"
+while [ $# -gt 0 ]; do
   case "$1" in
     --cloud) cloud=true ;;
     --java) java=true ;;
+    --experimental) experimental=true ;;
+    --*) die "Unknown option $1. $usage" ;;
     *) break ;;
   esac
   shift
 done
-[ $# -eq 1 ] && [ "${1#--}" = "$1" ] || die "Usage: $SCRIPT [--cloud] [--java] <ai-framework>, where <ai-framework> is a framework, several separated by commas, or all; or $SCRIPT stop|start|restart <ai-framework> while it runs"
+# --experimental on its own: the experimental frameworks only
+[ $# -eq 0 ] && $experimental && set -- experimental
+[ $# -eq 1 ] || die "$usage"
 
 # The frameworks named, checked by the API's own list (src/python/api/frameworks.py)
 cd "$ROOT/src/python/api" || exit 1
 uv run python -m api.frameworks "$SCRIPT" "$1" || exit 2
-requested=$(uv run python -c "import sys; from api.frameworks import names; print(' '.join(names(sys.argv[1])))" "$1")
+requested=$(uv run python -c "import sys; from api.frameworks import names; print(' '.join(names(sys.argv[1], sys.argv[2] == 'true')))" "$1" "$experimental")
+# The experimental frameworks among them, to say so when they start
+experimental_requested=$(uv run python -c "import sys; from api.frameworks import FRAMEWORKS; print(' '.join(n for n in sys.argv[1:] if FRAMEWORKS[n].experimental))" $requested)
 
 # A framework's worker folder and model key file
 worker_dir() {
@@ -120,11 +132,12 @@ worker_dir() {
     spring_ai) echo "src/java/spring_ai/scripts" ;;
     strands_agents_ts) echo "src/typescript/strands_agents/durable" ;;
     openai_agents_ts) echo "src/typescript/openai_agents/durable" ;;
+    agent_framework_dotnet) echo "src/dotnet/agent_framework/scripts" ;;
   esac
 }
 key_file() {
   case "$1" in
-    openai_agents|pyai|openai_agents_ts) echo "setoaikey.sh" ;;
+    openai_agents|pyai|openai_agents_ts|agent_framework_dotnet) echo "setoaikey.sh" ;;
     pure) echo "setllmkey.sh" ;;
     *) echo "setgeminikey.sh" ;;
   esac
@@ -178,6 +191,9 @@ for name in $requested; do
     spring_ai)
       command -v java >/dev/null 2>&1 && java -version >/dev/null 2>&1 \
         || die "Spring AI needs a JDK (25, see src/java/spring_ai/README.md), and java isn't on the PATH." ;;
+    agent_framework_dotnet)
+      command -v dotnet >/dev/null 2>&1 && (cd "$ROOT/src/dotnet" && dotnet --version >/dev/null 2>&1) \
+        || die "agent_framework_dotnet needs the .NET 10 SDK (see src/dotnet/agent_framework/README.md), and dotnet isn't on the PATH or is older." ;;
   esac
   frameworks="$frameworks $name"
 done
@@ -263,6 +279,11 @@ trap 'stop_all; exit 0' INT TERM
 trap stop_all EXIT
 
 echo "*** Starting ($where): ${frameworks// /, }. Output is also in logs/. Ctrl-C stops everything."
+for name in $experimental_requested; do
+  case " $frameworks " in *" $name "*)
+    echo "*** $name is experimental: it is built on a pre-release Temporal integration, which may change." ;;
+  esac
+done
 echo "*** To stop, start or restart one framework's worker, from another terminal: $SCRIPT stop|start|restart <ai-framework>"
 if $java; then
   # Every framework's worker reads this: it leaves the open-account workflow to <its task queue>-open-account

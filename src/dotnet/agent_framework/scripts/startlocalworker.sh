@@ -1,0 +1,16 @@
+#!/bin/bash
+# Start the worker against a local Temporal service.
+# Usage: startlocalworker.sh [java | <open-account task queue>]
+# With java, the open-account workflow runs on this framework's MAF-Supervisor-open-account
+# (TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT) and this worker doesn't run it: start the Java worker for
+# this framework too (TEMPORAL_TASK_QUEUE=MAF-Supervisor interop/open_account/java/startlocalworker.sh).
+# Another value names the queue.
+cd "$(dirname "$0")" || exit 1
+[ -f ../../../../scripts/setoaikey.sh ] && source ../../../../scripts/setoaikey.sh
+[ -f ../../../../scripts/setclaimcheck.sh ] && source ../../../../scripts/setclaimcheck.sh
+if [ -n "$1" ]; then
+  export TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT="$1"
+  echo "*** Open-account workflow on: $1 (java means this framework's <task queue>-open-account, for the Java worker). ***"
+fi
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+cd .. && exec dotnet run --project Durable
