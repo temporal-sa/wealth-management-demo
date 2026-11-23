@@ -19,7 +19,7 @@ _PROVIDER_NAMES = {
 
 
 def llm_model() -> str:
-    return os.getenv("LLM_MODEL", DEFAULT_LLM_MODEL)
+    return os.getenv("LLM_MODEL") or DEFAULT_LLM_MODEL
 
 
 def provider_name(model: str | None = None) -> str:

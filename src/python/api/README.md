@@ -25,15 +25,16 @@ Operations (all parameters are query parameters)
 
 | Method | Endpoint | Parameters | Description |
 |---|---|---|---|
-| GET | `/` | | Health check |
-| GET | `/api/config` | | The AI frameworks the API serves, in order: `{"frameworks": [...]}`, each with `framework`, `label`, `language` (`Python`, `TypeScript` or `Go`), `short_label` (its name within that language), `task_queue`, `workflow_id_prefix` and `available` (whether a worker polls its task queue) |
+| GET | `/` | | The built web app (`WEB_APP_DIR`, by default `frontend/build`) when it is there, as in the container image; otherwise a short JSON message |
+| GET | `/api/health` | | 200 `{"status": "ok"}` when Redis answers, 503 when it doesn't (the hosted demo's smoke check). The workers are reported per framework by `/api/config` |
+| GET | `/api/config` | | The AI frameworks the API serves, in order: `{"frameworks": [...]}`, each with `framework`, `label`, `language` (`Python`, `TypeScript`, `Go`, `Java` or `.NET`), `short_label` (its name within that language), `task_queue`, `workflow_id_prefix` and `available` (whether a worker polls its task queue) |
 | POST | `/api/start-workflow` | `framework` (optional when the API serves one) | Starts a chat workflow for this browser session on the framework's task queue. Returns `{"message": "Workflow started.", "workflow_id": <its ID>}`. 400 for a framework the API doesn't serve |
 | POST | `/api/send-prompt` | `workflow_id`, `prompt` | Sends the customer's message to the workflow (`process_user_message` signal) |
 | GET | `/api/get-chat-history` | `workflow_id`, `from_index` (default `0`) | Returns the conversation events (chat messages and account-opening status updates) stored in Redis, starting at `from_index` |
 | POST | `/api/end-chat` | `workflow_id` | Sends the `end_workflow` signal |
 | POST | `/api/approve-compliance` | `workflow_id` (the chat's) | Sends `compliance_approved` to the chat's running open-account workflows (IDs starting `OpenAccount-<workflow_id>-`) whose `get_current_state` is `Waiting Compliance Review`. Returns `{"approved": [<their workflow IDs>]}` |
 | GET | `/api/chaos` | | This session's failure-injection flags and the failures they recently caused |
-| POST | `/api/chaos` | `flag`, `enabled` (`true` / `false`) | Turns a flag on or off for this session. Flags: `tool_down`, `llm_down`, `llm_rate_limited`, `custodian_rejects`, `slow_saga`, `workflow_bug` |
+| POST | `/api/chaos` | `flag`, `enabled` (`true` / `false`) | Turns a flag on or off for this session. Flags: `tool_down`, `llm_down`, `llm_rate_limited`, `custodian_rejects`, `slow_saga`, `workflow_bug`. With `DEMO_HOSTED=true`, `workflow_bug` is left out of `GET /api/chaos` and turning it on answers 400: on a hosted copy nobody can fix the workflow code and restart its worker |
 | POST | `/api/chaos/reset` | | Turns every flag off and clears the failure log, for this session |
 
 The endpoints that take a `workflow_id` answer 404 unless it is one of this session's chats. They need no framework:

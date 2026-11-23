@@ -7,7 +7,9 @@ A multi-agent banking chat that shows what Temporal adds to an agent framework, 
 ```
 data/                 Demo data (system of record). Reset: git checkout data/
 testdata/             Committed seed copy used by all tests
-docs/                 Docs; images/ holds the README images
+docs/                 Docs; images/ holds the README images; fieldkit/ the hosted demo's platform entry
+docker/               Dockerfiles: the web component and the workers (see Running in containers)
+docker-compose.yml    The demo in containers, in the hosted demo's shape
 frontend/             The one shared React app
 contracts/            (optional) Language-neutral Temporal names, prompt lines, chaos flags
 interop/
@@ -148,6 +150,46 @@ profile share a session, and so the same copy of the data. Another browser, a pr
 a new session; so does clearing cookies. The web UI's frameworks are one session too. Restarting the API or the
 workers doesn't change anyone's session. Workflows
 started without the web UI (the scripts, the CLI, the tests) use a shared `default` session.
+
+## Running in containers
+
+[`docker-compose.yml`](docker-compose.yml) runs the demo with nothing installed but Docker: a Temporal dev server,
+Redis with a password, the web component (the API, which also serves the built web app) at http://localhost:8000, and
+a worker per framework, built from the Dockerfiles in [`docker/`](docker). It's the same shape as the hosted demo
+([`docs/hosting-plan.md`](docs/hosting-plan.md)): every container is configured through the environment, and each
+browser session's data and chaos switches live in Redis (`DEMO_DATA_STORE=redis`), so `data/` never changes.
+
+Put the model keys in a `.env` file next to `docker-compose.yml` (it's gitignored, and Compose reads it for every
+command):
+
+```text
+OPENAI_API_KEY=...
+GEMINI_API_KEY=...
+ANTHROPIC_API_KEY=...
+```
+
+Then start every framework, or a few by their names (each worker has a Compose profile named after its framework):
+
+```bash
+docker compose --profile all up --build
+```
+
+```bash
+docker compose --profile strands_agents --profile vercel_ai up --build
+```
+
+The web app lists all twelve stable frameworks (set `AI_FRAMEWORK` to change that) and marks those whose worker isn't
+running. The Temporal UI is at http://localhost:8233; if a local Temporal already uses 7233 or 8233, move the dev
+server with `TEMPORAL_PORT=17233 TEMPORAL_UI_PORT=18233`. `docker compose --profile all down` stops everything.
+
+The images copy `data/` from the working tree as the seed for each session's copy, so run `git checkout data/` first
+if a local demo changed it.
+
+Compose runs the hosted demo's settings, so `DEMO_HOSTED=true` leaves the "Bug in workflow code" switch out of the
+chaos panel (on a hosted copy nobody can fix the code and restart a worker). Set `DEMO_HOSTED=false` to have it.
+`GET /api/health` answers 200 when Redis does.
+
+The experimental .NET framework and the Java open-account worker have no image yet.
 
 ## Open decisions before migrating code
 
