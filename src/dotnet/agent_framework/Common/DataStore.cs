@@ -28,6 +28,8 @@ public sealed class DataStore(string dir, IDatabase? redis = null)
     private static readonly JsonSerializerOptions Pretty4 = new() { WriteIndented = true, IndentSize = 4, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     private static readonly JsonSerializerOptions Pretty2 = new() { WriteIndented = true, IndentSize = 2, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     private readonly object gate = new();
+    // Encoding.UTF8 writes a byte-order mark, which the other languages' JSON readers (Python's json) refuse
+    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
     /** The store the environment asks for: DATA_DIR (or the repository's data/), and Redis with DEMO_DATA_STORE=redis. */
     public static DataStore FromEnvironment() =>
@@ -191,7 +193,7 @@ public sealed class DataStore(string dir, IDatabase? redis = null)
             redis.StringSet(RedisKey(Session.Current(), name), data.ToJsonString(), Session.Ttl);
             return;
         }
-        File.WriteAllText(Path.Combine(dir, name + ".json"), data.ToJsonString(indent == 4 ? Pretty4 : Pretty2), Encoding.UTF8);
+        File.WriteAllText(Path.Combine(dir, name + ".json"), data.ToJsonString(indent == 4 ? Pretty4 : Pretty2), Utf8NoBom);
     }
 
     private static JsonArray ArrayFor(JsonObject data, string key)
