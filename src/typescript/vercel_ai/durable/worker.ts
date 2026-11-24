@@ -7,6 +7,7 @@ import { clientHelper } from './task-queues';
 import { openAccountTaskQueue } from '../../common/task-queues';
 import { buildDataConverter, useClaimCheck } from '../../common/data-converter';
 import { redisAddress } from '../../common/redis-config';
+import { publishWorkerModel } from '../../common/worker-info';
 import { chaosAwareProvider } from './chaos-model';
 import { workflowsModule } from './worker-workflows';
 
@@ -57,6 +58,8 @@ async function run() {
   logOpenAccountTaskQueue(helper.taskQueue, openAccountQueue);
   // Without the Open Account workflow when the Java worker runs it
   const workflows = workflowsModule(helper.taskQueue, openAccountQueue);
+  // For the web UI's sidebar (common/worker-info.ts)
+  await publishWorkerModel(helper.taskQueue, geminiModel());
   const connection = await NativeConnection.connect(helper.nativeConnectionOptions);
   try {
     const plugin = new AiSdkPlugin({ modelProvider: chaosAwareProvider(geminiProvider()) });

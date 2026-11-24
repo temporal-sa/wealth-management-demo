@@ -188,7 +188,8 @@ if a local demo changed it.
 
 Compose runs the hosted demo's settings, so `DEMO_HOSTED=true` leaves the "Bug in workflow code" switch, and its
 demo scenario, out of the chaos panel (on a hosted copy nobody can fix the code and restart a worker). Set `DEMO_HOSTED=false` to have it.
-`GET /api/health` answers 200 when Redis does.
+`GET /api/health` answers 200 when Redis does. The sidebar shows the model each framework's worker uses, and, when
+`DEMO_BUILD` is set, the build running (see the [API README](src/python/api/README.md)).
 
 To run the containers on Temporal Cloud instead of the dev server, add
 [`docker-compose.cloud.yml`](docker-compose.cloud.yml). It connects the way the hosted demo does, with an API key over

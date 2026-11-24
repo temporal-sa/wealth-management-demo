@@ -27,7 +27,7 @@ Operations (all parameters are query parameters)
 |---|---|---|---|
 | GET | `/` | | The built web app (`WEB_APP_DIR`, by default `frontend/build`) when it is there, as in the container image; otherwise a short JSON message |
 | GET | `/api/health` | | 200 `{"status": "ok"}` when Redis answers, 503 when it doesn't (the hosted demo's smoke check). The workers are reported per framework by `/api/config` |
-| GET | `/api/config` | | The AI frameworks the API serves, in order: `{"frameworks": [...]}`, each with `framework`, `label`, `language` (`Python`, `TypeScript`, `Go`, `Java` or `.NET`), `short_label` (its name within that language), `task_queue`, `workflow_id_prefix` and `available` (whether a worker polls its task queue) |
+| GET | `/api/config` | | The AI frameworks the API serves, in order, and the build running: `{"build": ..., "frameworks": [...]}`. Each framework has `framework`, `label`, `language` (`Python`, `TypeScript`, `Go`, `Java` or `.NET`), `short_label` (its name within that language), `task_queue`, `workflow_id_prefix`, `available` (whether a worker polls its task queue) and `model` (the model that worker recorded at startup, or null; see below). `build` is `DEMO_BUILD`, or null when it isn't set |
 | POST | `/api/start-workflow` | `framework` (optional when the API serves one) | Starts a chat workflow for this browser session on the framework's task queue. Returns `{"message": "Workflow started.", "workflow_id": <its ID>}`. 400 for a framework the API doesn't serve |
 | POST | `/api/send-prompt` | `workflow_id`, `prompt` | Sends the customer's message to the workflow (`process_user_message` signal) |
 | GET | `/api/get-chat-history` | `workflow_id`, `from_index` (default `0`) | Returns the conversation events (chat messages and account-opening status updates) stored in Redis, starting at `from_index` |
@@ -39,6 +39,14 @@ Operations (all parameters are query parameters)
 
 The endpoints that take a `workflow_id` answer 404 unless it is one of this session's chats. They need no framework:
 the chat's workflow ID starts with its framework's prefix.
+
+**Models and the build in the sidebar.** At startup every framework's worker records the model it uses (its
+`GEMINI_MODEL`, `OPENAI_MODEL` or `LLM_MODEL`, or the framework's default) in the Redis hash `worker-info`, under its
+chat task queue, as JSON `{"model": ...}` ([`common/worker_info.py`](../common/worker_info.py), and the same in each
+language). `/api/config` reports it only for a framework whose worker is polling, and the web UI shows it under the
+framework's name. A worker that can't reach Redis runs on without it. `DEMO_BUILD` names the build running, shown at
+the bottom of the sidebar: the hosted demo sets it to the platform's rollout version, which changes with every new
+build. Unset (as locally), no build is shown.
 
 ## Prerequisites
 

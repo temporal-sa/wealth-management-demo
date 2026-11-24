@@ -323,7 +323,38 @@ async def test_config_reports_the_framework_and_that_its_worker_runs(http):
         "task_queue": TASK_QUEUE,
         "workflow_id_prefix": "oai-temporal-agent-",
         "available": True,
+        "model": None,  # the test worker records no model
     }]
+
+
+async def test_config_shows_the_model_a_polling_worker_recorded_and_the_build(http, monkeypatch):
+    import api.main as main
+    recorded = {}
+
+    async def fake_worker_models(task_queues):
+        recorded["queues"] = list(task_queues)
+        return {TASK_QUEUE: "gpt-4o"}
+
+    monkeypatch.setattr(main, "worker_models", fake_worker_models)
+    monkeypatch.setenv("DEMO_BUILD", "v-1234abcd")
+    body = (await asyncio.to_thread(http.get, "/api/config")).json()
+    assert recorded["queues"] == [TASK_QUEUE]
+    assert body["build"] == "v-1234abcd"
+    assert body["frameworks"][0]["model"] == "gpt-4o"
+
+
+async def test_config_still_answers_without_redis_and_without_a_build(http, monkeypatch):
+    import api.main as main
+
+    async def failing_worker_models(task_queues):
+        raise ConnectionError("refused")
+
+    monkeypatch.setattr(main, "worker_models", failing_worker_models)
+    monkeypatch.delenv("DEMO_BUILD", raising=False)
+    body = (await asyncio.to_thread(http.get, "/api/config")).json()
+    assert body["build"] is None
+    assert body["frameworks"][0]["available"] is True
+    assert body["frameworks"][0]["model"] is None
 
 
 async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal_env, tmp_path_factory):
@@ -336,6 +367,7 @@ async def test_ai_framework_picks_its_task_queue_and_workflow_id_prefix(temporal
             "task_queue": "PYAI-Supervisor",
             "workflow_id_prefix": "pyai-temporal-agent-",
             "available": False,  # no worker polls PYAI-Supervisor here
+            "model": None,
         }]
 
         workflow_id = await start_chat(client)
@@ -537,3 +569,42 @@ print('ok')
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, cwd=Path(__file__).parents[2],
                             env={**os.environ, "WEB_APP_DIR": str(tmp_path)})
     assert result.stdout.strip() == "ok", result.stderr
+
+
+class FakeHash:
+    """An async Redis client holding one hash, for common/worker_info.py."""
+
+    def __init__(self, error=None):
+        self.hash, self.error = {}, error
+
+    async def hset(self, key, field, value):
+        if self.error:
+            raise self.error
+        self.hash[(key, field)] = value
+
+    async def hmget(self, key, fields):
+        return [self.hash.get((key, f)) for f in fields]
+
+    async def aclose(self):
+        pass
+
+
+async def test_worker_models_reads_back_what_workers_recorded(monkeypatch):
+    from common import worker_info
+    from common.redis_config import RedisConfig
+
+    fake = FakeHash()
+    monkeypatch.setattr(RedisConfig, "async_client", lambda self: fake)
+    await worker_info.publish_worker_model("Pure-Supervisor", "anthropic/claude-haiku-5-5")
+    fake.hash[(worker_info.WORKER_INFO_KEY, "Broken-Supervisor")] = "not json"
+    models = await worker_info.worker_models(["Pure-Supervisor", "Broken-Supervisor", "Unknown-Supervisor"])
+    assert models == {"Pure-Supervisor": "anthropic/claude-haiku-5-5"}
+
+
+async def test_a_worker_runs_on_when_redis_refuses_its_model(monkeypatch, capsys):
+    from common import worker_info
+    from common.redis_config import RedisConfig
+
+    monkeypatch.setattr(RedisConfig, "async_client", lambda self: FakeHash(ConnectionError("refused")))
+    await worker_info.publish_worker_model("Pure-Supervisor", "x")
+    assert "won't show it" in capsys.readouterr().out

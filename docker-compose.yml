@@ -48,6 +48,8 @@ services:
       <<: *temporal-env
       AI_FRAMEWORK: ${AI_FRAMEWORK:-openai_agents,pyai,strands_agents,google_adk,pure,langgraph_agents,vercel_ai,google_adk_ts,strands_agents_ts,openai_agents_ts,google_adk_go,spring_ai}
       DEMO_HOSTED: ${DEMO_HOSTED:-true}
+      # The build shown at the bottom of the sidebar (the hosted demo sets the platform's rollout version)
+      DEMO_BUILD: ${DEMO_BUILD:-}
     ports:
       - "8000:8000"
     restart: on-failure

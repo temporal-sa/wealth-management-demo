@@ -149,12 +149,25 @@ button {
     color: var(--muted);
 }
 
-.framework-name {
+/* The framework's name, and under it the model its worker uses */
+.framework-text {
+    display: flex;
     flex: 1;
+    flex-direction: column;
     min-width: 0;
+}
+
+.framework-name,
+.framework-model {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.framework-model {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
 }
 
 .framework-note {
@@ -213,6 +226,16 @@ button {
 .chaos-toggle:hover,
 .chaos-toggle.open {
     color: var(--text);
+}
+
+/* The build running, at the bottom of the sidebar */
+.build-info {
+    padding: 0 8px;
+    font-size: 11px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .chaos-count {

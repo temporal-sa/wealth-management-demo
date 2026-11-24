@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"strconv"
@@ -22,6 +23,7 @@ import (
 	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/data"
 	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/eventstream"
 	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/redisx"
+	"github.com/temporal-sa/wealth-management-demo/src/go/internal/common/workerinfo"
 )
 
 func main() {
@@ -56,6 +58,9 @@ func main() {
 		Events: eventstream.NewRedis(rdb),
 		Client: c,
 	}
+
+	// For the web UI's sidebar (internal/common/workerinfo)
+	workerinfo.PublishModel(context.Background(), rdb, cfg.TaskQueue, cfg.GeminiModel)
 
 	w := worker.New(c, cfg.TaskQueue, worker.Options{})
 	chat := &workflows.Chat{Config: workflows.ChatConfig{

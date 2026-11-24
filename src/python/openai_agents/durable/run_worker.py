@@ -11,6 +11,7 @@ from temporalio import workflow
 from temporalio.client import Client
 from temporalio.worker import Worker
 
+from common.worker_info import publish_worker_model
 from common.client_helper import ClientHelper
 from durable.task_queues import DEFAULT_TASK_QUEUE
 from durable.activities.clients import ClientActivities
@@ -45,10 +46,14 @@ openai_client = AsyncOpenAI(
 )
 
 
+# The model the agents use: they name none, so the provider picks this one
+DEFAULT_MODEL = "gpt-4o"
+
+
 class CustomModelProvider(ModelProvider):
     def get_model(self, model_name: Optional[str]) -> Model:
         model = ChaosAwareOpenAIModel(
-            model=model_name if model_name else "gpt-4o",
+            model=model_name if model_name else DEFAULT_MODEL,
             openai_client=openai_client,
         )
         return model
@@ -92,6 +97,8 @@ async def main():
     # for the demo, we're using the same task queue as
     # the agents and the child workflow. In a production
     # situation, this would likely be a different task queue
+    # For the web UI's sidebar (common/worker_info.py)
+    await publish_worker_model(client_helper.taskQueue, DEFAULT_MODEL)
     worker = Worker(
         client,
         task_queue=client_helper.taskQueue,

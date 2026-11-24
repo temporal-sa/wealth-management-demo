@@ -7,6 +7,20 @@ namespace WealthManagement.Tests;
 public class CommonTests
 {
     [Fact]
+    public void RecordsTheWorkerModelAsTheJsonTheApiReads()
+    {
+        var value = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(WorkerInfo.Value("gpt-4o"));
+        Assert.Equal(new Dictionary<string, string> { ["model"] = "gpt-4o" }, value);
+    }
+
+    [Fact]
+    public void ARedisFailureDoesNotStopTheWorker()
+    {
+        WorkerInfo.PublishModel(() => throw new StackExchange.Redis.RedisConnectionException(
+            StackExchange.Redis.ConnectionFailureType.UnableToConnect, "no Redis"), "MAF-Supervisor", "gpt-4o");
+    }
+
+    [Fact]
     public void FindsTheSessionInAChatOrAccountOpeningWorkflowId()
     {
         var session = new string('a', 32);
