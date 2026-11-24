@@ -118,7 +118,8 @@ npm test
 
 ## Example
 
-Here's the web application with seven frameworks, a chat running in five of them, and the chaos panel open. The sidebar
+Here's the web application with seven frameworks, a chat running in five of them, and the chaos panel open, scrolled
+to two injected failures, each with a link to the workflow it hit. The sidebar
 lists the frameworks the API serves (from its `GET /api/config`), and **Show chaos panel** / **Hide chaos panel** at its bottom
 opens or hides the chaos panel, which turns failures on and off while you chat. Next to it, the sidebar shows how many
 flags are on:
