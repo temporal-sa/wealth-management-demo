@@ -46,7 +46,7 @@ chat task queue, as JSON `{"model": ...}` ([`common/worker_info.py`](../common/w
 language). `/api/config` reports it only for a framework whose worker is polling, and the web UI shows it under the
 framework's name. A worker that can't reach Redis runs on without it. `DEMO_BUILD` names the build running, shown at
 the bottom of the sidebar: the hosted demo sets it to the platform's rollout version, which changes with every new
-build. Unset (as locally), no build is shown.
+build and starts with the commit it was built from (`git-<commit>-i<hash>`). Unset (as locally), no build is shown.
 
 ## Prerequisites
 

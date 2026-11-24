@@ -13,6 +13,9 @@ const defaultHeaderText = 'Chat session started.';
 // visible: whether this chat is the one shown.
 // onChange: called with {active} when a chat starts or ends, and {unseen: <count>} when replies or
 //   status updates arrive while the chat isn't shown.
+// Shown when a message didn't reach the chat, so the agents never saw it
+const UNDELIVERED_TEXT = "Your message didn't go through, so the agents didn't see it. It's still in the message field below: press Send to try again.";
+
 function ChatPane({ framework, visible, onChange = () => {} }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -104,19 +107,26 @@ function ChatPane({ framework, visible, onChange = () => {} }) {
       return;
     }
 
-    setMessages((prev) => [...prev, { text: input, type: 'user' }]);
+    const text = input;
+    setMessages((prev) => [...prev, { text, type: 'user' }]);
     setInput('');
     setIsWaitingForAIResponse(true);
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/send-prompt?workflow_id=${encodeURIComponent(workflowId)}&prompt=${encodeURIComponent(input)}`,
+        `${API_BASE_URL}/send-prompt?workflow_id=${encodeURIComponent(workflowId)}&prompt=${encodeURIComponent(text)}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' } },
       );
+      // An error status, or a page instead of the API's JSON (a sign-in page, or a gateway error while the
+      // API restarts), means the chat never got the message
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       await response.json();
     } catch (error) {
       console.error('Error sending message:', error);
-      setMessages((prev) => [...prev, { text: 'Failed to get response from bot.', type: 'bot' }]);
+      setIsWaitingForAIResponse(false);
+      // Back in the message field, so it can be sent again as it was
+      setInput((current) => current || text);
+      setMessages((prev) => [...prev, { text: UNDELIVERED_TEXT, type: 'bot' }]);
     }
   };
 
