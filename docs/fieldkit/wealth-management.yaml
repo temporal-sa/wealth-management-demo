@@ -14,10 +14,10 @@ metadata:
 spec:
   registry:
     title: "Wealth Management Agents — twelve agent frameworks"
-    summary: The same multi-agent banking chat built with twelve agent frameworks in Python, TypeScript, Go and
-      Java, each running on Temporal with its framework's integration. Model and tool calls are Activities; account
-      opening is a child Workflow saga with KYC and human compliance approval. Switch frameworks in the sidebar, and
-      use the per-session chaos panel to inject outages, rate limits and saga failures.
+    summary: >-
+      The same multi-agent banking chat built with twelve agent frameworks in Python, TypeScript, Go and Java on
+      Temporal. Model and tool calls are Activities; account opening is a child Workflow saga with KYC and human
+      approval. Switch frameworks in the sidebar and inject outages, rate limits and saga failures.
     tags:
     - AI Agents
     - Human-in-the-Loop

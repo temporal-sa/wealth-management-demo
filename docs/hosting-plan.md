@@ -27,8 +27,10 @@ Done in this repository:
   configuration like the others. The test namespace allows both mTLS and API keys, so the API key
   needed the regional endpoint (`<region>.<cloud>.api.temporal.io:7233`); a namespace that uses API keys only works on its own endpoint.
 
-Still to do: validate the draft with the
-platform's `validate-projects`, and get it onto the platform's test cluster.
+- **The draft passes the platform's `validate-projects`** (platform commit c24bda0), alone and alongside
+  the test cluster's other demos, with no name or subdomain clash (the Google ADK demo is `wealth-adk`).
+
+Still to do: get it onto the platform's test cluster.
 
 This plan follows the platform's contract (`docs/crd-reference.md` and `docs/platform-onboarding.md` in the
 platform repo) and what the Google ADK repo's onboarding did (`temporal-sa/adk-wealth-management`, commit `7e0bb00`,
