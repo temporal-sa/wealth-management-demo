@@ -50,6 +50,8 @@ services:
       DEMO_HOSTED: ${DEMO_HOSTED:-true}
       # The build shown at the bottom of the sidebar (the hosted demo sets the platform's rollout version)
       DEMO_BUILD: ${DEMO_BUILD:-}
+      # Where the web app links workflows: the dev server's UI on this machine
+      TEMPORAL_UI_URL: ${TEMPORAL_UI_URL:-http://localhost:${TEMPORAL_UI_PORT:-8233}}
     ports:
       - "8000:8000"
     restart: on-failure

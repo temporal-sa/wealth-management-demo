@@ -65,6 +65,11 @@ running chat, and a red count shows replies and status updates that arrived whil
 framework, marked "no worker", has no worker running its chats, and its **Start chat** button is off until one starts.
 Under each running framework's name is the model its worker uses, and when the API has `DEMO_BUILD` set (as the hosted
 demo does), the build running is at the bottom of the sidebar.
+
+**View in Temporal**, in a running chat's header, opens its workflow in the Temporal UI in a new tab. While an account
+opening runs, **View account opening** on its status line opens that workflow, and each injected failure in the chaos
+panel has **View workflow**, where its retries show. On Temporal Cloud they need a Cloud sign-in with access to the
+namespace.
 With more than six frameworks, a filter box above the list narrows it down.
 
 While an account opening runs, a status line under the chat header shows its state: amber while it waits, green when

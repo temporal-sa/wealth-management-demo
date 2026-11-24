@@ -11,14 +11,17 @@ const REFRESH_MS = 10000;
 const FILTER_ABOVE = 6;
 
 // The API's GET /api/config: the AI frameworks it serves, each with its labels, language, whether a
-// worker runs its chats and the model that worker uses; and the build running (null when not set).
+// worker runs its chats and the model that worker uses; the build running (null when not set); and the Temporal
+// UI to link workflows to (null when there's none).
 // Null if the API can't be reached.
 async function fetchConfig() {
   try {
     const response = await fetch(`${API_BASE_URL}/config`);
     if (response.ok) {
       const config = await response.json();
-      return Array.isArray(config.frameworks) ? { frameworks: config.frameworks, build: config.build || null } : null;
+      return Array.isArray(config.frameworks)
+        ? { frameworks: config.frameworks, build: config.build || null, temporalUi: config.temporal_ui || null }
+        : null;
     }
   } catch (error) {
     console.log(`Couldn't read the API's config: ${error}`);
@@ -71,6 +74,7 @@ function byLanguage(frameworks) {
 function App() {
   const [frameworks, setFrameworks] = useState(null);
   const [build, setBuild] = useState(null);
+  const [temporalUi, setTemporalUi] = useState(null);
   const [selected, setSelected] = useState(null);
   // Per framework: {active: a chat is running, unseen: events that arrived while it wasn't selected}
   const [chatState, setChatState] = useState({});
@@ -88,6 +92,8 @@ function App() {
       const latest = config.frameworks;
       setFrameworks(latest);
       setBuild(config.build);
+      // The same object while it's unchanged, so the chats don't redo what depends on it on every refresh
+      setTemporalUi((current) => (JSON.stringify(current) === JSON.stringify(config.temporalUi) ? current : config.temporalUi));
       setSelected((current) => (
         latest.some((f) => f.framework === current) ? current : (latest[0] && latest[0].framework)
       ));
@@ -211,11 +217,12 @@ function App() {
               framework={f}
               visible={f === null || f.framework === selected}
               onChange={(change) => f && updateChat(f.framework, change)}
+              temporalUi={temporalUi}
             />
           ))}
         </main>
       </div>
-      {showChaos && <ChaosPanel />}
+      {showChaos && <ChaosPanel temporalUi={temporalUi} />}
     </div>
   );
 }

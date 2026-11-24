@@ -634,3 +634,21 @@ button {
     margin: 2px 0 8px;
     color: var(--text-2);
 }
+
+/* A link to a workflow in the Temporal UI (opens in a new tab) */
+.temporal-link {
+    color: var(--accent);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.temporal-link:hover,
+.temporal-link:focus-visible {
+    text-decoration: underline;
+}
+
+.status-area .temporal-link {
+    color: inherit;
+    text-decoration: underline;
+}

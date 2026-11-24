@@ -39,6 +39,8 @@ In this repository:
   and the chaos panel shows only the demo scenarios whose switches the API offers.
 - **What's running**: every worker records its model in Redis at startup, and the sidebar shows it under each
   framework, with the build at the bottom.
+- **Links to the Temporal UI**: the chat, its account opening and each injected failure link to their workflows, at
+  the platform's `TEMPORAL_UI_URL` (Temporal Cloud's UI: everyone demoing it has a Cloud account), not the public UI.
 - **`docker-compose.yml`** in the hosted shape, with a profile per framework, and
   [`docker-compose.cloud.yml`](../docker-compose.cloud.yml) to run the same containers on Temporal Cloud with an API
   key, as the platform connects.

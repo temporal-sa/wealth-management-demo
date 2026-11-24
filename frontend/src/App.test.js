@@ -309,3 +309,59 @@ test('a delivered message leaves the box empty and shows no error', async () => 
   await waitFor(() => expect(box).toHaveValue(''));
   expect(screen.queryByText(/didn't go through/)).toBeNull();
 });
+
+const TEMPORAL_UI = { url: 'https://cloud.temporal.io', namespace: 'fieldkit-wealth.acct' };
+const uiUrl = (id) => `https://cloud.temporal.io/namespaces/fieldkit-wealth.acct/workflows/${encodeURIComponent(id)}`;
+
+test("links a running chat to its workflow in the Temporal UI", async () => {
+  mockApi({ ...PYAI, temporal_ui: TEMPORAL_UI });
+  render(<App />);
+  await screen.findByRole('tab', { name: /Pydantic AI/ });
+  expect(screen.queryByRole('link', { name: 'View in Temporal' })).toBeNull(); // no chat yet
+  fireEvent.click(screen.getByRole('button', { name: 'Start chat' }));
+  const link = await screen.findByRole('link', { name: 'View in Temporal' });
+  expect(link).toHaveAttribute('href', uiUrl(chatIdOf('pyai')));
+  expect(link).toHaveAttribute('target', '_blank');
+});
+
+test('shows no Temporal link when the API names no Temporal UI', async () => {
+  mockApi(PYAI);
+  render(<App />);
+  await screen.findByRole('tab', { name: /Pydantic AI/ });
+  fireEvent.click(screen.getByRole('button', { name: 'Start chat' }));
+  await screen.findByRole('button', { name: 'End chat' });
+  expect(screen.queryByRole('link', { name: 'View in Temporal' })).toBeNull();
+});
+
+test("links the status line to the chat's account opening in the Temporal UI", async () => {
+  const openingId = `OpenAccount-${chatIdOf('pyai')}-123-Ski Trip-1`;
+  mockApi({ ...PYAI, temporal_ui: TEMPORAL_UI }, [status('New Ski Trip account status changed: Waiting KYC')]);
+  const apiFetch = global.fetch;
+  const lookups = [];
+  global.fetch = jest.fn(async (url, options) => {
+    if (url.includes('/open-account')) {
+      lookups.push(url);
+      return { ok: true, json: async () => ({ workflow_id: openingId }) };
+    }
+    return apiFetch(url, options);
+  });
+  render(<App />);
+  await screen.findByRole('tab', { name: /Pydantic AI/ });
+  fireEvent.click(screen.getByRole('button', { name: 'Start chat' }));
+  const link = await screen.findByRole('link', { name: 'View account opening' });
+  expect(link).toHaveAttribute('href', uiUrl(openingId));
+  expect(lookups[0]).toBe(`/api/open-account?workflow_id=${encodeURIComponent(chatIdOf('pyai'))}`);
+});
+
+test('links each injected failure in the chaos panel to its workflow', async () => {
+  global.fetch = jest.fn(async () => ({
+    ok: true,
+    json: async () => ({
+      flags: [{ flag: 'tool_down', label: 'Core banking API down', description: '', enabled: true }],
+      events: [{ timestamp: 1700000000, source: 'list_investments', attempt: 2, flag: 'tool_down', workflow_id: 'chat-1' }],
+    }),
+  }));
+  const { default: ChaosPanel } = await import('./ChaosPanel');
+  render(<ChaosPanel temporalUi={TEMPORAL_UI} />);
+  expect(await screen.findByRole('link', { name: 'View workflow' })).toHaveAttribute('href', uiUrl('chat-1'));
+});

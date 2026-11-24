@@ -27,11 +27,12 @@ Operations (all parameters are query parameters)
 |---|---|---|---|
 | GET | `/` | | The built web app (`WEB_APP_DIR`, by default `frontend/build`) when it is there, as in the container image; otherwise a short JSON message |
 | GET | `/api/health` | | 200 `{"status": "ok"}` when Redis answers, 503 when it doesn't (the hosted demo's smoke check). The workers are reported per framework by `/api/config` |
-| GET | `/api/config` | | The AI frameworks the API serves, in order, and the build running: `{"build": ..., "frameworks": [...]}`. Each framework has `framework`, `label`, `language` (`Python`, `TypeScript`, `Go`, `Java` or `.NET`), `short_label` (its name within that language), `task_queue`, `workflow_id_prefix`, `available` (whether a worker polls its task queue) and `model` (the model that worker recorded at startup, or null; see below). `build` is `DEMO_BUILD`, or null when it isn't set |
+| GET | `/api/config` | | The AI frameworks the API serves, in order, and the build running: `{"build": ..., "frameworks": [...]}`. Each framework has `framework`, `label`, `language` (`Python`, `TypeScript`, `Go`, `Java` or `.NET`), `short_label` (its name within that language), `task_queue`, `workflow_id_prefix`, `available` (whether a worker polls its task queue) and `model` (the model that worker recorded at startup, or null; see below). `build` is `DEMO_BUILD`, or null when it isn't set. `temporal_ui` is `{"url", "namespace"}` for links to workflows in the Temporal UI, or null (see below) |
 | POST | `/api/start-workflow` | `framework` (optional when the API serves one) | Starts a chat workflow for this browser session on the framework's task queue. Returns `{"message": "Workflow started.", "workflow_id": <its ID>}`. 400 for a framework the API doesn't serve |
 | POST | `/api/send-prompt` | `workflow_id`, `prompt` | Sends the customer's message to the workflow (`process_user_message` signal) |
 | GET | `/api/get-chat-history` | `workflow_id`, `from_index` (default `0`) | Returns the conversation events (chat messages and account-opening status updates) stored in Redis, starting at `from_index` |
 | POST | `/api/end-chat` | `workflow_id` | Sends the `end_workflow` signal |
+| GET | `/api/open-account` | `workflow_id` (the chat's) | `{"workflow_id": ...}`: the chat's most recently started account opening (ID starting `OpenAccount-<workflow_id>-`), running or not, or null. The web UI links its status line to it |
 | POST | `/api/approve-compliance` | `workflow_id` (the chat's) | Sends `compliance_approved` to the chat's running open-account workflows (IDs starting `OpenAccount-<workflow_id>-`) whose `get_current_state` is `Waiting Compliance Review`. Returns `{"approved": [<their workflow IDs>]}` |
 | GET | `/api/chaos` | | This session's failure-injection flags and the failures they recently caused |
 | POST | `/api/chaos` | `flag`, `enabled` (`true` / `false`) | Turns a flag on or off for this session. Flags: `tool_down`, `llm_down`, `llm_rate_limited`, `custodian_rejects`, `slow_saga`, `workflow_bug`. With `DEMO_HOSTED=true`, `workflow_bug` is left out of `GET /api/chaos` and turning it on answers 400: on a hosted copy nobody can fix the workflow code and restart its worker |
@@ -47,6 +48,15 @@ language). `/api/config` reports it only for a framework whose worker is polling
 framework's name. A worker that can't reach Redis runs on without it. `DEMO_BUILD` names the build running, shown at
 the bottom of the sidebar: the hosted demo sets it to the platform's rollout version, which changes with every new
 build and starts with the commit it was built from (`git-<commit>-i<hash>`). Unset (as locally), no build is shown.
+
+**Links to the Temporal UI.** The web UI links a chat to its workflow (in the chat header), the status line to the
+chat's account opening, and each injected failure in the chaos panel to the workflow it hit, as
+`<url>/namespaces/<namespace>/workflows/<workflow ID>` from `/api/config`'s `temporal_ui`
+([`api/temporal_ui.py`](api/temporal_ui.py)). `TEMPORAL_UI_URL` and `TEMPORAL_UI_NAMESPACE` set them, as the FieldKit
+platform does. Without them, a Temporal Cloud address links to `https://cloud.temporal.io` (opening a link needs a
+Temporal Cloud sign-in with access to the namespace), a local address to the dev server's UI at
+`http://localhost:8233`, and any other address has no links. Compose sets `TEMPORAL_UI_URL` to the dev server's UI on
+this machine.
 
 ## Prerequisites
 
