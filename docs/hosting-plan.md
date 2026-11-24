@@ -202,7 +202,7 @@ run the `DemoProject` itself locally, if we have access to it.
 - With Compose: the web app's sidebar shows all 12 frameworks with workers; a chat in each answers; an account opening
   through KYC, the approve button and Complete in a few; two browser sessions don't see each other's chats, data or
   chaos switches; the bug switch is absent in hosted mode; `/api/health` answers.
-- Against Temporal Cloud with an API key (what the platform injects), which hasn't been tested with every language.
+- Against Temporal Cloud with an API key (what the platform injects): `docker-compose.cloud.yml`. Done, see Status.
 
 ## Work on the platform
 

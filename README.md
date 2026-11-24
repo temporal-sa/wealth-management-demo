@@ -10,6 +10,7 @@ testdata/             Committed seed copy used by all tests
 docs/                 Docs; images/ holds the README images; fieldkit/ the hosted demo's platform entry
 docker/               Dockerfiles: the web component and the workers (see Running in containers)
 docker-compose.yml    The demo in containers, in the hosted demo's shape
+docker-compose.cloud.yml  Its override for Temporal Cloud with an API key
 frontend/             The one shared React app
 contracts/            (optional) Language-neutral Temporal names, prompt lines, chaos flags
 interop/
@@ -188,6 +189,18 @@ if a local demo changed it.
 Compose runs the hosted demo's settings, so `DEMO_HOSTED=true` leaves the "Bug in workflow code" switch out of the
 chaos panel (on a hosted copy nobody can fix the code and restart a worker). Set `DEMO_HOSTED=false` to have it.
 `GET /api/health` answers 200 when Redis does.
+
+To run the containers on Temporal Cloud instead of the dev server, add
+[`docker-compose.cloud.yml`](docker-compose.cloud.yml). It connects the way the hosted demo does, with an API key over
+TLS, and takes `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE` and `TEMPORAL_API_KEY` from the shell or `.env`:
+
+```bash
+set -a; source scripts/setcloudenv.sh; set +a
+docker compose -f docker-compose.yml -f docker-compose.cloud.yml --profile all up --build
+```
+
+With an API key, `TEMPORAL_ADDRESS` is your region's endpoint (`<region>.<cloud>.api.temporal.io:7233`); the
+namespace's own endpoint (`<namespace>.<account>.tmprl.cloud:7233`) accepts only client certificates.
 
 The experimental .NET framework and the Java open-account worker have no image yet.
 
