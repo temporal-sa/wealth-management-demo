@@ -3,6 +3,8 @@
 #   npm run --workspace <framework> temporal:worker
 # Built from the repository root. Configured only through the environment, as the other workers.
 FROM node:26-slim
+# The slim image has no CA certificates, and the Temporal SDK's TLS connection to Temporal Cloud needs them
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app/src/typescript
 # The workspace's manifests first, so the dependencies are a layer of their own
 COPY src/typescript/package.json src/typescript/package-lock.json ./

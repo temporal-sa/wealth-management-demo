@@ -17,6 +17,10 @@ Done in this repository:
   approve button and Complete in OpenAI Agents (Python), Vercel AI SDK, Google ADK (Go) and Spring AI; hosted mode
   hides the bug switch; another browser session gets 404 for the first one's chat and keeps its own data.
 - **The draft platform entry**: [`docs/fieldkit/wealth-management.yaml`](fieldkit/wealth-management.yaml).
+- **Temporal Cloud with mTLS**: the same Compose test passes with the web component and all twelve workers on one
+  Cloud namespace (certificate and key mounted, `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH`). It
+  found that the TypeScript image needed CA certificates for any TLS connection, which the platform's connection uses
+  too.
 
 Still to do: test against Temporal Cloud with an API key (what the platform injects), validate the draft with the
 platform's `validate-projects`, and get it onto the platform's test cluster.
