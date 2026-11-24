@@ -18,5 +18,8 @@ RUN npm ci --no-audit --no-fund
 COPY src/typescript ./
 COPY data /app/data
 ENV NODE_ENV=production
+# ts-node only transpiles: type checking each framework's SDKs at startup needs more than the hosted demo's 1Gi
+# (Node then runs out of heap). The types are checked by the tests and npm run build instead.
+ENV TS_NODE_TRANSPILE_ONLY=true
 USER node
 CMD ["npm", "run", "--silent", "--workspace", "vercel_ai", "temporal:worker"]
