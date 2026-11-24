@@ -1,10 +1,11 @@
-# Draft DemoProject for the Temporal FieldKit platform (temporal-sa/temporal-fieldkit-platform), phase 1 of
-# docs/hosting-plan.md. It goes in that repo as projects/test/demo/wealth-management.yaml first, then
-# projects/live/demo/. Validate it there: (cd operator && go run ./cmd/validate-projects ../projects/test/demo)
+# This repository's copy of the DemoProject the Temporal FieldKit platform (temporal-sa/temporal-fieldkit-platform)
+# runs, as projects/test/demo/wealth-management.yaml and projects/live/demo/wealth-management.yaml. Keep everything
+# below this header identical to those files: a change goes to the platform repo as a pull request, test first
+# (docs/hosting-plan.md). Validate it there: (cd operator && go run ./cmd/validate-projects ../projects/test/demo)
 #
 # One web component (the API serving the built web app) and one worker per framework, in the demo's one Temporal
 # Cloud namespace, each on its own task queue. The images are the Dockerfiles in docker/; docker-compose.yml runs
-# the same shape locally. No claim check in phase 1.
+# the same shape locally. No claim check yet (phase 2).
 apiVersion: registry.tmprl-demo.cloud/v1alpha1
 kind: DemoProject
 metadata:
