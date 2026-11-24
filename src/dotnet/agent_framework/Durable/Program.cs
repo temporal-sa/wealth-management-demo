@@ -25,6 +25,8 @@ using var loggerFactory = LoggerFactory.Create(builder => builder
 
 Console.Error.WriteLine(ClaimCheckSetting.Status());
 var config = WorkerConfig.FromEnvironment();
+// For the web UI's sidebar
+WorkerInfo.PublishModel(RedisConfig.Database, config.TaskQueue, config.Model);
 var ownOpenAccount = config.OpenAccountTaskQueue == config.TaskQueue;
 Console.Error.WriteLine(ownOpenAccount
     ? $"Open-account workflow runs on this worker (task queue {config.TaskQueue})"

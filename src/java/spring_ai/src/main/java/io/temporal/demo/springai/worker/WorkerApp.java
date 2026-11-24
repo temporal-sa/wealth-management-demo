@@ -7,6 +7,7 @@ import io.temporal.demo.springai.common.Chaos;
 import io.temporal.demo.springai.common.DataStore;
 import io.temporal.demo.springai.common.EventStream;
 import io.temporal.demo.springai.common.TaskQueues;
+import io.temporal.demo.springai.common.WorkerInfo;
 import io.temporal.demo.springai.workflows.OpenInvestmentAccountWorkflowImpl;
 import io.temporal.demo.springai.workflows.WealthManagementWorkflowImpl;
 import io.temporal.springai.plugin.SpringAiPlugin;
@@ -72,6 +73,8 @@ public class WorkerApp implements CommandLineRunner {
                 .setWorkerInterceptors(new ModelCallInterceptor(chaos)).build());
 
         String chatQueue = TaskQueues.chat();
+        // For the web UI's sidebar
+        WorkerInfo.publishModel(redis, chatQueue, geminiModel());
         Worker worker = factory.newWorker(chatQueue);
         worker.registerWorkflowImplementationTypes(WealthManagementWorkflowImpl.class);
         if (TaskQueues.openAccount().equals(chatQueue)) {

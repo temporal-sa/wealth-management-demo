@@ -12,6 +12,7 @@ import { GoogleAdkPlugin } from '@temporalio/google-adk';
 import { ClientHelper, getSharedClient } from '../../common/client-helper';
 import { claimCheckStatus, DEFAULT_TASK_QUEUE, llmMaxCallsPerSecond, loadWorkerConfig } from '../adk_agents/config';
 import { buildDataConverter } from '../../common/data-converter';
+import { publishWorkerModel } from '../../common/worker-info';
 import { DataStore } from '../adk_agents/data-store';
 import { createActivities } from './activities';
 import { chaosModelProvider } from './chaos-model';
@@ -70,6 +71,8 @@ async function run(): Promise<void> {
   // listed last, as the integration asks.
   const plugin = new GoogleAdkPlugin({ modelProvider: chaosModelProvider() });
 
+  // For the web UI's sidebar (common/worker-info.ts)
+  await publishWorkerModel(config.task_queue, config.model);
   const connection = await NativeConnection.connect(helper.nativeConnectionOptions);
   try {
     const worker = await Worker.create({

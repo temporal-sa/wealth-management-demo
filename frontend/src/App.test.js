@@ -253,3 +253,27 @@ test('with no chaos flags on, the chaos button shows no count', async () => {
   await screen.findByRole('tab', { name: 'Strands' });
   expect(screen.getByRole('button', { name: 'Show chaos panel' })).toHaveTextContent(/^Show chaos panel$/);
 });
+
+test("shows each running framework's model, and the build at the bottom of the sidebar", async () => {
+  mockApi({
+    build: 'v-1234abcd',
+    frameworks: [
+      { ...framework('pure', 'Pure Python'), model: 'anthropic/claude-haiku-5-5' },
+      { ...framework('strands', 'Strands', false), model: null },
+    ],
+  });
+  render(<App />);
+  expect(await screen.findByText('anthropic/claude-haiku-5-5')).toBeInTheDocument();
+  expect(screen.getByText('Build v-1234abcd')).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: /Pure Python/ })).toHaveAttribute(
+    'title', expect.stringContaining('model anthropic/claude-haiku-5-5'));
+  expect(document.querySelectorAll('.framework-model')).toHaveLength(1);
+});
+
+test('shows no model or build when the API reports none', async () => {
+  mockApi(PYAI);
+  render(<App />);
+  await screen.findByRole('tab', { name: /Pydantic AI/ });
+  expect(document.querySelector('.framework-model')).toBeNull();
+  expect(document.querySelector('.build-info')).toBeNull();
+});

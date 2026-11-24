@@ -13,6 +13,7 @@ import { ClientHelper, getSharedClient } from '../../common/client-helper';
 import { claimCheckStatus, DEFAULT_TASK_QUEUE, llmMaxCallsPerSecond, loadWorkerConfig } from '../strands_lib/config';
 import { MODEL_NAME } from '../strands_lib/model-name';
 import { buildDataConverter } from '../../common/data-converter';
+import { publishWorkerModel } from '../../common/worker-info';
 import { DataStore } from '../strands_lib/data-store';
 import { createActivities } from './activities';
 import { geminiModel, withChaos } from './chaos-model';
@@ -72,6 +73,8 @@ async function run(): Promise<void> {
   // workers, so they register the same model activities.
   const plugin = new StrandsPlugin({ models: { [MODEL_NAME]: () => withChaos(geminiModel(config.model)) } });
 
+  // For the web UI's sidebar (common/worker-info.ts)
+  await publishWorkerModel(config.task_queue, config.model);
   const connection = await NativeConnection.connect(helper.nativeConnectionOptions);
   try {
     const worker = await Worker.create({

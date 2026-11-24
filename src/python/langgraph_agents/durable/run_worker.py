@@ -22,6 +22,7 @@ from temporalio.client import Client
 from temporalio.langgraph import LangGraphPlugin
 from temporalio.worker import Worker
 
+from common.worker_info import publish_worker_model
 from common.gemini_model import gemini_model
 from durable import connection
 from durable.activities.beneficiaries import Beneficiaries
@@ -83,6 +84,8 @@ async def main():
         print(f"The open-account workflow runs on task queue {client_helper.taskQueueOpenAccount}: "
               "start the worker that polls it.")
 
+    # For the web UI's sidebar (common/worker_info.py)
+    await publish_worker_model(client_helper.taskQueue, gemini_model())
     worker = Worker(client, task_queue=client_helper.taskQueue, workflows=workflows,
                     activities=tool_activities(client))
 

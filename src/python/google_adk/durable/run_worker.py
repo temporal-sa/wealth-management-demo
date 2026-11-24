@@ -6,6 +6,7 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 from temporalio.google_adk import GoogleAdkPlugin
 
+from common.worker_info import publish_worker_model
 from common.client_helper import ClientHelper
 from common.util import str_to_bool
 from common.claim_check.claim_check_plugin import ClaimCheckPlugin
@@ -19,7 +20,7 @@ from durable.activities.investments import Investments
 from durable.model_config import register_chaos_aware_gemini
 from durable.workflows.supervisor_workflow import WealthManagementWorkflow
 from durable.workflows.open_account_workflow import OpenInvestmentAccountWorkflow
-from durable.task_queues import DEFAULT_TASK_QUEUE
+from durable.task_queues import DEFAULT_TASK_QUEUE, GEMINI_MODEL
 
 
 def choose_workflows(client_helper: ClientHelper) -> list:
@@ -53,6 +54,8 @@ async def main():
         plugins=plugins
     )
 
+    # For the web UI's sidebar (common/worker_info.py)
+    await publish_worker_model(client_helper.taskQueue, GEMINI_MODEL)
     worker = Worker(
         client,
         task_queue=client_helper.taskQueue,

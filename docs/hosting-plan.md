@@ -11,6 +11,8 @@ Done in this repository:
 - **The API** serves the built web app at `/` (`WEB_APP_DIR`), answers `GET /api/health`, and with `DEMO_HOSTED=true`
   leaves the "Bug in workflow code" switch out (`src/python/api/main.py`, with tests). The chaos panel shows only the
   demo scenarios whose switches the API offers (`frontend/src/ChaosPanel.js`, with tests).
+- **What's running**: every worker records its model in Redis at startup, and the sidebar shows it under each
+  framework; the web component's `DEMO_BUILD` (the platform's `platform.rolloutVersion`) is shown at the bottom.
 - **The images**: ten Dockerfiles in `docker/` (web, six Python workers, one TypeScript image for four workers, Go,
   Spring AI) and a root `.dockerignore`.
 - **`docker-compose.yml`** in the hosted shape, with a profile per framework. Tested: all twelve workers start from

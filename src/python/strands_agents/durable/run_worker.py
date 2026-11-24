@@ -8,10 +8,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from dotenv import load_dotenv
 from temporalio.worker import Worker
 
+from common.worker_info import publish_worker_model
 from durable.client_helper import connect_client
 from durable.model_config import (
     LLM_MAX_CALLS_PER_SECOND,
     LLM_TASK_QUEUE,
+    MODEL_ID,
     OPEN_ACCOUNT_TASK_QUEUE,
     TASK_QUEUE,
 )
@@ -50,6 +52,8 @@ async def main():
 
     client = await connect_client()
 
+    # For the web UI's sidebar (common/worker_info.py)
+    await publish_worker_model(TASK_QUEUE, MODEL_ID)
     worker = Worker(
         client,
         task_queue=TASK_QUEUE,

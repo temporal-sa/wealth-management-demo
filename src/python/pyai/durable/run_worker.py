@@ -12,8 +12,10 @@ from pydantic_ai.durable_exec.temporal import (
     TemporalAgent,
 )
 
+from common.worker_info import publish_worker_model
 from common.client_helper import ClientHelper
 from durable.task_queues import DEFAULT_TASK_QUEUE
+from prompts.agent_constants import AGENT_MODEL
 from durable.activities.event_stream_activities import EventStreamActivities
 from durable.activities.local_activities import LocalActivities
 from durable.activities.clients import ClientActivities
@@ -58,6 +60,8 @@ async def main():
     # for the demo, we're using the same task queue as
     # the agents and the child workflow. In a production
     # situation, this would likely be a different task queue
+    # For the web UI's sidebar (common/worker_info.py)
+    await publish_worker_model(client_helper.taskQueue, AGENT_MODEL)
     worker = Worker(
         client,
         task_queue=client_helper.taskQueue, 

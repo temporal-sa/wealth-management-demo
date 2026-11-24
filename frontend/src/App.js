@@ -10,14 +10,15 @@ const REFRESH_MS = 10000;
 // Above this many frameworks, the sidebar offers a filter box
 const FILTER_ABOVE = 6;
 
-// The API's GET /api/config: the AI frameworks it serves, each with its labels, language and whether a
-// worker runs its chats. Null if the API can't be reached.
-async function fetchFrameworks() {
+// The API's GET /api/config: the AI frameworks it serves, each with its labels, language, whether a
+// worker runs its chats and the model that worker uses; and the build running (null when not set).
+// Null if the API can't be reached.
+async function fetchConfig() {
   try {
     const response = await fetch(`${API_BASE_URL}/config`);
     if (response.ok) {
       const config = await response.json();
-      return Array.isArray(config.frameworks) ? config.frameworks : null;
+      return Array.isArray(config.frameworks) ? { frameworks: config.frameworks, build: config.build || null } : null;
     }
   } catch (error) {
     console.log(`Couldn't read the API's config: ${error}`);
@@ -69,6 +70,7 @@ function byLanguage(frameworks) {
 // several frameworks and compared.
 function App() {
   const [frameworks, setFrameworks] = useState(null);
+  const [build, setBuild] = useState(null);
   const [selected, setSelected] = useState(null);
   // Per framework: {active: a chat is running, unseen: events that arrived while it wasn't selected}
   const [chatState, setChatState] = useState({});
@@ -79,11 +81,13 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
-      const [latest, count] = await Promise.all([fetchFrameworks(), fetchChaosCount()]);
+      const [config, count] = await Promise.all([fetchConfig(), fetchChaosCount()]);
       if (cancelled) return;
       setChaosCount(count);
-      if (latest === null) return;
+      if (config === null) return;
+      const latest = config.frameworks;
       setFrameworks(latest);
+      setBuild(config.build);
       setSelected((current) => (
         latest.some((f) => f.framework === current) ? current : (latest[0] && latest[0].framework)
       ));
@@ -163,7 +167,7 @@ function App() {
                       aria-selected={isSelected}
                       className={classes.join(' ')}
                       title={f.available
-                        ? `${f.label} (task queue ${f.task_queue})`
+                        ? `${f.label} (task queue ${f.task_queue}${f.model ? `, model ${f.model}` : ''})`
                         : `${f.label}: no worker is polling task queue ${f.task_queue}`}
                       onClick={() => select(f.framework)}
                     >
@@ -171,7 +175,10 @@ function App() {
                         className={`dot ${state.active ? 'live' : ''}`}
                         aria-label={state.active ? 'chat running' : undefined}
                       />
-                      <span className="framework-name">{f.short_label || f.label}</span>
+                      <span className="framework-text">
+                        <span className="framework-name">{f.short_label || f.label}</span>
+                        {f.model && <span className="framework-model">{f.model}</span>}
+                      </span>
                       {!f.available && <span className="framework-note">no worker</span>}
                       {f.available && !isSelected && state.unseen > 0 && (
                         <span className="unseen" aria-label="new replies">{state.unseen}</span>
@@ -191,6 +198,11 @@ function App() {
             <span>{showChaos ? 'Hide chaos panel' : 'Show chaos panel'}</span>
             {chaosCount > 0 && <span className="chaos-count on">{chaosCount} on</span>}
           </button>
+          {build && (
+            <div className="build-info" title="The build running (DEMO_BUILD)">
+              Build {build}
+            </div>
+          )}
         </nav>
         <main className="chat-area">
           {panes.map((f) => (

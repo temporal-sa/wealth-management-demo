@@ -17,6 +17,7 @@ from common.chaos_manager import CHAOS_FLAGS, ChaosFlag, ChaosManager
 from common.redis_config import RedisConfig
 from common.event_stream_manager import EventStreamManager
 from common.client_helper import ClientHelper
+from common.worker_info import worker_models
 from common.session_scope import is_session_id, new_chat_workflow_id, new_session_id, owns_workflow
 
 temporal_client: Optional[Client] = None
@@ -120,10 +121,16 @@ async def health():
 
 @api.get("/config")
 async def get_config():
-    """The AI frameworks this API serves, for the web UI's sidebar, and whether a worker runs each one's chats."""
+    """The AI frameworks this API serves, for the web UI's sidebar: whether a worker runs each one's chats, the model
+    that worker uses (common/worker_info.py, only while it polls), and the build running (DEMO_BUILD, if set)."""
     available = await asyncio.gather(
         *(chat.has_workers(temporal_client, framework.task_queue) for framework in frameworks.values()))
+    try:
+        models = await worker_models(framework.task_queue for framework in frameworks.values())
+    except Exception:  # noqa: BLE001 - without Redis the sidebar just shows no models
+        models = {}
     return {
+        "build": os.getenv("DEMO_BUILD") or None,
         "frameworks": [
             {
                 "framework": framework.name,
@@ -133,6 +140,7 @@ async def get_config():
                 "task_queue": framework.task_queue,
                 "workflow_id_prefix": framework.workflow_id_prefix,
                 "available": has_workers,
+                "model": models.get(framework.task_queue) if has_workers else None,
             }
             for framework, has_workers in zip(frameworks.values(), available)
         ]

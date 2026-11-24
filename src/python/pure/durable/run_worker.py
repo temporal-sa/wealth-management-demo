@@ -19,6 +19,7 @@ import os
 from temporalio.client import Client
 from temporalio.worker import Worker
 
+from common.worker_info import publish_worker_model
 from durable import connection
 from pure_agents.llm_config import llm_model
 from durable.activities.beneficiaries import Beneficiaries
@@ -76,6 +77,8 @@ async def main():
         print(f"The open-account workflow runs on task queue {client_helper.taskQueueOpenAccount}: "
               "start the worker that polls it.")
 
+    # For the web UI's sidebar (common/worker_info.py)
+    await publish_worker_model(client_helper.taskQueue, llm_model())
     worker = Worker(client, task_queue=client_helper.taskQueue, workflows=workflows,
                     activities=tool_activities(client))
 

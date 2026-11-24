@@ -111,6 +111,10 @@ spec:
         value: openai_agents,pyai,strands_agents,google_adk,pure,langgraph_agents,vercel_ai,google_adk_ts,strands_agents_ts,openai_agents_ts,google_adk_go,spring_ai
       - name: DEMO_HOSTED
         value: 'true'
+      # Shown at the bottom of the sidebar: changes with every new build
+      - name: DEMO_BUILD
+        valueFrom:
+          inputRef: platform.rolloutVersion
       resources:
         requests: {cpu: 100m, memory: 256Mi}
         limits: {memory: 512Mi}
