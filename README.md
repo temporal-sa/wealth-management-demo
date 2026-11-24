@@ -186,8 +186,8 @@ server with `TEMPORAL_PORT=17233 TEMPORAL_UI_PORT=18233`. `docker compose --prof
 The images copy `data/` from the working tree as the seed for each session's copy, so run `git checkout data/` first
 if a local demo changed it.
 
-Compose runs the hosted demo's settings, so `DEMO_HOSTED=true` leaves the "Bug in workflow code" switch out of the
-chaos panel (on a hosted copy nobody can fix the code and restart a worker). Set `DEMO_HOSTED=false` to have it.
+Compose runs the hosted demo's settings, so `DEMO_HOSTED=true` leaves the "Bug in workflow code" switch, and its
+demo scenario, out of the chaos panel (on a hosted copy nobody can fix the code and restart a worker). Set `DEMO_HOSTED=false` to have it.
 `GET /api/health` answers 200 when Redis does.
 
 To run the containers on Temporal Cloud instead of the dev server, add
