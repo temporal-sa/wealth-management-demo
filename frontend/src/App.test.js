@@ -277,3 +277,35 @@ test('shows no model or build when the API reports none', async () => {
   expect(document.querySelector('.framework-model')).toBeNull();
   expect(document.querySelector('.build-info')).toBeNull();
 });
+
+// Starts a chat with PYAI's framework and sends "Hello", with /send-prompt answering as `sendPrompt` does
+async function sendHello(sendPrompt) {
+  mockApi(PYAI);
+  const apiFetch = global.fetch;
+  global.fetch = jest.fn(async (url, options) => (url.includes('/send-prompt') ? sendPrompt() : apiFetch(url, options)));
+  render(<App />);
+  await screen.findByRole('tab', { name: /Pydantic AI/ });
+  fireEvent.click(screen.getByRole('button', { name: 'Start chat' }));
+  const box = await screen.findByRole('textbox', { name: 'Message' });
+  await waitFor(() => expect(box).toBeEnabled());
+  fireEvent.change(box, { target: { value: 'Hello' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+  return box;
+}
+
+test("says a message wasn't delivered and puts it back in the message field when the API answers with an error", async () => {
+  const box = await sendHello(async () => ({ ok: false, status: 502, json: async () => { throw new Error('not JSON'); } }));
+  expect(await screen.findByText(/Your message didn't go through/)).toBeInTheDocument();
+  expect(box).toHaveValue('Hello');
+});
+
+test("says a message wasn't delivered when the API answers with a page instead of JSON", async () => {
+  await sendHello(async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('Unexpected token <'); } }));
+  expect(await screen.findByText(/Your message didn't go through/)).toBeInTheDocument();
+});
+
+test('a delivered message leaves the box empty and shows no error', async () => {
+  const box = await sendHello(async () => ({ ok: true, status: 200, json: async () => ({ response: 'Message sent' }) }));
+  await waitFor(() => expect(box).toHaveValue(''));
+  expect(screen.queryByText(/didn't go through/)).toBeNull();
+});
