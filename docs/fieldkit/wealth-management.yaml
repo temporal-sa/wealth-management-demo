@@ -1,0 +1,245 @@
+# Draft DemoProject for the Temporal FieldKit platform (temporal-sa/temporal-fieldkit-platform), phase 1 of
+# docs/hosting-plan.md. It goes in that repo as projects/test/demo/wealth-management.yaml first, then
+# projects/live/demo/. Validate it there: (cd operator && go run ./cmd/validate-projects ../projects/test/demo)
+#
+# One web component (the API serving the built web app) and one worker per framework, in the demo's one Temporal
+# Cloud namespace, each on its own task queue. The images are the Dockerfiles in docker/; docker-compose.yml runs
+# the same shape locally. No claim check in phase 1.
+apiVersion: registry.tmprl-demo.cloud/v1alpha1
+kind: DemoProject
+metadata:
+  name: wealth-management
+  annotations:
+    registry.tmprl-demo.cloud/operator: v2
+spec:
+  registry:
+    title: "Wealth Management Agents — twelve agent frameworks"
+    summary: >-
+      The same multi-agent banking chat built with twelve agent frameworks in Python, TypeScript, Go and Java on
+      Temporal. Model and tool calls are Activities; account opening is a child Workflow saga with KYC and human
+      approval. Switch frameworks in the sidebar and inject outages, rate limits and saga failures.
+    tags:
+    - AI Agents
+    - Human-in-the-Loop
+    - Financial Services
+    - Saga
+    - Chaos
+    temporalSdks:
+    - Python
+    - TypeScript
+    - Go
+    - Java
+    aiSdks:
+    - OpenAI Agents SDK
+    - Pydantic AI
+    - Strands Agents
+    - Google ADK
+    - LangGraph
+    - LiteLLM
+    - Vercel AI SDK
+    - Spring AI
+  source:
+    repo: https://github.com/temporal-sa/wealth-management-demo
+    branch: main
+  # The frameworks read the provider keys as they are (their SDKs don't all follow the LiteLLM base-URL variables)
+  llm:
+    gateway: direct
+  builds:
+    web:
+      context: .
+      strategy: dockerfile
+      dockerfile: docker/web.Dockerfile
+    openai-agents:
+      context: .
+      strategy: dockerfile
+      dockerfile: docker/python-openai-agents.Dockerfile
+    pyai:
+      context: .
+      strategy: dockerfile
+      dockerfile: docker/python-pyai.Dockerfile
+    strands-agents:
+      context: .
+      strategy: dockerfile
+      dockerfile: docker/python-strands-agents.Dockerfile
+    google-adk:
+      context: .
+      strategy: dockerfile
+      dockerfile: docker/python-google-adk.Dockerfile
+    pure:
+      context: .
+      strategy: dockerfile
+      dockerfile: docker/python-pure.Dockerfile
+    langgraph:
+      context: .
+      strategy: dockerfile
+      dockerfile: docker/python-langgraph.Dockerfile
+    typescript:
+      context: .
+      strategy: dockerfile
+      dockerfile: docker/typescript.Dockerfile
+    go:
+      context: .
+      strategy: dockerfile
+      dockerfile: docker/go.Dockerfile
+    spring-ai:
+      context: .
+      strategy: dockerfile
+      dockerfile: docker/spring-ai.Dockerfile
+  secrets:
+    openai:
+      shared: openai
+      requiredProperties:
+      - OPENAI_API_KEY
+    gemini:
+      shared: gemini
+      requiredProperties:
+      - GEMINI_API_KEY
+    anthropic:
+      shared: anthropic
+      requiredProperties:
+      - ANTHROPIC_API_KEY
+  components:
+    web:
+      build: web
+      temporalAccess: true
+      ports:
+      - name: http
+        containerPort: 8000
+        servicePort: 80
+      env:
+      - name: AI_FRAMEWORK
+        value: openai_agents,pyai,strands_agents,google_adk,pure,langgraph_agents,vercel_ai,google_adk_ts,strands_agents_ts,openai_agents_ts,google_adk_go,spring_ai
+      - name: DEMO_HOSTED
+        value: 'true'
+      resources:
+        requests: {cpu: 100m, memory: 256Mi}
+        limits: {memory: 512Mi}
+    # ---- Python workers
+    worker-openai-agents:
+      build: openai-agents
+      worker: true
+      secrets: [openai]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 384Mi}
+        limits: {memory: 1Gi}
+    worker-pyai:
+      build: pyai
+      worker: true
+      secrets: [openai]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 384Mi}
+        limits: {memory: 1Gi}
+    worker-strands-agents:
+      build: strands-agents
+      worker: true
+      secrets: [gemini]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 384Mi}
+        limits: {memory: 1Gi}
+    worker-google-adk:
+      build: google-adk
+      worker: true
+      secrets: [gemini]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 384Mi}
+        limits: {memory: 1Gi}
+    worker-pure:
+      build: pure
+      worker: true
+      secrets: [anthropic]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      # LLM_MODEL defaults to anthropic/claude-opus-5-5: consider a cheaper model for a shared demo
+      resources:
+        requests: {cpu: 100m, memory: 384Mi}
+        limits: {memory: 1Gi}
+    worker-langgraph:
+      build: langgraph
+      worker: true
+      secrets: [gemini]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 384Mi}
+        limits: {memory: 1Gi}
+    # ---- TypeScript workers: one image, a command per framework
+    worker-vercel-ai:
+      build: typescript
+      command: [npm, run, --silent, --workspace, vercel_ai, temporal:worker]
+      worker: true
+      secrets: [gemini]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 512Mi}
+        limits: {memory: 1Gi}
+    worker-google-adk-ts:
+      build: typescript
+      command: [npm, run, --silent, --workspace, google_adk, temporal:worker]
+      worker: true
+      secrets: [gemini]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 512Mi}
+        limits: {memory: 1Gi}
+    worker-strands-agents-ts:
+      build: typescript
+      command: [npm, run, --silent, --workspace, strands_agents, temporal:worker]
+      worker: true
+      secrets: [gemini]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 512Mi}
+        limits: {memory: 1Gi}
+    worker-openai-agents-ts:
+      build: typescript
+      command: [npm, run, --silent, --workspace, openai_agents, temporal:worker]
+      worker: true
+      secrets: [openai]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 512Mi}
+        limits: {memory: 1Gi}
+    # ---- Go and Java workers
+    worker-google-adk-go:
+      build: go
+      worker: true
+      secrets: [gemini]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 128Mi}
+        limits: {memory: 512Mi}
+    worker-spring-ai:
+      build: spring-ai
+      worker: true
+      secrets: [gemini]
+      env:
+      - {name: DEMO_DATA_STORE, value: redis}
+      resources:
+        requests: {cpu: 100m, memory: 512Mi}
+        limits: {memory: 1Gi}
+  ingress:
+    subdomain: wealth
+    temporalAuthRequired: true
+    routes:
+    - pathPrefix: /
+      component: web
+      port: http
+  smokeCheck:
+    path: /api/health
+    expectedStatus: 200
+    timeoutSeconds: 10
+  redis:
+    version: '7'

@@ -1,8 +1,12 @@
 import asyncio
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Optional, AsyncGenerator
 
 from fastapi import APIRouter, FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from temporalio.client import Client
 from temporalio.exceptions import TemporalError
 from temporalio.service import RPCError
@@ -10,11 +14,26 @@ from temporalio.service import RPCError
 from api import client as chat
 from api.frameworks import Framework, ignored_overrides, selected_frameworks
 from common.chaos_manager import CHAOS_FLAGS, ChaosFlag, ChaosManager
+from common.redis_config import RedisConfig
 from common.event_stream_manager import EventStreamManager
 from common.client_helper import ClientHelper
 from common.session_scope import is_session_id, new_chat_workflow_id, new_session_id, owns_workflow
 
 temporal_client: Optional[Client] = None
+
+# The hosted demo (DEMO_HOSTED, set on the FieldKit platform): visitors can't edit the workflow code and
+# restart its worker, so the "Bug in workflow code" scenario couldn't be finished there, and its switch is left out.
+HOSTED = os.getenv("DEMO_HOSTED", "").strip().lower() in ("true", "t", "yes", "y", "1", "on")
+HOSTED_HIDDEN_FLAGS = {ChaosFlag.WORKFLOW_BUG}
+
+
+def available_flags():
+    """The chaos flags this API offers: all of them, less the ones the hosted demo leaves out."""
+    return [info for info in CHAOS_FLAGS if not (HOSTED and info.flag in HOSTED_HIDDEN_FLAGS)]
+
+# The built web app, served at / when it is there (the container image). Locally the React dev server serves it
+# and proxies /api here.
+WEB_APP_DIR = Path(os.getenv("WEB_APP_DIR") or Path(__file__).resolve().parents[3] / "frontend" / "build")
 # The frameworks the API serves (AI_FRAMEWORK), by name, in the order the web UI lists them
 frameworks: dict[str, Framework] = {}
 
@@ -23,6 +42,10 @@ frameworks: dict[str, Framework] = {}
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # app startup
     print("API is starting up...")
+    if HOSTED:
+        print("Hosted demo (DEMO_HOSTED): the chaos panel leaves out " + ", ".join(f.value for f in HOSTED_HIDDEN_FLAGS))
+    if (WEB_APP_DIR / "index.html").is_file():
+        print(f"Serving the web app from {WEB_APP_DIR}")
     global temporal_client
     global frameworks
     served = selected_frameworks()
@@ -76,9 +99,23 @@ def own_chat(request: Request, workflow_id: str) -> Framework:
 api = APIRouter(prefix="/api")
 
 
-@app.get("/")
-def root():
-    return {"message": "Wealth Management Agent API"}
+if not (WEB_APP_DIR / "index.html").is_file():
+    @app.get("/")
+    def root():
+        return {"message": "Wealth Management Agent API"}
+
+
+@api.get("/health")
+async def health():
+    """200 when Redis answers (the platform's smoke check). Workers are reported per framework by /config."""
+    redis = RedisConfig().async_client()
+    try:
+        await redis.ping()
+        return {"status": "ok"}
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"status": "unavailable", "redis": str(e)})
+    finally:
+        await redis.aclose()
 
 
 @api.get("/config")
@@ -210,7 +247,7 @@ async def get_chaos(request: Request):
                     "description": info.description,
                     "enabled": enabled[info.flag.value],
                 }
-                for info in CHAOS_FLAGS
+                for info in available_flags()
             ],
             "events": await manager.get_events(),
         }
@@ -224,6 +261,8 @@ async def set_chaos(request: Request, flag: str, enabled: bool):
         chaos_flag = ChaosFlag(flag)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Unknown chaos flag: {flag}")
+    if enabled and chaos_flag not in {info.flag for info in available_flags()}:
+        raise HTTPException(status_code=400, detail=f"The {flag} chaos flag isn't available on the hosted demo")
     manager = ChaosManager(session_id=request.state.session_id)
     try:
         await manager.set_enabled(chaos_flag, enabled)
@@ -246,3 +285,7 @@ async def reset_chaos(request: Request):
 
 
 app.include_router(api)
+
+if (WEB_APP_DIR / "index.html").is_file():
+    # Last, so /api and the routes above win over the files
+    app.mount("/", StaticFiles(directory=WEB_APP_DIR, html=True), name="web")

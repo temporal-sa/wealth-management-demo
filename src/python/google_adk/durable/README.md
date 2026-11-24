@@ -341,7 +341,7 @@ spaces, turn off "Pass the user access token" and "Include cross-origin credenti
 
 Redis still runs locally. Create the cloud settings file and fill in your namespace and address, and
 either the mTLS certificate paths or `TEMPORAL_API_KEY` (with the `<region>.<cloud>.api.temporal.io:7233`
-address):
+address if the namespace also allows mTLS):
 
 ```bash
 cp scripts/setcloudenv.example scripts/setcloudenv.sh

@@ -13,26 +13,25 @@ is built here, so they all encode payloads the same way.
 """
 
 import asyncio
-import os
 
-from temporalio.client import Client, TLSConfig
+from temporalio.client import Client
+from temporalio.envconfig import ClientConfig
 from temporalio.contrib.strands import StrandsPlugin
 
 from common.claim_check.claim_check_plugin import ClaimCheckPlugin, use_claim_check
 from durable.model_config import MODELS
 
 
-def _tls_config():
-    """Build a TLSConfig from env vars for Temporal Cloud, or None for local."""
-    cert_path = os.getenv("TEMPORAL_TLS_CLIENT_CERT_PATH")
-    key_path = os.getenv("TEMPORAL_TLS_CLIENT_KEY_PATH")
-    if cert_path and key_path:
-        with open(cert_path, "rb") as f:
-            client_cert = f.read()
-        with open(key_path, "rb") as f:
-            client_key = f.read()
-        return TLSConfig(client_cert=client_cert, client_private_key=client_key)
-    return None
+def _connect_config() -> dict:
+    """Client.connect's settings from Temporal's environment configuration (TEMPORAL_ADDRESS,
+    TEMPORAL_NAMESPACE, TEMPORAL_API_KEY, TEMPORAL_TLS*, or a temporal.toml profile), defaulting
+    to a local server. Temporal Cloud works with an API key or an mTLS certificate and key."""
+    config = ClientConfig.load_client_connect_config()
+    if not config.get("target_host"):
+        config["target_host"] = "localhost:7233"
+    if not config.get("namespace"):
+        config["namespace"] = "default"
+    return config
 
 
 def client_plugins() -> list:
@@ -48,17 +47,11 @@ def client_plugins() -> list:
 
 
 async def connect_client(max_attempts: int = 5) -> Client:
-    address = os.getenv("TEMPORAL_ADDRESS", "localhost:7233")
-    namespace = os.getenv("TEMPORAL_NAMESPACE", "default")
+    connect_config = _connect_config()
     last_exc: Exception | None = None
     for attempt in range(1, max_attempts + 1):
         try:
-            return await Client.connect(
-                address,
-                namespace=namespace,
-                tls=_tls_config() or False,
-                plugins=client_plugins(),
-            )
+            return await Client.connect(**connect_config, plugins=client_plugins())
         except RuntimeError as exc:
             # Tolerate transient transport resets during startup.
             last_exc = exc

@@ -348,8 +348,8 @@ certificate paths:
 cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
-This framework connects with mTLS only (`TEMPORAL_TLS_CLIENT_CERT_PATH` and `TEMPORAL_TLS_CLIENT_KEY_PATH`);
-it doesn't read `TEMPORAL_API_KEY`. Start the worker and the API (the web UI starts as before):
+Set either the mTLS certificate and key (`TEMPORAL_TLS_CLIENT_CERT_PATH` and `TEMPORAL_TLS_CLIENT_KEY_PATH`)
+or `TEMPORAL_API_KEY`, and the matching address (see `setcloudenv.example`). Start the worker and the API (the web UI starts as before):
 
 ```bash
 ./src/python/strands_agents/durable/startcloudworker.sh
@@ -377,6 +377,7 @@ For the Java open-account worker, start the worker with `startcloudworker.sh jav
 | `TEMPORAL_ADDRESS` | `localhost:7233` | Temporal service address |
 | `TEMPORAL_NAMESPACE` | `default` | Temporal namespace |
 | `TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH` | none | mTLS certificate and key for Temporal Cloud (both must be set) |
+| `TEMPORAL_API_KEY` | none | API key for Temporal Cloud, instead of mTLS (`scripts/setcloudenv.sh`) |
 | `TEMPORAL_TASK_QUEUE` | `Strands-Supervisor` | Main task queue (workflows and tools); `DEFAULT_TASK_QUEUE` in `model_config.py`. The worker, API and Java worker must agree |
 | `TEMPORAL_TASK_QUEUE_LLM` | `<TEMPORAL_TASK_QUEUE>-llm` | Task queue for model calls. The older name `TEMPORAL_LLM_TASK_QUEUE` is still accepted |
 | `TEMPORAL_TASK_QUEUE_OPEN_ACCOUNT` | `<TEMPORAL_TASK_QUEUE>` | Task queue for the open-account workflow. `java` means `<TEMPORAL_TASK_QUEUE>-open-account`; set by the worker scripts' argument. When it differs from the main queue, the Python worker doesn't register `OpenInvestmentAccountWorkflow` |

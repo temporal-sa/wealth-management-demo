@@ -1,0 +1,29 @@
+# Runs the containers on Temporal Cloud instead of the dev server, the way the hosted demo connects: an API key over
+# TLS, with no certificate files. Compose takes the values from the shell (or .env), for example:
+#
+#   set -a; source scripts/setcloudenv.sh; set +a
+#   docker compose -f docker-compose.yml -f docker-compose.cloud.yml --profile all up --build
+#
+# TEMPORAL_ADDRESS is the namespace's own endpoint when the namespace uses API keys only, or the regional endpoint
+# (<region>.<cloud>.api.temporal.io:7233) when it allows both mTLS and API keys. The dev server container still starts, unused.
+x-cloud: &cloud
+  environment:
+    TEMPORAL_ADDRESS: "${TEMPORAL_ADDRESS:?set TEMPORAL_ADDRESS}"
+    TEMPORAL_NAMESPACE: "${TEMPORAL_NAMESPACE:?set TEMPORAL_NAMESPACE}"
+    TEMPORAL_API_KEY: "${TEMPORAL_API_KEY:?set TEMPORAL_API_KEY}"
+    TEMPORAL_TLS: "true"
+
+services:
+  web: *cloud
+  openai_agents: *cloud
+  pyai: *cloud
+  strands_agents: *cloud
+  google_adk: *cloud
+  pure: *cloud
+  langgraph_agents: *cloud
+  vercel_ai: *cloud
+  google_adk_ts: *cloud
+  strands_agents_ts: *cloud
+  openai_agents_ts: *cloud
+  google_adk_go: *cloud
+  spring_ai: *cloud

@@ -1,0 +1,22 @@
+# Kept out of every image build. Keys and local settings first: never in an image.
+scripts/set*.sh
+.env
+*.pem
+*.key
+.git
+logs
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+frontend/build
+src/typescript/lib
+**/*.tsbuildinfo
+src/java/spring_ai/build
+src/java/spring_ai/.gradle
+interop/**/build
+interop/**/.gradle
+src/dotnet/**/bin
+src/dotnet/**/obj
+src/go/bin
+**/workflow-bundle-*.js

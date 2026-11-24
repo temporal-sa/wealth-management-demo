@@ -8,7 +8,7 @@ Settings files that every framework's start scripts source, plus scripts that wo
 | `setgeminikey.example` → `setgeminikey.sh` | Gemini API key (`GEMINI_API_KEY`): Strands Agents (Python and TypeScript), Google ADK (Python, TypeScript and Go), LangGraph, Vercel AI SDK and Spring AI frameworks. All of them also read an optional `GEMINI_MODEL` (default `gemini-3.8-flash`) |
 | `setllmkey.example` → `setllmkey.sh` | Pure Python framework: `LLM_MODEL` (a LiteLLM `<provider>/<model>` name) and that provider's key (Anthropic by default; OpenAI or Gemini also work) |
 | `setclaimcheck.example` → `setclaimcheck.sh` | Optional claim check: `USE_CLAIM_CHECK`, and where Redis is: host and port, an optional `REDIS_PASSWORD`, or a `REDIS_URL` that wins over them; how long claim-checked payloads are kept (`CLAIM_CHECK_TTL_SECONDS`, default 7 days) |
-| `setcloudenv.example` → `setcloudenv.sh` | Temporal Cloud address, namespace, and either an mTLS cert and key or an API key |
+| `setcloudenv.example` → `setcloudenv.sh` | Temporal Cloud address, namespace, and either an mTLS cert and key or an API key (with an API key, a namespace that also allows mTLS needs the regional `<region>.<cloud>.api.temporal.io:7233` address) |
 | `setsplitworkflows.sh` | Sourced by worker scripts: a queue argument moves the open-account workflow onto that queue (e.g. for the Java worker) |
 | `startdemo.sh` | Starts the demo for one or more frameworks in one terminal: each framework's worker, the API and the web UI, and with `--java` the Java open-account worker. See [Start the demo with one command](#start-the-demo-with-one-command) |
 

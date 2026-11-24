@@ -480,3 +480,60 @@ async def test_the_strands_framework_needs_nothing_extra(temporal_env, tmp_path_
         assert (config["framework"], config["task_queue"], config["workflow_id_prefix"]) == (
             "strands_agents", "Strands-Supervisor", "strands-temporal-agent-")
         assert (await asyncio.to_thread(client.get, "/api/pending-approval", params={"workflow_id": "x"})).status_code == 404
+
+
+# ---- Hosting: the health check, the hosted demo's chaos flags and the built web app
+
+
+class FakeRedis:
+    def __init__(self, error=None):
+        self.error = error
+
+    async def ping(self):
+        if self.error:
+            raise self.error
+        return True
+
+    async def aclose(self):
+        pass
+
+
+async def test_health_answers_ok_when_redis_answers_and_503_when_it_doesnt(http, monkeypatch):
+    import api.main as main
+
+    monkeypatch.setattr(main.RedisConfig, "async_client", lambda self: FakeRedis())
+    response = await asyncio.to_thread(http.get, "/api/health")
+    assert (response.status_code, response.json()) == (200, {"status": "ok"})
+    monkeypatch.setattr(main.RedisConfig, "async_client", lambda self: FakeRedis(ConnectionError("refused")))
+    response = await asyncio.to_thread(http.get, "/api/health")
+    assert response.status_code == 503 and response.json()["status"] == "unavailable"
+
+
+async def test_the_hosted_demo_leaves_out_the_workflow_bug_switch(http, monkeypatch):
+    import api.main as main
+
+    every = [info.flag.value for info in main.CHAOS_FLAGS]
+    assert [info.flag.value for info in main.available_flags()] == every
+    monkeypatch.setattr(main, "HOSTED", True)
+    assert [info.flag.value for info in main.available_flags()] == [f for f in every if f != "workflow_bug"]
+    # Refused before any Redis call
+    response = await asyncio.to_thread(http.post, "/api/chaos", params={"flag": "workflow_bug", "enabled": "true"})
+    assert response.status_code == 400 and "hosted demo" in response.json()["detail"]
+
+
+def test_the_api_serves_the_built_web_app_at_the_root_when_there_is_one(tmp_path):
+    (tmp_path / "index.html").write_text("<html>the web app</html>")
+    (tmp_path / "static").mkdir()
+    (tmp_path / "static" / "app.js").write_text("console.log('app')")
+    script = """
+from fastapi.testclient import TestClient
+from api.main import app
+client = TestClient(app)
+assert client.get('/').text == '<html>the web app</html>', client.get('/').text
+assert client.get('/static/app.js').text == "console.log('app')"
+assert client.get('/api/nope').status_code == 404
+print('ok')
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, cwd=Path(__file__).parents[2],
+                            env={**os.environ, "WEB_APP_DIR": str(tmp_path)})
+    assert result.stdout.strip() == "ok", result.stderr

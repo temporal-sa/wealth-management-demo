@@ -347,7 +347,8 @@ cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
 `scripts/setcloudenv.sh` sets `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_TLS_CLIENT_CERT_PATH` and
-`TEMPORAL_TLS_CLIENT_KEY_PATH` (or `TEMPORAL_API_KEY`, if your namespace uses an API key instead of mTLS). It
+`TEMPORAL_TLS_CLIENT_KEY_PATH` (or `TEMPORAL_API_KEY`, if your namespace uses an API key instead of mTLS, with the regional
+`<region>.<cloud>.api.temporal.io:7233` endpoint as the address if the namespace also allows mTLS). It
 is git-ignored: never commit it. Redis still runs locally. Then use the cloud scripts in place of the local
 ones:
 

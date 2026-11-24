@@ -1,0 +1,133 @@
+# The demo in containers, in the same shape as the hosted demo on the Temporal FieldKit platform
+# (docs/hosting-plan.md): a Temporal dev server, Redis with a password, the web component (the API serving the web
+# app) at http://localhost:8000, and one worker per framework.
+#
+#   Put the model keys in a gitignored .env next to this file (compose reads it for every command):
+#     OPENAI_API_KEY=...      openai_agents, pyai, openai_agents_ts
+#     GEMINI_API_KEY=...      strands_agents, google_adk, langgraph_agents, vercel_ai, google_adk_ts,
+#                             strands_agents_ts, google_adk_go, spring_ai
+#     ANTHROPIC_API_KEY=...   pure (or set LLM_MODEL to another provider's model and its key)
+#
+#   docker compose --profile all up --build                               every framework
+#   docker compose --profile strands_agents --profile vercel_ai up --build   a few
+#
+# Each worker has a profile named after its framework, and the profile all. The web app lists every framework in
+# AI_FRAMEWORK, marking those whose worker isn't running. Each browser session gets its own sample data and chaos
+# switches in Redis (DEMO_DATA_STORE=redis), so data/ never changes. The Temporal UI is at http://localhost:8233.
+# TEMPORAL_PORT and TEMPORAL_UI_PORT move the dev server's host ports, if a local Temporal already uses them.
+
+x-temporal: &temporal-env
+  TEMPORAL_ADDRESS: temporal:7233
+  TEMPORAL_NAMESPACE: default
+  # The same Redis settings the platform injects
+  REDIS_URL: redis://:localdev@redis:6379/0
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: localdev
+  DEMO_DATA_STORE: redis
+
+x-worker: &worker
+  restart: on-failure
+  depends_on: [temporal, redis]
+
+services:
+  temporal:
+    image: temporalio/temporal:latest
+    command: ["server", "start-dev", "--ip", "0.0.0.0", "--ui-ip", "0.0.0.0"]
+    ports:
+      - "${TEMPORAL_PORT:-7233}:7233"
+      - "${TEMPORAL_UI_PORT:-8233}:8233"
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "localdev"]
+
+  web:
+    build: { context: ., dockerfile: docker/web.Dockerfile }
+    environment:
+      <<: *temporal-env
+      AI_FRAMEWORK: ${AI_FRAMEWORK:-openai_agents,pyai,strands_agents,google_adk,pure,langgraph_agents,vercel_ai,google_adk_ts,strands_agents_ts,openai_agents_ts,google_adk_go,spring_ai}
+      DEMO_HOSTED: ${DEMO_HOSTED:-true}
+    ports:
+      - "8000:8000"
+    restart: on-failure
+    depends_on: [temporal, redis]
+
+  # ---- Python
+  openai_agents:
+    <<: *worker
+    profiles: [all, openai_agents]
+    build: { context: ., dockerfile: docker/python-openai-agents.Dockerfile }
+    environment: { <<: *temporal-env, OPENAI_API_KEY: "${OPENAI_API_KEY:-}" }
+  pyai:
+    <<: *worker
+    profiles: [all, pyai]
+    build: { context: ., dockerfile: docker/python-pyai.Dockerfile }
+    environment: { <<: *temporal-env, OPENAI_API_KEY: "${OPENAI_API_KEY:-}" }
+  strands_agents:
+    <<: *worker
+    profiles: [all, strands_agents]
+    build: { context: ., dockerfile: docker/python-strands-agents.Dockerfile }
+    environment: { <<: *temporal-env, GEMINI_API_KEY: "${GEMINI_API_KEY:-}", GEMINI_MODEL: "${GEMINI_MODEL:-gemini-3.8-flash}" }
+  google_adk:
+    <<: *worker
+    profiles: [all, google_adk]
+    build: { context: ., dockerfile: docker/python-google-adk.Dockerfile }
+    environment: { <<: *temporal-env, GEMINI_API_KEY: "${GEMINI_API_KEY:-}", GEMINI_MODEL: "${GEMINI_MODEL:-gemini-3.8-flash}" }
+  pure:
+    <<: *worker
+    profiles: [all, pure]
+    build: { context: ., dockerfile: docker/python-pure.Dockerfile }
+    environment:
+      <<: *temporal-env
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      LLM_MODEL: "${LLM_MODEL:-}"
+  langgraph_agents:
+    <<: *worker
+    profiles: [all, langgraph_agents]
+    build: { context: ., dockerfile: docker/python-langgraph.Dockerfile }
+    environment: { <<: *temporal-env, GEMINI_API_KEY: "${GEMINI_API_KEY:-}", GEMINI_MODEL: "${GEMINI_MODEL:-gemini-3.8-flash}" }
+
+  # ---- TypeScript: one image, a worker per framework
+  vercel_ai:
+    <<: *worker
+    profiles: [all, vercel_ai]
+    build: { context: ., dockerfile: docker/typescript.Dockerfile }
+    image: wealth-management-typescript
+    command: ["npm", "run", "--silent", "--workspace", "vercel_ai", "temporal:worker"]
+    environment: { <<: *temporal-env, GEMINI_API_KEY: "${GEMINI_API_KEY:-}", GEMINI_MODEL: "${GEMINI_MODEL:-gemini-3.8-flash}" }
+  google_adk_ts:
+    <<: *worker
+    profiles: [all, google_adk_ts]
+    build: { context: ., dockerfile: docker/typescript.Dockerfile }
+    image: wealth-management-typescript
+    command: ["npm", "run", "--silent", "--workspace", "google_adk", "temporal:worker"]
+    environment: { <<: *temporal-env, GEMINI_API_KEY: "${GEMINI_API_KEY:-}", GEMINI_MODEL: "${GEMINI_MODEL:-gemini-3.8-flash}" }
+  strands_agents_ts:
+    <<: *worker
+    profiles: [all, strands_agents_ts]
+    build: { context: ., dockerfile: docker/typescript.Dockerfile }
+    image: wealth-management-typescript
+    command: ["npm", "run", "--silent", "--workspace", "strands_agents", "temporal:worker"]
+    environment: { <<: *temporal-env, GEMINI_API_KEY: "${GEMINI_API_KEY:-}", GEMINI_MODEL: "${GEMINI_MODEL:-gemini-3.8-flash}" }
+  openai_agents_ts:
+    <<: *worker
+    profiles: [all, openai_agents_ts]
+    build: { context: ., dockerfile: docker/typescript.Dockerfile }
+    image: wealth-management-typescript
+    command: ["npm", "run", "--silent", "--workspace", "openai_agents", "temporal:worker"]
+    environment: { <<: *temporal-env, OPENAI_API_KEY: "${OPENAI_API_KEY:-}", OPENAI_MODEL: "${OPENAI_MODEL:-gpt-4o}" }
+
+  # ---- Go and Java
+  google_adk_go:
+    <<: *worker
+    profiles: [all, google_adk_go]
+    build: { context: ., dockerfile: docker/go.Dockerfile }
+    environment: { <<: *temporal-env, GEMINI_API_KEY: "${GEMINI_API_KEY:-}", GEMINI_MODEL: "${GEMINI_MODEL:-gemini-3.8-flash}" }
+  spring_ai:
+    <<: *worker
+    profiles: [all, spring_ai]
+    build: { context: ., dockerfile: docker/spring-ai.Dockerfile }
+    environment: { <<: *temporal-env, GEMINI_API_KEY: "${GEMINI_API_KEY:-}", GEMINI_MODEL: "${GEMINI_MODEL:-gemini-3.8-flash}" }

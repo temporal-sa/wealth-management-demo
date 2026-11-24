@@ -51,6 +51,8 @@ public class CommonTests
         var added = store.AddBeneficiary(new NewBeneficiary("123", "Jim", "Doe", "Brother"));
         Assert.StartsWith("b-", added.BeneficiaryId);
         Assert.Contains("\n    \"123\": [", File.ReadAllText(Path.Combine(dir, "beneficiaries.json")));
+        // No byte-order mark: Python's json, which every Python framework reads the files with, refuses one
+        Assert.Equal((byte)'{', File.ReadAllBytes(Path.Combine(dir, "beneficiaries.json"))[0]);
         var first = store.Debit("123", 100, "t-1");
         var again = store.Debit("123", 100, "t-1");
         Assert.Equal(first, again);
