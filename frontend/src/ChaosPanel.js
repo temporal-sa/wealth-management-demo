@@ -3,14 +3,17 @@ import { API_BASE_URL } from './config';
 
 const POLL_INTERVAL_MS = 2000;
 
-// Short scripts for each failure scenario, shown under "Demo scenarios".
+// Short scripts for each failure scenario, shown under "Demo scenarios". flags: the switches a scenario uses; it
+// is shown only when the API offers at least one of them (the hosted demo leaves out the bug switch). None: always.
 const SCENARIOS = [
   {
     title: 'Tool / API down',
+    flags: ['tool_down'],
     steps: 'Turn on "Core banking API down" and ask to list your investments. The tool retries until you turn it off, then the answer arrives.',
   },
   {
     title: 'LLM down or rate limited',
+    flags: ['llm_down', 'llm_rate_limited'],
     steps: 'Turn on an LLM flag and send any message. Rate-limited calls wait 15s between attempts (the Retry-After delay) instead of backing off normally.',
   },
   {
@@ -23,6 +26,7 @@ const SCENARIOS = [
   },
   {
     title: 'Bug in workflow code',
+    flags: ['workflow_bug'],
     steps: 'Turn on "Bug in workflow code" and open an account through compliance approval. The workflow pauses on the bug while other chats keep working. Fix _welcome_bonus in open_account_workflow.py (initial_deposit → initial_amount), PROMOTIONS in open-account.ts for the TypeScript frameworks (swap its two lines), the promotions lookup in openaccount.go for the Go framework, or BONUS_RATES in the Java workflow (WELCOME_BONUS → WELCOME-BONUS), and restart the worker (with startdemo.sh: scripts/startdemo.sh restart <framework>), and it carries on. Afterwards, git checkout the file to re-arm the bug.',
   },
 ];
@@ -75,6 +79,9 @@ function ChaosPanel() {
     fetchChaos();
   };
 
+  const offered = (flag) => flags.some((f) => f.flag === flag);
+  const scenarios = SCENARIOS.filter((s) => !s.flags || s.flags.some(offered));
+
   const labelFor = (flag) => flags.find((f) => f.flag === flag)?.label || flag;
 
   return (
@@ -119,7 +126,7 @@ function ChaosPanel() {
 
         <details className="chaos-scenarios">
           <summary>Demo scenarios</summary>
-          {SCENARIOS.map((s) => (
+          {scenarios.map((s) => (
             <div key={s.title} className="chaos-scenario">
               <strong>{s.title}</strong>
               <p>{s.steps}</p>
