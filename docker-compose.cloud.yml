@@ -4,11 +4,11 @@
 #   set -a; source scripts/setcloudenv.sh; set +a
 #   docker compose -f docker-compose.yml -f docker-compose.cloud.yml --profile all up --build
 #
-# TEMPORAL_ADDRESS must be the regional endpoint (<region>.<cloud>.api.temporal.io:7233): a namespace's own endpoint
-# accepts only client certificates. The dev server container still starts, unused.
+# TEMPORAL_ADDRESS is the namespace's own endpoint when the namespace uses API keys only, or the regional endpoint
+# (<region>.<cloud>.api.temporal.io:7233) when it allows both mTLS and API keys. The dev server container still starts, unused.
 x-cloud: &cloud
   environment:
-    TEMPORAL_ADDRESS: "${TEMPORAL_ADDRESS:?set TEMPORAL_ADDRESS to your region's API-key endpoint}"
+    TEMPORAL_ADDRESS: "${TEMPORAL_ADDRESS:?set TEMPORAL_ADDRESS}"
     TEMPORAL_NAMESPACE: "${TEMPORAL_NAMESPACE:?set TEMPORAL_NAMESPACE}"
     TEMPORAL_API_KEY: "${TEMPORAL_API_KEY:?set TEMPORAL_API_KEY}"
     TEMPORAL_TLS: "true"

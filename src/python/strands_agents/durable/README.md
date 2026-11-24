@@ -349,7 +349,7 @@ cp scripts/setcloudenv.example scripts/setcloudenv.sh
 ```
 
 Set either the mTLS certificate and key (`TEMPORAL_TLS_CLIENT_CERT_PATH` and `TEMPORAL_TLS_CLIENT_KEY_PATH`)
-or `TEMPORAL_API_KEY`, with the address `setcloudenv.example` describes for each. Start the worker and the API (the web UI starts as before):
+or `TEMPORAL_API_KEY`, and the matching address (see `setcloudenv.example`). Start the worker and the API (the web UI starts as before):
 
 ```bash
 ./src/python/strands_agents/durable/startcloudworker.sh

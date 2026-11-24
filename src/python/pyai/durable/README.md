@@ -320,9 +320,9 @@ cp scripts/setcloudenv.example scripts/setcloudenv.sh
 
 Edit `scripts/setcloudenv.sh`: `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, and either the mTLS
 certificate and key (`TEMPORAL_TLS_CLIENT_CERT_PATH`, `TEMPORAL_TLS_CLIENT_KEY_PATH`) or
-`TEMPORAL_API_KEY`. With an API key, `TEMPORAL_ADDRESS` is your region's endpoint
-(`<region>.<cloud>.api.temporal.io:7233`): the namespace's own endpoint (`<namespace>.<account>.tmprl.cloud:7233`)
-accepts only client certificates. The cloud scripts source it. Start Redis, then:
+`TEMPORAL_API_KEY`. With an API key, the namespace's own endpoint
+(`<namespace>.<account>.tmprl.cloud:7233`) works when the namespace uses API keys only; when it allows both
+mTLS and API keys, use your region's endpoint (`<region>.<cloud>.api.temporal.io:7233`). The cloud scripts source it. Start Redis, then:
 
 ```bash
 ./src/python/pyai/durable/startcloudworker.sh

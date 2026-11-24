@@ -24,8 +24,8 @@ Done in this repository:
 - **Temporal Cloud with an API key**, as the platform injects it (`TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`,
   `TEMPORAL_API_KEY`, `TEMPORAL_TLS=true`, no certificate files): the same test passes. It found that the Strands
   Agents (Python) worker built its own connection that only knew mTLS; it now uses Temporal's environment
-  configuration like the others. An API key needs the regional endpoint (`<region>.<cloud>.api.temporal.io:7233`):
-  a namespace's own endpoint (`<namespace>.<account>.tmprl.cloud:7233`) asks for a client certificate.
+  configuration like the others. The test namespace allows both mTLS and API keys, so the API key
+  needed the regional endpoint (`<region>.<cloud>.api.temporal.io:7233`); a namespace that uses API keys only works on its own endpoint.
 
 Still to do: validate the draft with the
 platform's `validate-projects`, and get it onto the platform's test cluster.

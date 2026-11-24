@@ -199,8 +199,8 @@ set -a; source scripts/setcloudenv.sh; set +a
 docker compose -f docker-compose.yml -f docker-compose.cloud.yml --profile all up --build
 ```
 
-With an API key, `TEMPORAL_ADDRESS` is your region's endpoint (`<region>.<cloud>.api.temporal.io:7233`); the
-namespace's own endpoint (`<namespace>.<account>.tmprl.cloud:7233`) accepts only client certificates.
+With an API key, the namespace's own endpoint (`<namespace>.<account>.tmprl.cloud:7233`) works when the namespace uses API keys only; when
+it allows both mTLS and API keys, use your region's endpoint (`<region>.<cloud>.api.temporal.io:7233`).
 
 The experimental .NET framework and the Java open-account worker have no image yet.
 
