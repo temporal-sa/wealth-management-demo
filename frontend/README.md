@@ -63,6 +63,8 @@ Each framework keeps its own chat: start a chat with one, pick another and start
 you can ask several frameworks the same questions and compare. In the sidebar, a green dot marks a framework with a
 running chat, and a red count shows replies and status updates that arrived while its chat wasn't shown. A greyed-out
 framework, marked "no worker", has no worker running its chats, and its **Start chat** button is off until one starts.
+Under each running framework's name is the model its worker uses, and when the API has `DEMO_BUILD` set (as the hosted
+demo does), the build running is at the bottom of the sidebar.
 With more than six frameworks, a filter box above the list narrows it down.
 
 While an account opening runs, a status line under the chat header shows its state: amber while it waits, green when
