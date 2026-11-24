@@ -21,8 +21,13 @@ Done in this repository:
   Cloud namespace (certificate and key mounted, `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH`). It
   found that the TypeScript image needed CA certificates for any TLS connection, which the platform's connection uses
   too.
+- **Temporal Cloud with an API key**, as the platform injects it (`TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`,
+  `TEMPORAL_API_KEY`, `TEMPORAL_TLS=true`, no certificate files): the same test passes. It found that the Strands
+  Agents (Python) worker built its own connection that only knew mTLS; it now uses Temporal's environment
+  configuration like the others. An API key needs the regional endpoint (`<region>.<cloud>.api.temporal.io:7233`):
+  a namespace's own endpoint (`<namespace>.<account>.tmprl.cloud:7233`) asks for a client certificate.
 
-Still to do: test against Temporal Cloud with an API key (what the platform injects), validate the draft with the
+Still to do: validate the draft with the
 platform's `validate-projects`, and get it onto the platform's test cluster.
 
 This plan follows the platform's contract (`docs/crd-reference.md` and `docs/platform-onboarding.md` in the
