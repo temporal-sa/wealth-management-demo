@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Markdown from './Markdown';
 import { API_BASE_URL } from './config';
+import { TemporalLink } from './temporal-ui';
 
 const defaultHeaderText = 'Chat session started.';
 
@@ -16,7 +17,7 @@ const defaultHeaderText = 'Chat session started.';
 // Shown when a message didn't reach the chat, so the agents never saw it
 const UNDELIVERED_TEXT = "Your message didn't go through, so the agents didn't see it. It's still in the message field below: press Send to try again.";
 
-function ChatPane({ framework, visible, onChange = () => {} }) {
+function ChatPane({ framework, visible, onChange = () => {}, temporalUi = null }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isChatActive, setIsChatActive] = useState(false);
@@ -35,6 +36,8 @@ function ChatPane({ framework, visible, onChange = () => {} }) {
   const [isPolling, setIsPolling] = useState(false);
   const [isWaitingForAIResponse, setIsWaitingForAIResponse] = useState(false);
   const [workflowId, setWorkflowId] = useState('');
+  // The chat's latest account opening, for the status line's link to it in the Temporal UI
+  const [openingId, setOpeningId] = useState(null);
 
   const unavailable = framework && framework.available === false;
 
@@ -131,6 +134,36 @@ function ChatPane({ framework, visible, onChange = () => {} }) {
   };
 
   // The status text each chat shows while an account opening waits for compliance review
+  // Each time the opening's status changes, look up its workflow, for the link. The search may not list an opening that
+  // just started, so a miss is retried a few times.
+  useEffect(() => {
+    if (!statusContent || !workflowId || !temporalUi) {
+      setOpeningId(null);
+      return undefined;
+    }
+    let cancelled = false;
+    let timer = null;
+    const lookUp = async (triesLeft) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/open-account?workflow_id=${encodeURIComponent(workflowId)}`);
+        const result = response.ok ? await response.json() : {};
+        if (cancelled) return;
+        if (result.workflow_id) {
+          setOpeningId(result.workflow_id);
+        } else if (triesLeft > 0) {
+          timer = setTimeout(() => lookUp(triesLeft - 1), 3000);
+        }
+      } catch (error) {
+        console.log(`Couldn't look up the account opening: ${error}`);
+      }
+    };
+    lookUp(3);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [statusContent, workflowId, temporalUi]);
+
   const isWaitingComplianceReview = isChatActive && statusContent.endsWith('Waiting Compliance Review');
 
   useEffect(() => {
@@ -252,7 +285,17 @@ function ChatPane({ framework, visible, onChange = () => {} }) {
         <div className="chat-title">
           <div className="framework">{framework ? framework.label : 'Wealth Management Chatbot'}</div>
           {framework && (
-            <div className="chat-subtitle">{framework.language} · {framework.task_queue}</div>
+            <div className="chat-subtitle">
+              {framework.language} · {framework.task_queue}
+              {workflowId && (
+                <>
+                  {' · '}
+                  <TemporalLink temporalUi={temporalUi} workflowId={workflowId} title={`This chat's workflow, ${workflowId}`}>
+                    View in Temporal
+                  </TemporalLink>
+                </>
+              )}
+            </div>
           )}
         </div>
         <button
@@ -266,6 +309,9 @@ function ChatPane({ framework, visible, onChange = () => {} }) {
       {statusContent && (
         <div className={`status-area tone-${tone}`}>
           <span className="status-text">{statusContent}</span>
+          <TemporalLink temporalUi={temporalUi} workflowId={openingId} title={`The account opening's workflow, ${openingId}`}>
+            View account opening
+          </TemporalLink>
           {isWaitingComplianceReview && (
             <button
               className="approve-compliance-button"

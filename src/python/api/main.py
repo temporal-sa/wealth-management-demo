@@ -12,6 +12,7 @@ from temporalio.exceptions import TemporalError
 from temporalio.service import RPCError
 
 from api import client as chat
+from api.temporal_ui import temporal_ui
 from api.frameworks import Framework, ignored_overrides, selected_frameworks
 from common.chaos_manager import CHAOS_FLAGS, ChaosFlag, ChaosManager
 from common.redis_config import RedisConfig
@@ -37,6 +38,8 @@ def available_flags():
 WEB_APP_DIR = Path(os.getenv("WEB_APP_DIR") or Path(__file__).resolve().parents[3] / "frontend" / "build")
 # The frameworks the API serves (AI_FRAMEWORK), by name, in the order the web UI lists them
 frameworks: dict[str, Framework] = {}
+# Where the web UI links to the chats' workflows (api/temporal_ui.py), or None
+temporal_ui_settings: Optional[dict] = None
 
 
 @asynccontextmanager
@@ -49,6 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         print(f"Serving the web app from {WEB_APP_DIR}")
     global temporal_client
     global frameworks
+    global temporal_ui_settings
     served = selected_frameworks()
     frameworks = {framework.name: framework for framework in served}
     for framework in served:
@@ -58,6 +62,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         print(f"Ignoring {name}: it applies only when the API serves one AI framework")
     client_helper = ClientHelper(default_task_queue=served[0].task_queue)
     temporal_client = await chat.connect(**client_helper.client_config)
+    temporal_ui_settings = temporal_ui(client_helper.address, client_helper.namespace)
+    if temporal_ui_settings:
+        print(f"Linking to workflows in the Temporal UI at {temporal_ui_settings['url']}, "
+              f"namespace {temporal_ui_settings['namespace']}")
     yield
     print("API is shutting down...")
     # app teardown
@@ -131,6 +139,7 @@ async def get_config():
         models = {}
     return {
         "build": os.getenv("DEMO_BUILD") or None,
+        "temporal_ui": temporal_ui_settings,
         "frameworks": [
             {
                 "framework": framework.name,
@@ -199,6 +208,20 @@ async def end_chat(request: Request, workflow_id: str):
         print(e)
         # Workflow not found; return an empty response
         return {}
+
+
+@api.get("/open-account")
+async def open_account(request: Request, workflow_id: str):
+    """The workflow ID of this chat's most recent account opening, for the web UI's link to it: {"workflow_id": ...},
+    null if there's none (or the search doesn't list it yet)."""
+    own_chat(request, workflow_id)
+    try:
+        return {"workflow_id": await chat.latest_opening(temporal_client, workflow_id)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except (RPCError, TemporalError) as e:
+        print(f"Error looking up the account opening of {workflow_id}: {e}")
+        raise HTTPException(status_code=502, detail=f"Couldn't look up the account opening: {e}")
 
 
 @api.post("/approve-compliance")

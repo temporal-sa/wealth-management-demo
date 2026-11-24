@@ -7,14 +7,18 @@
 # TEMPORAL_ADDRESS is the namespace's own endpoint when the namespace uses API keys only, or the regional endpoint
 # (<region>.<cloud>.api.temporal.io:7233) when it allows both mTLS and API keys. The dev server container still starts, unused.
 x-cloud: &cloud
-  environment:
+  environment: &cloud-env
     TEMPORAL_ADDRESS: "${TEMPORAL_ADDRESS:?set TEMPORAL_ADDRESS}"
     TEMPORAL_NAMESPACE: "${TEMPORAL_NAMESPACE:?set TEMPORAL_NAMESPACE}"
     TEMPORAL_API_KEY: "${TEMPORAL_API_KEY:?set TEMPORAL_API_KEY}"
     TEMPORAL_TLS: "true"
 
 services:
-  web: *cloud
+  web:
+    environment:
+      <<: *cloud-env
+      # The web app links workflows to Temporal Cloud's UI (a Cloud sign-in with access to the namespace)
+      TEMPORAL_UI_URL: https://cloud.temporal.io
   openai_agents: *cloud
   pyai: *cloud
   strands_agents: *cloud

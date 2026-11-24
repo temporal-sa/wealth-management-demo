@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from './config';
+import { TemporalLink } from './temporal-ui';
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -35,7 +36,7 @@ function formatTime(timestamp) {
   return new Date(timestamp * 1000).toLocaleTimeString();
 }
 
-function ChaosPanel() {
+function ChaosPanel({ temporalUi = null }) {
   const [flags, setFlags] = useState([]);
   const [events, setEvents] = useState([]);
   const [error, setError] = useState(null);
@@ -118,7 +119,17 @@ function ChaosPanel() {
                 <span className="chaos-event-time">{formatTime(e.timestamp)}</span>{' '}
                 <span className="chaos-event-source">{e.source}</span>
                 {e.attempt ? ` attempt ${e.attempt}` : ''}
-                <div className="chaos-event-flag">{labelFor(e.flag)}</div>
+                <div className="chaos-event-flag">
+                  {labelFor(e.flag)}
+                  {e.workflow_id && (
+                    <>
+                      {' · '}
+                      <TemporalLink temporalUi={temporalUi} workflowId={e.workflow_id} title={`See the retries in ${e.workflow_id}`}>
+                        View workflow
+                      </TemporalLink>
+                    </>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

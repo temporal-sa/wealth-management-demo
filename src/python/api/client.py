@@ -10,6 +10,8 @@ Kept apart from main.py, with no FastAPI dependency, so a framework's tests can 
 these exact calls against its real workflow.
 """
 
+from typing import Optional
+
 from temporalio.api.enums.v1 import TaskQueueKind, TaskQueueType
 from temporalio.api.taskqueue.v1 import TaskQueue
 from temporalio.api.workflowservice.v1 import DescribeTaskQueueRequest
@@ -79,6 +81,21 @@ async def approve_compliance(client: Client, chat_workflow_id: str) -> list[str]
             await handle.signal(COMPLIANCE_APPROVED_SIGNAL)
             approved.append(execution.id)
     return approved
+
+
+async def latest_opening(client: Client, chat_workflow_id: str) -> Optional[str]:
+    """The workflow ID of the chat's most recently started account opening, running or not, or None.
+
+    Visibility is eventually consistent, so an opening that just started may not be found yet.
+    """
+    if "'" in chat_workflow_id or "\\" in chat_workflow_id:
+        raise ValueError("A chat workflow ID can't contain quotes or backslashes")
+    query = f"WorkflowId STARTS_WITH '{OPEN_ACCOUNT_ID_PREFIX}{chat_workflow_id}-'"
+    latest = None
+    async for execution in client.list_workflows(query):
+        if latest is None or execution.start_time > latest.start_time:
+            latest = execution
+    return latest.id if latest else None
 
 
 async def has_workers(client: Client, task_queue: str) -> bool:

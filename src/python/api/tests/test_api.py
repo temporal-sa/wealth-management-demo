@@ -608,3 +608,51 @@ async def test_a_worker_runs_on_when_redis_refuses_its_model(monkeypatch, capsys
     monkeypatch.setattr(RedisConfig, "async_client", lambda self: FakeHash(ConnectionError("refused")))
     await worker_info.publish_worker_model("Pure-Supervisor", "x")
     assert "won't show it" in capsys.readouterr().out
+
+
+async def test_open_account_finds_this_chats_latest_opening(http, temporal_env):
+    chat_id = await start_chat(http)
+    assert (await asyncio.to_thread(http.get, "/api/open-account", params={"workflow_id": chat_id})).json() == {
+        "workflow_id": None}
+    first = await _start_opening(temporal_env, f"OpenAccount-{chat_id}-123-Vacation-1", "Complete")
+    await asyncio.sleep(0.05)
+    second = await _start_opening(temporal_env, f"OpenAccount-{chat_id}-123-Ski Trip-2", "Waiting KYC")
+    other_chat = await _start_opening(temporal_env, f"OpenAccount-{chat_id}0-123-Vacation-1", "Waiting KYC")
+    await _wait_until_listed(temporal_env, [first.id, second.id, other_chat.id])
+
+    response = await asyncio.to_thread(http.get, "/api/open-account", params={"workflow_id": chat_id})
+
+    assert response.json() == {"workflow_id": second.id}
+    for handle in (first, second, other_chat):
+        await handle.terminate()
+
+
+async def test_open_account_rejects_an_id_that_isnt_this_sessions_chat(http):
+    response = await asyncio.to_thread(http.get, "/api/open-account", params={"workflow_id": "x' OR WorkflowId != '"})
+    assert response.status_code == 404
+
+
+async def test_config_says_where_the_temporal_ui_is(http):
+    body = (await asyncio.to_thread(http.get, "/api/config")).json()
+    # The test server is local, so the links go to the dev server's UI
+    assert body["temporal_ui"]["url"] == "http://localhost:8233"
+    assert body["temporal_ui"]["namespace"]
+
+
+@pytest.mark.parametrize("address, env, expected", [
+    ("myns.a1b2c.tmprl.cloud:7233", {}, {"url": "https://cloud.temporal.io", "namespace": "myns.a1b2c"}),
+    ("us-west-2.aws.api.temporal.io:7233", {}, {"url": "https://cloud.temporal.io", "namespace": "myns.a1b2c"}),
+    ("localhost:7233", {}, {"url": "http://localhost:8233", "namespace": "myns.a1b2c"}),
+    ("temporal:7233", {}, None),
+    ("temporal:7233", {"TEMPORAL_UI_URL": "http://localhost:18233/"}, {"url": "http://localhost:18233", "namespace": "myns.a1b2c"}),
+    # As the FieldKit platform sets them
+    ("x.tmprl.cloud:7233", {"TEMPORAL_UI_URL": "https://cloud.temporal.io", "TEMPORAL_UI_NAMESPACE": "fieldkit-demo.acct"},
+     {"url": "https://cloud.temporal.io", "namespace": "fieldkit-demo.acct"}),
+])
+def test_temporal_ui_address(monkeypatch, address, env, expected):
+    from api.temporal_ui import temporal_ui
+    for name in ("TEMPORAL_UI_URL", "TEMPORAL_UI_NAMESPACE"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    assert temporal_ui(address, "myns.a1b2c") == expected
