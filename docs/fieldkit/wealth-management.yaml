@@ -157,7 +157,8 @@ spec:
       secrets: [anthropic]
       env:
       - {name: DEMO_DATA_STORE, value: redis}
-      # LLM_MODEL defaults to anthropic/claude-opus-5-5: consider a cheaper model for a shared demo
+      # Haiku, not the anthropic/claude-opus-5-5 default: it passed the same scenarios as Opus, faster and cheaper
+      - {name: LLM_MODEL, value: anthropic/claude-haiku-5-5}
       resources:
         requests: {cpu: 100m, memory: 384Mi}
         limits: {memory: 1Gi}

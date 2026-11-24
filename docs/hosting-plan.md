@@ -237,6 +237,9 @@ run the `DemoProject` itself locally, if we have access to it.
   use?
 - Build time and image size: the Python frameworks' dependencies are large. CodeBuild's default machine (`medium`)
   may need `compute: large` for some builds.
-- Model spend: a shared hosted demo on the platform's keys, with `gemini-3.8-flash`, `gpt-4o` and, for Pure Python,
-  `anthropic/claude-opus-5-5` by default (`LLM_MODEL`). The hosted copy could set a cheaper `LLM_MODEL` for it.
+- Model spend: a shared hosted demo on the platform's keys, with `gemini-3.8-flash` and `gpt-4o`. Pure Python defaults
+  to `anthropic/claude-opus-5-5`; the hosted copy sets `LLM_MODEL=anthropic/claude-haiku-5-5`. Compared on Pure
+  Python's scenarios (list, off-topic, add and delete a beneficiary with confirmation, close an account, open one
+  through KYC and approval, an LLM outage), two trials each: Haiku 5.5, Sonnet 5.5, Gemini 3.5 Flash and Opus 5.5 all
+  passed every check, and Haiku was the fastest.
 - The Google ADK demo: keep it alongside this one, or retire it once this one is live.
